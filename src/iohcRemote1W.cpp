@@ -21,7 +21,7 @@ namespace IOHC {
     void iohcRemote1W::init(iohcPacket* packet, uint16_t/*size_t*/ typn) {
         //           for (size_t typn=0; typn<_type.size(); typn++) { // Pre-allocate packets vector; one packet for each remote type loaded
         // Pas besoin de new ici, std::array gère automatiquement la mémoire
-        // Vous pouvez directement accéder à l'élément avec l'opérateur [].
+        // On peut directement accéder à l'élément avec l'opérateur [].
         //            auto& packet = packets2send[typn];
         //                packets2send[typn] = new iohcPacket; //(iohcPacket *) malloc(sizeof(iohcPacket));
         //            else

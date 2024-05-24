@@ -1,4 +1,4 @@
-//#include <board-config.h>
+//#include <board-config.h.org>
 
 #define USE_US_TIMER
 

@@ -289,7 +289,7 @@ namespace IOHC {
         /*Dynamic*/JsonDocument doc; //(256);
         // It's the gateway
         // JsonObject jobj = doc.createNestedObject(bytesToHexString(_node, sizeof(_node)));
-        JsonObject jobj = doc[bytesToHexString(_node, sizeof(_node))].to<JsonObject>();
+        auto jobj = doc[bytesToHexString(_node, sizeof(_node))].to<JsonObject>();
     //        jobj["key"] = bytesToHexString(_key, sizeof(_key));
         jobj["dst"] = _dst;
         //        uint8_t btmp[2];

@@ -10,10 +10,14 @@
 #include <iohcPacket.h>
 
 #if defined(RADIO_SX127X)
-    #include <SX1276Helpers.h>
+        #include <SX1276Helpers.h>
+#elif defined(CC1101)
+        #include <CC1101Helpers.h>
 #endif
 
-#if defined(ESP32)
+#if defined(ESP8266)
+  #include <TickerUs.h>
+#elif defined(ESP32)  	
     #include <TickerUsESP32.h>
 #endif
 
@@ -63,7 +67,11 @@ namespace IOHC {
             uint8_t currentFreqIdx = 0;
 
 
-        #if defined(ESP32)
+        #if defined(ESP8266)
+            Timers::TickerUs TickTimer;
+            Timers::TickerUs Sender;
+//            Timers::TickerUs FreqScanner;
+        #elif defined(ESP32)
             TimersUS::TickerUsESP32 TickTimer;
             TimersUS::TickerUsESP32 Sender;
         #endif

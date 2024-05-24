@@ -26,10 +26,7 @@ extern "C" {
 
 #include <utils.h>
 
-#if defined(ESP8266)
-  #include <TickerUs.h>
-  #define MAXCMDS 25
-#elif defined(ESP32)
+#if defined(ESP32)
 //  #include <picoMQTT.h> 	
   #include <TickerUsESP32.h>
   #define MAXCMDS 50
@@ -233,9 +230,7 @@ namespace Cmd {
   inline uint8_t _avail = 0;
 //  bool receivingSerial = false;
 
-#if defined(ESP8266)
-      Timers::TickerUs kbd_tick;
-#elif defined(ESP32)
+#if defined(ESP32)
       inline TimersUS::TickerUsESP32 kbd_tick;
 #endif
 
@@ -312,10 +307,10 @@ namespace Cmd {
   
   inline void init() {
     #if defined(MQTT)
-    mqttClient.setClientId("iown");
-    mqttClient.setCredentials("user", "passwd");
-    mqttClient.setServer(MQTT_SERVER, 1883);
-    mqttClient.onConnect(onMqttConnect);
+      mqttClient.setClientId("iown");
+     mqttClient.setCredentials("user", "passwd");
+     mqttClient.setServer(MQTT_SERVER, 1883);
+     mqttClient.onConnect(onMqttConnect);
     mqttClient.onMessage(onMqttMessage);
     mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(2000), pdFALSE, nullptr, reinterpret_cast<TimerCallbackFunction_t>(connectToMqtt));
     #endif

@@ -18,43 +18,6 @@ extern "C" {
     #include "freertos/task.h"
 }
 
-#if defined(ESP8266)
-//    #include <ESP8266WiFi.h>
-//    #include "ESPAsyncTCP.h"
-//    #include <ESP8266mDNS.h>
-//    #include <ESP8266SSDP.h>
-#elif defined(ESP32)
-//    #include <WiFi.h>
-//    #include "esp_wifi.h"
-//   #include "mqtt_client.h"
-//    #include <AsyncMqttClient.h>
-//    #include <picoMQTT.h>
-//    #include <AsyncTCP.h>           // ESPAsyncWebServer & OTA
-//    #include <ESPmDNS.h>            // ESPAsyncWebServer & OTA
-//    #include <ESP32SSDP.h>
-#endif
-
-//#include <ESPAsyncWebServer.h>
-//#include <WiFiManager.h>          //https://github.com/tzapu/WiFiManager WiFi Configuration - Async branch
-
-/*
-// Transceivers Helpers defined inside de iohcRadio header
-#if defined(RADIO_SX127X)
-    #include <SX1276Helpers.h>
-#elif defined(CC1101)
-    #include <CC1101Helpers.h>
-#endif
-*/
-
-//#include <WebServerHelpers.h>
-//const char* http_username = HTTP_USERNAME;
-//const char* http_password = HTTP_PASSWORD;
-//WiFiManager wm;
-
-//AsyncWebServer server(HTTP_LISTEN_PORT);
-//AsyncWebSocket ws("/ws"); // access at ws://[esp ip]/ws
-//AsyncEventSource events("/events"); // event source (Server-Sent events)
-
 // Receiving buffer
 bool verbosity = true;
 bool pairMode = false;
@@ -90,154 +53,18 @@ bool publishMsg(IOHC::iohcPacket* iohc);
 bool IRAM_ATTR msgRcvd(IOHC::iohcPacket* iohc);
 bool msgArchive(IOHC::iohcPacket* iohc);
 
-#if defined(ESP8266)
-      Timers::TickerUs kbd_tick;
-#elif defined(ESP32)
-//      TickerUsESP32 kbd_tick;
-#endif
-
 void setup() {
-    //    Timers::init_us();
-    //    system_timer_reinit();
-#if defined(ESP8266)
-        INIT_US;
-#endif
 
     Serial.begin(115200); //SERIALSPEED);
 
     pinMode(RX_LED, OUTPUT); // we are goning to blink this LED
     digitalWrite(RX_LED, 1);
 
-    /*
-        wm.autoConnect();
-
-        // WiFi Manager setup
-        // Reset settings - wipe credentials for testing
-        //wm.resetSettings();
-        wm.setConfigPortalBlocking(false);
-        wm.setConfigPortalTimeout(120);
-        // automatically connect using saved credentials if they exist
-        // If connection fails it starts an access point with the specified name
-        if(wm.autoConnect("AutoConnectAP")){
-            LOG(printf_P, PSTR("Connected :)"));
-            // Show the current IP Address
-            LOG(printf_P, PSTR("IP got: %s\n"), WiFi.localIP().toString());
-        }
-        else {
-            LOG(printf_P("Configportal running\n"));
-        }
-    */
-
     // Mount LittleFS filesystem
-#if defined(ESP8266)
-    LittleFSConfig lcfg;
-    lcfg.setAutoFormat(false);
-    LittleFS.setConfig(lcfg);
-//    LittleFS.begin();
-#elif defined(ESP32)
+#if defined(ESP32)
     LittleFS.begin();
 #endif
 
-    /*
-        // Start MDNS
-        if (! MDNS.begin("IO-Homecontrol_gateway"))
-            Serial.println(F("Error setting up MDNS responder"));
-
-        MDNS.addService("http", "tcp", HTTP_LISTEN_PORT);
-        //testmDNS((char *)"http");
-        // Start SSDP
-        SSDP.setSchemaURL("description.xml");
-        SSDP.setHTTPPort(HTTP_LISTEN_PORT);
-        SSDP.setName("Velux remote gateway");
-    #if defined(ESP8266)
-        SSDP.setSerialNumber(ESP.getChipId());
-    #elif defined(ESP32)
-        uint64_t macAddress = ESP.getEfuseMac();
-        uint64_t macAddressTrunc = macAddress << 40;
-        SSDP.setSerialNumber(macAddressTrunc >> 40);
-    #endif
-
-        SSDP.setURL("/");
-        SSDP.setDeviceType("upnp:rootdevice");
-        SSDP.begin();
-        //server.on("/description.xml", HTTP_GET, [](AsyncWebServerRequest *request) { SSDP.schema((Print&)std::ref(request->client())); });
-
-        // Web Server
-        // attach AsyncWebSocket
-        ws.onEvent(onEvent);
-        server.addHandler(&ws);
-
-        // attach AsyncEventSource
-        server.addHandler(&events);
-    */
-
-    /*
-    To be completed
-
-    // respond to GET requests on URL /heap
-    server.on("/heap", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(200, "text/plain", String(ESP.getFreeHeap()));
-    });
-
-    // upload a file to /upload
-    server.on("/upload", HTTP_POST, [](AsyncWebServerRequest *request){
-    request->send(200);
-    }, onUpload);
-
-    // send a file when /index is requested
-    server.on("/index", HTTP_ANY, [](AsyncWebServerRequest *request){
-//    request->send(LittleFS, "/index.htm");
-    });
-
-    // HTTP basic authentication
-    server.on("/login", HTTP_GET, [](AsyncWebServerRequest *request){
-    if(!request->authenticate(http_username, http_password))
-        return request->requestAuthentication();
-    request->send(200, "text/plain", "Login Success!");
-    });
-
-    // Simple Firmware Update Form
-    server.on("/update", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(200, "text/html", "<form method='POST' action='/update' enctype='multipart/form-data'><input type='file' name='update'><input type='submit' value='Update'></form>");
-    });
-    server.on("/update", HTTP_POST, [](AsyncWebServerRequest *request){
-    shouldReboot = !Update.hasError();
-    AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", shouldReboot?"OK":"FAIL");
-    response->addHeader("Connection", "close");
-    request->send(response);
-    },[](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final){
-    if(!index){
-        Serial.printf("Update Start: %s\n", filename.c_str());
-        Update.runAsync(true);
-        if(!Update.begin((ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000)){
-        Update.printError(Serial);
-        }
-    }
-    if(!Update.hasError()){
-        if(Update.write(data, len) != len){
-        Update.printError(Serial);
-        }
-    }
-    if(final){
-        if(Update.end(true)){
-        Serial.printf("Update Success: %uB\n", index+len);
-        } else {
-        Update.printError(Serial);
-        }
-    }
-    });
-
-    */
-
-    // attach filesystem root at URL /fs
-    //    server.serveStatic("/fs", LittleFS, "/");
-
-    // Catch-All Handlers
-    // Any request that can not find a Handler that canHandle it
-    // ends in the callbacks below.
-    //    server.onNotFound(onRequest);
-    //    server.onRequestBody(onBody);
-    //    server.begin();
     radioInstance = IOHC::iohcRadio::getInstance();
     radioInstance->start(MAX_FREQS, frequencies, 0, msgRcvd, nullptr); //publishMsg); //msgArchive); //, msgRcvd);
 
@@ -322,8 +149,7 @@ void setup() {
 
 bool IRAM_ATTR msgRcvd(IOHC::iohcPacket* iohc) {
     // iohc->decode(verbosity);
-
-    /*Dynamic*/JsonDocument doc; //(1280);
+    JsonDocument doc;
     doc["type"] = "Unk";
     switch (iohc->payload.packet.header.cmd) {
         case IOHC::iohcDevice::RECEIVED_DISCOVER_0x28: {
@@ -773,22 +599,7 @@ void txUserBuffer(Tokens* cmd) {
     //        free(packets2send[0]);
     //        packets2send[0] = nullptr;
 }
+
 void loop() {
-    //    wm.process();
-#if defined(ESP8266)
-        MDNS.update();
-#endif
 
-    //    return;
-    /*
-
-        if(shouldReboot){
-        Serial.println("Rebooting...");
-        delay(100);
-        ESP.restart();
-        }
-        static char temp[128];
-        sprintf(temp, "Seconds since boot: %lu", millis()/1000);
-        events.send(temp, "time"); //send event "time"
-    */
 }

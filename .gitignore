@@ -1,6 +1,7 @@
 /.pio/
 /.idea/
 /docs/
+/archives/
 compile_commands.json
 git_rev_macro.py
 sdkconfig.HeltecESP32
@@ -8,11 +9,11 @@ CMakeLists.txt
 .idea/inspectionProfiles/Project_Default.xml
 .vscode/settings.json
 .idea/IOWN_Mosto.iml
-include/MQTTHelper_h
+
 include/user_config.h
 test/variousHeater
 src/CMakeLists.txt
 /.vscode/
 /lib/
 /build
-
++.org
