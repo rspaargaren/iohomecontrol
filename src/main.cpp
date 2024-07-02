@@ -139,20 +139,21 @@ bool IRAM_ATTR msgRcvd(IOHC::iohcPacket *iohc) {
             std::vector<uint8_t> toSend = {0xff, 0xc0, 0xba, 0x11, 0xad, 0x0b, 0xcc, 0x00, 0x00};
 
             packets2send.clear();
-            packets2send.push_back(new IOHC::iohcPacket);
-            forgePacket(packets2send.back(), toSend);
+            auto* packet = new iohcPacket;
+            forgePacket(packet, toSend);
 
-            packets2send.back()->payload.packet.header.cmd = IOHC::iohcDevice::SEND_DISCOVER_ANSWER_0x29;
+            packet->payload.packet.header.cmd = IOHC::iohcDevice::SEND_DISCOVER_ANSWER_0x29;
  
             /* Swap */
-            memcpy(packets2send.back()->payload.packet.header.source, cozyDevice2W->gateway, 3);
-            memcpy(packets2send.back()->payload.packet.header.target, iohc->payload.packet.header.source, 3);
+            memcpy(packet->payload.packet.header.source, cozyDevice2W->gateway, 3);
+            memcpy(packet->payload.packet.header.target, iohc->payload.packet.header.source, 3);
 
-            packets2send.back()->delayed = 250;
-            packets2send.back()->repeat = 0;
+            packet->delayed = 250;
+            packet->repeat = 0;
 
-            radioInstance->send(packets2send);
+            packets2send.push_back(packet);
             digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
+            radioInstance->send(packets2send);
             break;
         }
         case iohcDevice::RECEIVED_DISCOVER_ANSWER_0x29: {
@@ -329,7 +330,7 @@ bool IRAM_ATTR msgRcvd(IOHC::iohcPacket *iohc) {
                 if (cozyDevice2W->memorizeSend.memorizedCmd == IOHC::iohcDevice::RECEIVED_ASK_CHALLENGE_0x31) {
                     packets2send.back()->payload.packet.header.cmd = IOHC::iohcDevice::SEND_KEY_TRANSFERT_0x32;
                     dataLen = 16;
-                    IVdata = {iohcDevice::RECEIVED_ASK_CHALLENGE_0x31};
+                    IVdata = {IOHC::iohcDevice::RECEIVED_ASK_CHALLENGE_0x31};
                     constructInitialValue(IVdata, initial_value, 1, challengeAsked, nullptr);
                     AES_ECB_encrypt(&ctx, initial_value);
                     for (int i = 0; i < dataLen; i++)
@@ -375,6 +376,30 @@ bool IRAM_ATTR msgRcvd(IOHC::iohcPacket *iohc) {
             cozyDevice2W->memorizeSend.memorizedCmd = iohc->payload.packet.header.cmd;
             break;
         }
+        case iohcDevice::RECEIVED_GET_NAME_0x50: {
+            if (cozyDevice2W->isFake(iohc->payload.packet.header.source, iohc->payload.packet.header.target)) {
+            // MY_GATEWAY 4d595f47415445574159
+            std::vector<uint8_t> toSend = {0x4d, 0x59, 0x5f, 0x47, 0x41, 0x54, 0x45, 0x57, 0x41, 0x59};
+            toSend.resize(16);
+            
+            packets2send.clear();
+            packets2send.push_back(new IOHC::iohcPacket);
+            forgePacket(packets2send.back(), toSend);
+
+            packets2send.back()->payload.packet.header.cmd = 0x51;
+
+            /* Swap */
+            memcpy(packets2send.back()->payload.packet.header.source, cozyDevice2W->gateway, 3);
+            memcpy(packets2send.back()->payload.packet.header.target, iohc->payload.packet.header.source, 3);
+
+            packets2send.back()->delayed = 50;
+            packets2send.back()->repeat = 0;
+
+            radioInstance->send(packets2send);
+            digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
+            }
+            break;
+        }
         case 0x51: {
             std::vector<uint8_t> nameReceived;
             nameReceived.assign(iohc->payload.buffer + 9, iohc->payload.buffer + 25);
@@ -402,7 +427,7 @@ bool IRAM_ATTR msgRcvd(IOHC::iohcPacket *iohc) {
             }
         break;
     }
-        case 0xFE: {
+        case iohcDevice::RECEIVED_STATUS_0xFE: {
             if (Cmd::scanMode) {
                 otherDevice2W->memorizeOther2W = {};
                 // printf(" Unknown %X Cmd %X ", iohc->payload.buffer[9], IOHC::lastSendCmd);
@@ -437,11 +462,10 @@ bool IRAM_ATTR msgRcvd(IOHC::iohcPacket *iohc) {
             printf("\n");
             break;
         }
-        case 0X3D:
+        case iohcDevice::RECEIVED_CHALLENGE_ANSWER_0x3D:
         case 0x48:
         case 0x49:
         case 0x4A:
-        case 0x50:
         case 0X05: break;
         default:
             printf("Received Unknown command %02X ", iohc->payload.packet.header.cmd);
