@@ -389,26 +389,34 @@ namespace IOHC {
                         // ,0x50, 0x52(16), 0x54, 0x56, 0x60(21), 0x64(2), 0x6e(9), 0x6f(9), 0x71, 0x73(3), 0x80, 0x82(21), 0x84, 0x86, 0x88, 0x8a(18), 0x8b(1), 0x8e, 0x90, 0x92(16), 0x94, 0x96(12), 0x98
 
                         if (command.first == 0x00 || command.first == 0x01 || command.first == 0x0B || command.first ==
-                            0x0E || command.first == 0x23 || command.first == 0x2A || command.first == 0x1E) toSend.
-                                assign(specacei, specacei + 6);
-                        if (command.first == 0x8B || command.first == 0x19) toSend.assign(special12, special12 + 1);
+                            0x0E || command.first == 0x23 || command.first == 0x2A || command.first == 0x1E)
+                            toSend.assign(specacei, specacei + 6);
+                        if (command.first == 0x8B || command.first == 0x19)
+                            toSend.assign(special12, special12 + 1);
                         if (command.first == 0x04) toSend.assign(special12, special12 + 14);
                         uint8_t special03[] = {0x03, 0x00, 0x00};
-                        if (command.first == 0x03 || command.first == 0x73) toSend.assign(special03, special03 + 3);
+                        if (command.first == 0x03 || command.first == 0x73)
+                            toSend.assign(special03, special03 + 3);
                         uint8_t special0C[] = {0xD8, 0x00, 0x00, 0x00};
-                        if (command.first == 0x0C) toSend.assign(special0C, special0C + 4);
+                        if (command.first == 0x0C)
+                            toSend.assign(special0C, special0C + 4);
                         uint8_t special0D[] = {0x05, 0xaa, 0x0d, 0x00, 0x00};
-                        if (command.first == 0x0D) toSend.assign(special0D, special0D + 5);
-                        if (command.first == 0x64 || command.first == 0x14) toSend.assign(special12, special12 + 2);
-                        if (command.first == 0x2A || command.first == 0x96) toSend.assign(special12, special12 + 12);
-                        if (command.first == 0x38 || command.first == 0x3C || command.first == 0x3D) toSend.assign(
-                            special12, special12 + 6);
-                        if (command.first == 0x32 || command.first == 0x52 || command.first == 0x92) toSend.assign(
-                            special12, special12 + 16);
-                        if (command.first == 0x46 || command.first == 0x48 || command.first == 0x6E || command.first ==
-                            0x6F) toSend.assign(special12, special12 + 9);
-                        if (command.first == 0x4A || command.first == 0x8A) toSend.assign(special12, special12 + 18);
-                        if (command.first == 0x60 || command.first == 0x82) toSend.assign(special12, special12 + 21);
+                        if (command.first == 0x0D)
+                            toSend.assign(special0D, special0D + 5);
+                        if (command.first == 0x64 || command.first == 0x14)
+                            toSend.assign(special12, special12 + 2);
+                        if (command.first == 0x2A || command.first == 0x96)
+                            toSend.assign(special12, special12 + 12);
+                        if (command.first == 0x38 || command.first == 0x3C || command.first == 0x3D)
+                            toSend.assign(special12, special12 + 6);
+                        if (command.first == 0x32 || command.first == 0x52 || command.first == 0x92)
+                            toSend.assign(special12, special12 + 16);
+                        if (command.first == 0x46 || command.first == 0x48 || command.first == 0x6E || command.first == 0x6F)
+                            toSend.assign(special12, special12 + 9);
+                        if (command.first == 0x4A || command.first == 0x8A)
+                            toSend.assign(special12, special12 + 18);
+                        if (command.first == 0x60 || command.first == 0x82)
+                            toSend.assign(special12, special12 + 21);
 
                         packets2send.push_back(new iohcPacket);
                         forgePacket(packets2send.back(), toSend);
@@ -424,7 +432,7 @@ namespace IOHC {
                         // if (command.first == 0x14 || command.first == 0x19 || command.first == 0x1e || command.first == 0x2a || command.first == 0x34 || command.first == 0x4a) {
                         // memcpy(packets2send.back()->payload.packet.header.target, broad, 3);
                         // } else {
-                        memcpy(packets2send.back()->payload.packet.header.target, from/*master_to*/, 3);
+                        memcpy(packets2send.back()->payload.packet.header.target, master_to, 3);
                         // }
 
                         packets2send.back()->delayed = 245;
@@ -449,7 +457,7 @@ namespace IOHC {
     */
     void iohcOtherDevice2W::initializeValid() {
         size_t validKey = 0;
-        auto valid = std::vector<uint8_t>(256);
+        auto valid = std::vector<uint8_t>(255);
         std::iota(valid.begin(), valid.end(), 0);
 
         valid = {
@@ -470,7 +478,7 @@ namespace IOHC {
     }
 
     /**
-    * @brief Dump the scan result to the console for debugging purposes. \ ingroup iohcCozy
+    * @brief Dump the scan result to the console for debugging purposes.
     */
     void iohcOtherDevice2W::scanDump() {
         printf("*********************** Scan result ***********************\n");

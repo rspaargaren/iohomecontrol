@@ -33,7 +33,7 @@ namespace IOHC {
     }
 
     /**
-    * @brief Forge a Cozy packet into iohcPacket. This is the function that is called by iohcCozyDevice2W :: forgePacket
+    * @brief Forge a Cozy packet into iohcPacket. This is the function that is called when calling a command
     * @param packet * The IOHC packet to forge
     * @param toSend
     */
@@ -84,19 +84,20 @@ namespace IOHC {
                 std::vector<uint8_t> toSend = {};
 
                 packets2send.clear();
-                packets2send.push_back(new iohcPacket);
-                forgePacket(packets2send.back(), toSend);
+                auto* packet = new iohcPacket;
+                forgePacket(packet, toSend);
 
-                packets2send.back()->payload.packet.header.cmd = iohcDevice::SEND_ASK_CHALLENGE_0x31;
+                packet->payload.packet.header.cmd = iohcDevice::SEND_ASK_CHALLENGE_0x31;
                 memorizeSend.memorizedData = toSend;
                 memorizeSend.memorizedCmd = iohcDevice::SEND_ASK_CHALLENGE_0x31;
 
-                packets2send.back()->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
-                packets2send.back()->payload.packet.header.CtrlByte1.asStruct.EndFrame = 1;
+                packet->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
+                packet->payload.packet.header.CtrlByte1.asStruct.EndFrame = 1;
 
-                memcpy(packets2send.back()->payload.packet.header.source, gateway, 3);
-                memcpy(packets2send.back()->payload.packet.header.target, master_to, 3);
+                memcpy(packet->payload.packet.header.source, gateway, 3);
+                memcpy(packet->payload.packet.header.target, master_to, 3);
 
+                packets2send.push_back(packet);
                 digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
                 _radioInstance->send(packets2send);
                 break;
@@ -105,18 +106,19 @@ namespace IOHC {
                 std::vector<uint8_t> toSend = {0x0C, 0x60, 0x01, 0x2C};
 
                 packets2send.clear();
-                packets2send.push_back(new iohcPacket);
-                forgePacket(packets2send.back(), toSend);
+                auto* packet = new iohcPacket;
+                forgePacket(packet, toSend);
 
-                packets2send.back()->payload.packet.header.cmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
+                packet->payload.packet.header.cmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
                 memorizeSend.memorizedCmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
                 memorizeSend.memorizedData = toSend;
 
-                packets2send.back()->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
+                packet->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
 
-                memcpy(packets2send.back()->payload.packet.header.source, gateway, 3);
-                memcpy(packets2send.back()->payload.packet.header.target, master_to, 3);
+                memcpy(packet->payload.packet.header.source, gateway, 3);
+                memcpy(packet->payload.packet.header.target, master_to, 3);
 
+                packets2send.push_back(packet);
                 digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
                 _radioInstance->send(packets2send);
 
@@ -133,20 +135,21 @@ namespace IOHC {
                 else addr = std::stoi(data->at(2));
 
                 packets2send.clear();
-                packets2send.push_back(new iohcPacket);
-                forgePacket(packets2send.back(), toSend);
+                auto* packet = new iohcPacket;
+                forgePacket(packet, toSend);
 
-                packets2send.back()->payload.packet.header.cmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
+                packet->payload.packet.header.cmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
                 memorizeSend.memorizedData = toSend;
                 memorizeSend.memorizedCmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
 
-                packets2send.back()->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
+                packet->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
 
-                memcpy(packets2send.back()->payload.packet.header.source, gateway, 3);
-                memcpy(packets2send.back()->payload.packet.header.target, addresses.at(addr).data()/* 0 Master_to*/, 3);
+                memcpy(packet->payload.packet.header.source, gateway, 3);
+                memcpy(packet->payload.packet.header.target, addresses.at(addr).data()/* 0 Master_to*/, 3);
 
-                packets2send.back()->delayed = 50;
+                packet->delayed = 50;
 
+                packets2send.push_back(packet);
                 digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
                 _radioInstance->send(packets2send);
                 //                mqttClient.publish("iown/Frame", 0, false, message.c_str(), messageSize);

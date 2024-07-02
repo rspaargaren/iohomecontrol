@@ -59,7 +59,7 @@ namespace IOHC {
             RECEIVED_CHALLENGE_REQUEST_0x3C = 0x3c, SEND_CHALLENGE_REQUEST_0x3C = 0x3c,
             RECEIVED_CHALLENGE_ANSWER_0x3D = 0x3d, SEND_CHALLENGE_ANSWER_0x3D = 0x3d,
             RECEIVED_GET_NAME_0x50 = 0x50, SEND_GET_NAME_0x50 = 0x50,
-            RECEIVED_ERROR_0xFE = 0xfe, SEND_ERROR_0xFE = 0xfe,
+            RECEIVED_STATUS_0xFE = 0xfe, SEND_STATUS_0xFE = 0xfe,
         };
 
     protected:
