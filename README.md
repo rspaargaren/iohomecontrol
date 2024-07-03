@@ -45,6 +45,3 @@ _After any other changes:_
 [^3]: Decoding can be verbose (RSSI, Timing, ...)
 
 #### **License**
-
-[Creative Commons Attribution-NonCommercial-NoDerivs (CC-BY-NC-ND)](http://creativecommons.org/licenses/by-nc-nd/4.0/)
-This only allows people to download and share your work for no commercial gain and for no other purposes.
