@@ -17,6 +17,7 @@
 #include <iohcCozyDevice2W.h>
 #include <LittleFS.h>
 #include <iohcCryptoHelpers.h>
+#include <ArduinoJson.h>
 #include <numeric>
 
 namespace IOHC {
