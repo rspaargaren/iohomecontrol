@@ -101,9 +101,9 @@ void setup() {
  * 8-bit integer). In this function, the size of the `
  */
 /**
-* @brief Creates a iohcPacket with the given vector. This is the function that is called by I / OHC to forge the IOHC packet
+* @brief Creates a iohcPacket with the given data to send. 
 * @param packet * The packet you want to forge
-* @param toSend The vector that will be added to the packet
+* @param toSend The data that will be added to the packet
 */
 void IRAM_ATTR forgePacket(iohcPacket* packet, const std::vector<uint8_t> &toSend) {
     digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
