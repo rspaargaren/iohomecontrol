@@ -19,7 +19,7 @@
 
 #define RADIO_SX127X
 #define Regulatory_Domain_EU_868
-#define RADIO_SX126X
+//#define RADIO_SX126X
 #define BOARD_MODEL BOARD_HELTEC32_V3
 /*
  * Board pins definitions
