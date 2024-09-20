@@ -296,9 +296,9 @@ bool IRAM_ATTR msgRcvd(IOHC::iohcPacket *iohc) {
                 // (true) { //
 
                 doc["type"] = "Gateway";
-                if (!cozyDevice2W->isFake(iohc->payload.packet.header.source, iohc->payload.packet.header.target)) {
+//                if (!cozyDevice2W->isFake(iohc->payload.packet.header.source, iohc->payload.packet.header.target)) {
                     //                        AES_init_ctx(&ctx, setgo); // PreInit AES for other2W (1W use original version) TODO
-                }
+//                }
                 //                    else
                 AES_init_ctx(&ctx, transfert_key);
 
@@ -356,7 +356,7 @@ bool IRAM_ATTR msgRcvd(IOHC::iohcPacket *iohc) {
                 // for (int i = 0; i < 16; i++)
                 //     Serial.printf("%02X ", initial_value[i]);
                 // Serial.println();
-                printf("Key to be sent with %2.2X: ", packets2send[0]->payload.packet.header.cmd);
+                printf("Challenge response %2.2X: ", packets2send[0]->payload.packet.header.cmd);
                 for (int i = 0; i < dataLen; i++)
                     printf("%02X ", initial_value[i]);
                 printf("\n");
