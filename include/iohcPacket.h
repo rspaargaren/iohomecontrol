@@ -160,13 +160,13 @@ namespace IOHC {
         uint8_t info;
         uint8_t tstamp[2];
     };
-
+/// 1) 1W PAIR
     struct _p0x2e {
         uint8_t data;
         uint8_t sequence[2];
         uint8_t hmac[6];
     };
-
+/// 3) 1W ADD**
     struct _p0x30 {
         uint8_t enc_key[16];
         uint8_t man_id;

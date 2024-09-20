@@ -196,7 +196,7 @@ namespace IOHC {
                 // packets2send.back()->payload.packet.header.CtrlByte2.asStruct.Prio = 1;
 
                 memcpy(packets2send.back()->payload.packet.header.source, gateway/*master_from*/, 3);
-                memcpy(packets2send.back()->payload.packet.header.target, slave_to, 3);
+                memcpy(packets2send.back()->payload.packet.header.target, master_to/*slave_to*/, 3);
 
                 packets2send.back()->delayed = 250;
                 digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
