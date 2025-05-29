@@ -1,3 +1,19 @@
+/*
+   Copyright (c) 2024. CRIDP https://github.com/cridp
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+           http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ */
+
 #ifndef IOHC_PACKET_H
 #define IOHC_PACKET_H
 
@@ -7,8 +23,6 @@
 
 #if defined(RADIO_SX127X)
 #include <SX1276Helpers.h>
-#elif defined(CC1101)
-        #include <CC1101Helpers.h>
 #endif
 
 #define RESET_AFTER_LAST_MSG_US         15000
@@ -46,6 +60,7 @@ namespace IOHC {
         CB2 asStruct;
     };
 
+    /// Common frame header
     struct _header {
         CtrlByte1Union CtrlByte1; //1
         CtrlByte2Union CtrlByte2; //1
@@ -145,13 +160,13 @@ namespace IOHC {
         uint8_t info;
         uint8_t tstamp[2];
     };
-
+/// 1) 1W PAIR
     struct _p0x2e {
         uint8_t data;
         uint8_t sequence[2];
         uint8_t hmac[6];
     };
-
+/// 3) 1W ADD**
     struct _p0x30 {
         uint8_t enc_key[16];
         uint8_t man_id;
@@ -192,7 +207,7 @@ namespace IOHC {
     inline unsigned long packetStamp = 0L;
     inline unsigned long relStamp = 0L;
     inline size_t lastSendCmd = 0xFF;
-    /*
+    /**
     Class implementing the IOHC packet received/sent, including some additional members useful to track/control Radio parameters and timings
     */
     class iohcPacket {

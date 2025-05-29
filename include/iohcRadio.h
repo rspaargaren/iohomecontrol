@@ -1,18 +1,34 @@
+/*
+   Copyright (c) 2024. CRIDP https://github.com/cridp
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+           http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ */
+
 #ifndef IOHC_RADIO_H
 #define IOHC_RADIO_H
 
-#include <map>
 #include <Delegate.h>
-#include <memory>
 
 #include <board-config.h>
 #include <iohcCryptoHelpers.h>
 #include <iohcPacket.h>
 
 #if defined(RADIO_SX127X)
-    #include <SX1276Helpers.h>
+        #include <SX1276Helpers.h>
 #endif
-
+#if defined(RADIO_SX126X)
+        #include <SX126xHelpers.h>
+#endif
 #if defined(ESP32)
     #include <TickerUsESP32.h>
 #endif
@@ -63,7 +79,11 @@ namespace IOHC {
             uint8_t currentFreqIdx = 0;
 
 
-        #if defined(ESP32)
+        #if defined(ESP8266)
+            Timers::TickerUs TickTimer;
+            Timers::TickerUs Sender;
+//            Timers::TickerUs FreqScanner;
+        #elif defined(ESP32)
             TimersUS::TickerUsESP32 TickTimer;
             TimersUS::TickerUsESP32 Sender;
         #endif

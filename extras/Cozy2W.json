@@ -1,5 +1,5 @@
 {
-    "ba11ad":{"type": "gateway", "dst": "ballad"},
-    "477706":{"type": "master", "dst": "487902"},
-    "8ccb30":{"type": "slave", "dst": "8ccb31"}
+    "ba11ad":{"type": "gateway", "dst": "ballad", "description":"FAKE"},
+    "477706":{"type": "master", "dst": "487902", "description":"HEAT1"},
+    "8ccb30":{"type": "slave", "dst": "8ccb31", "description":"HEAT2"}
 }

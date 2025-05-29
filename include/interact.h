@@ -1,3 +1,19 @@
+/*
+   Copyright (c) 2024. CRIDP https://github.com/cridp
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+           http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ */
+
 #ifndef INTERACT_H
 #define INTERACT_H
 /*
@@ -15,8 +31,6 @@ extern "C" {
 	#include "freertos/timers.h"
 }
 
-#define MQTT
-
 #include <WiFi.h>
 #include <esp_wifi.h>
 #if defined(MQTT)
@@ -27,7 +41,6 @@ extern "C" {
 #include <utils.h>
 
 #if defined(ESP32)
-//  #include <picoMQTT.h> 	
   #include <TickerUsESP32.h>
   #define MAXCMDS 50
 #endif
@@ -137,7 +150,7 @@ inline void onMqttConnect(bool sessionPresent) {
   inline void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) {
     if (topic[0] == '\0') return;
 
-    /*Static*/JsonDocument/*<200>*/ doc;
+    JsonDocument doc;
 
 	  payload[len] = '\0';
 
@@ -225,15 +238,24 @@ inline void WiFiEvent(WiFiEvent_t event) {
 
 // using Tokens = std::vector<std::string>;
 namespace Cmd {
+
   inline char _rxbuffer[512];
   inline uint8_t _len = 0;
   inline uint8_t _avail = 0;
-//  bool receivingSerial = false;
+
+
+    void createCommands();
+
+    inline bool verbosity = true;
+    inline bool pairMode = false;
+    inline bool scanMode = false;
+
 
 #if defined(ESP32)
       inline TimersUS::TickerUsESP32 kbd_tick;
 #endif
 
+    inline TimerHandle_t consoleTimer;
 
   inline bool addHandler(char *cmd, char *description, void (*handler)(Tokens*)) {
     for (uint8_t idx=0; idx<MAXCMDS; ++idx) {
@@ -306,20 +328,22 @@ namespace Cmd {
   }
   
   inline void init() {
+    
     #if defined(MQTT)
       mqttClient.setClientId("iown");
-     mqttClient.setCredentials("user", "passwd");
-     mqttClient.setServer(MQTT_SERVER, 1883);
-     mqttClient.onConnect(onMqttConnect);
-    mqttClient.onMessage(onMqttMessage);
-    mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(2000), pdFALSE, nullptr, reinterpret_cast<TimerCallbackFunction_t>(connectToMqtt));
+      mqttClient.setCredentials("user", "passwd");
+      mqttClient.setServer(MQTT_SERVER, 1883);
+      mqttClient.onConnect(onMqttConnect);
+      mqttClient.onMessage(onMqttMessage);
+      mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(5000), pdFALSE, nullptr, reinterpret_cast<TimerCallbackFunction_t>(connectToMqtt));
     #endif
 
-    wifiReconnectTimer = xTimerCreate("wifiTimer", pdMS_TO_TICKS(2000), pdFALSE, nullptr, reinterpret_cast<TimerCallbackFunction_t>(connectToWifi));
+    wifiReconnectTimer = xTimerCreate("wifiTimer", pdMS_TO_TICKS(5000), pdFALSE, nullptr, reinterpret_cast<TimerCallbackFunction_t>(connectToWifi));
 
     WiFi.onEvent(WiFiEvent);
     connectToWifi();
 
+//    consoleTimer = xTimerCreate("consoleTimer", pdMS_TO_TICKS(500), pdFALSE, nullptr, reinterpret_cast<TimerCallbackFunction_t>(cmdFuncHandler));
     kbd_tick.attach_ms(500, cmdFuncHandler);
 
   }  
