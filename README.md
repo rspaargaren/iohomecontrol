@@ -44,4 +44,43 @@ _After any other changes:_
 
 [^3]: Decoding can be verbose (RSSI, Timing, ...)
 
+## Web Interface (Experimental)
+
+This project now includes an experimental web interface to control IOHC devices.
+
+### Setup & Access
+
+1.  **Configure WiFi:**
+    *   Open `src/main.cpp`.
+    *   Locate the `YOUR_SSID` and `YOUR_PASSWORD` placeholders.
+    *   Replace them with your actual WiFi network SSID and password.
+
+2.  **Build and Upload Filesystem:**
+    *   The web interface files (`index.html`, `style.css`, `script.js`) are located in `extras/web_interface_data/`.
+    *   These files need to be uploaded to the ESP32's LittleFS filesystem.
+    *   Using PlatformIO:
+        *   First, build the filesystem image: `pio run --target buildfs` (or use the PlatformIO IDE option for building the filesystem image).
+        *   Then, upload the filesystem image: `pio run --target uploadfs` (or use the PlatformIO IDE option for uploading).
+    *   **Note:** You only need to rebuild and re-upload the filesystem image if you make changes to the files in `extras/web_interface_data/`.
+
+3.  **Build and Upload Firmware:**
+    *   Build and upload the main firmware to your ESP32 as usual using PlatformIO (`pio run --target upload` or via the IDE).
+
+4.  **Find ESP32 IP Address:**
+    *   After uploading, open the Serial Monitor.
+    *   When the ESP32 connects to your WiFi network, it will print its IP address. Look for a line like: `Connected to WiFi. IP Address: XXX.XXX.X.XXX`.
+
+5.  **Access the Interface:**
+    *   Open a web browser on a device connected to the same WiFi network as your ESP32.
+    *   Navigate to the IP address you found in the Serial Monitor (e.g., `http://XXX.XXX.X.XXX`).
+
+### Usage
+
+The web interface allows you to:
+
+*   **View a list of devices:** The device list is currently populated with placeholder examples. (Future development will integrate this with actual detected/configured devices).
+*   **Send commands:** Select a device, type a command string (e.g., `setTemp 21.0`), and click "Send". (Command processing is currently a placeholder and will acknowledge receipt).
+
+This feature is under development, and functionality will be expanded in the future.
+
 #### **License**

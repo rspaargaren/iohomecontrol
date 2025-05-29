@@ -29,6 +29,10 @@
 #include <iohcCozyDevice2W.h>
 #include <iohcOtherDevice2W.h>
 
+#include "include/web_server_handler.h"
+#include "LittleFS.h"
+#include <WiFi.h> // Assuming WiFi is used and initialized elsewhere or will be here.
+
 extern "C" {
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -69,8 +73,39 @@ void setup() {
 
     // Mount LittleFS filesystem
 #if defined(ESP32)
-    LittleFS.begin();
+    // LittleFS.begin(); // Original call, replaced by new init below
+    if(!LittleFS.begin()){
+        Serial.println("An Error has occurred while mounting LittleFS");
+        // Handle error appropriately, maybe by halting or indicating failure
+        return; 
+    }
+    Serial.println("LittleFS mounted successfully");
 #endif
+
+    // --- WiFi Setup (Example - replace with your actual WiFi setup) ---
+    const char* ssid = "YOUR_SSID"; // REPLACE with your WiFi SSID
+    const char* password = "YOUR_PASSWORD"; // REPLACE with your WiFi Password
+
+    WiFi.begin(ssid, password);
+    Serial.print("Connecting to WiFi...");
+    int retries = 0;
+    while (WiFi.status() != WL_CONNECTED && retries < 30) { // Retry for 15 seconds
+        delay(500);
+        Serial.print(".");
+        retries++;
+    }
+    Serial.println();
+
+    if (WiFi.status() == WL_CONNECTED) {
+        Serial.print("Connected to WiFi. IP Address: ");
+        Serial.println(WiFi.localIP());
+        // --- End WiFi Setup ---
+
+        // Call setupWebServer() only if WiFi connected
+        setupWebServer();
+    } else {
+        Serial.println("Failed to connect to WiFi. Web server not started.");
+    }
 
     radioInstance = IOHC::iohcRadio::getInstance();
     radioInstance->start(MAX_FREQS, frequencies, 0, msgRcvd, nullptr); //publishMsg); //msgArchive); //, msgRcvd);
@@ -578,4 +613,5 @@ void txUserBuffer(Tokens *cmd) {
 }
 
 void loop() {
+    // loopWebServer(); // For ESPAsyncWebServer, this is typically not needed.
 }
