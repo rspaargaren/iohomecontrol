@@ -103,6 +103,20 @@ inline void onMqttConnect(bool sessionPresent) {
   mqttClient.subscribe("iown/heatState", 0); 
 
   mqttClient.publish("iown/Frame", 0, false, R"({"cmd": "powerOn", "_data": "Gateway"})", 38);
+  // Home Assistant MQTT discovery for a generic sensor showing last frame
+  {
+    StaticJsonDocument<256> configDoc;
+    configDoc["name"] = "IOHC Frame";
+    configDoc["state_topic"] = "homeassistant/sensor/iohc_frame/state";
+    configDoc["unique_id"] = "iohc_frame";
+    configDoc["json_attributes_topic"] = "homeassistant/sensor/iohc_frame/state";
+    JsonObject device = configDoc.createNestedObject("device");
+    device["identifiers"] = "iohc_gateway";
+    device["name"] = "IO Homecontrol Gateway";
+    std::string cfg;
+    size_t cfgLen = serializeJson(configDoc, cfg);
+    mqttClient.publish("homeassistant/sensor/iohc_frame/config", 0, true, cfg.c_str(), cfgLen);
+  }
   // Serial.println("Publishing at QoS 0");
   // uint16_t packetIdPub1 = mqttClient.publish("test/lol", 1, true, "test 2");
   // Serial.print("Publishing at QoS 1, packetId: ");
@@ -210,7 +224,8 @@ inline void WiFiEvent(WiFiEvent_t event) {
         Serial.println("WiFi connected");
         //byte mac[6];
         Serial.printf(WiFi.macAddress().c_str());
-        Serial.printf(" IP address: %s ", WiFi.localIP().toString());
+        Serial.printf(" IP address: %s ", WiFi.localIP().toString().c_str());
+        xTimerStop(wifiReconnectTimer, 0);
         #if defined(MQTT)
           connectToMqtt();
         #endif
@@ -331,7 +346,7 @@ namespace Cmd {
     
     #if defined(MQTT)
       mqttClient.setClientId("iown");
-      mqttClient.setCredentials("user", "passwd");
+      mqttClient.setCredentials(MQTT_USER, MQTT_PASSWD);
       mqttClient.setServer(MQTT_SERVER, 1883);
       mqttClient.onConnect(onMqttConnect);
       mqttClient.onMessage(onMqttMessage);

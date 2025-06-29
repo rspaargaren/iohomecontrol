@@ -29,9 +29,28 @@
 #include <iohcCozyDevice2W.h>
 #include <iohcOtherDevice2W.h>
 
-#include "include/web_server_handler.h"
+#include <web_server_handler.h>
 #include "LittleFS.h"
 #include <WiFi.h> // Assuming WiFi is used and initialized elsewhere or will be here.
+
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include <Wire.h>
+//#include "HT_SSD1306Wire.h"
+
+// OLED configuration for Heltec WiFi LoRa 32 V2
+#define OLED_ADDRESS 0x3c
+#define OLED_SDA     4
+#define OLED_SCL     15
+#define OLED_RST     16
+#define SCREEN_WIDTH 128 // OLED display width
+#define SCREEN_HEIGHT 64 // OLED display height
+
+
+//SSD1306Wire display(OLED_ADDRESS, 400000, OLED_SDA, OLED_SCL, GEOMETRY_128_64, OLED_RST);
+
+// Create display object
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RST);
 
 extern "C" {
 #include "freertos/FreeRTOS.h"
@@ -42,7 +61,7 @@ void txUserBuffer(Tokens *cmd);
 void testKey();
 void scanDump();
 bool publishMsg(IOHC::iohcPacket *iohc);
-bool IRAM_ATTR msgRcvd(IOHC::iohcPacket *iohc);
+bool msgRcvd(IOHC::iohcPacket *iohc);
 bool msgArchive(IOHC::iohcPacket *iohc);
 
 uint8_t keyCap[16] = {};
@@ -67,6 +86,22 @@ using namespace IOHC;
 
 void setup() {
     Serial.begin(115200);
+    
+    Wire.begin(OLED_SDA, OLED_SCL);  // SDA = 21, SCL = 22 (ESP32 default, change if needed)
+
+    // Initialize display
+    if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+      Serial.println(F("SSD1306 allocation failed"));
+    for (;;);
+    }
+
+    //display.init();
+    //display.setFont(ArialMT_Plain_10);
+
+    //Heltec.begin(true /*DisplayEnable*/, false /*LoRaEnable*/, true /*SerialEnable*/);
+    //Heltec.display->clear();
+    //Heltec.display->drawString(0, 0, "Booting...");
+    //Heltec.display->display();
 
     pinMode(RX_LED, OUTPUT); // Blink this LED
     digitalWrite(RX_LED, 1);
@@ -82,11 +117,10 @@ void setup() {
     Serial.println("LittleFS mounted successfully");
 #endif
 
-    // --- WiFi Setup (Example - replace with your actual WiFi setup) ---
-    const char* ssid = "YOUR_SSID"; // REPLACE with your WiFi SSID
-    const char* password = "YOUR_PASSWORD"; // REPLACE with your WiFi Password
+    // --- WiFi Setup ---
+    // Credentials are defined in include/user_config.h
 
-    WiFi.begin(ssid, password);
+    WiFi.begin(WIFI_SSID, WIFI_PASSWD);
     Serial.print("Connecting to WiFi...");
     int retries = 0;
     while (WiFi.status() != WL_CONNECTED && retries < 30) { // Retry for 15 seconds
@@ -99,6 +133,15 @@ void setup() {
     if (WiFi.status() == WL_CONNECTED) {
         Serial.print("Connected to WiFi. IP Address: ");
         Serial.println(WiFi.localIP());
+
+        display.clearDisplay();
+        display.setTextSize(1);
+        display.setTextColor(SSD1306_WHITE);
+        display.setCursor(0, 0);
+        String ipStr = "IP: " + WiFi.localIP().toString();
+        display.println(ipStr);
+        display.display();
+
         // --- End WiFi Setup ---
 
         // Call setupWebServer() only if WiFi connected
@@ -108,7 +151,7 @@ void setup() {
     }
 
     radioInstance = IOHC::iohcRadio::getInstance();
-    radioInstance->start(MAX_FREQS, frequencies, 0, msgRcvd, nullptr); //publishMsg); //msgArchive); //, msgRcvd);
+    radioInstance->start(MAX_FREQS, frequencies, 0, msgRcvd, publishMsg); //msgArchive); //, msgRcvd);
 
     sysTable = IOHC::iohcSystemTable::getInstance();
 
@@ -162,7 +205,7 @@ void IRAM_ATTR forgePacket(iohcPacket* packet, const std::vector<uint8_t> &toSen
     packet->lock = false;
 }
 
-bool IRAM_ATTR msgRcvd(IOHC::iohcPacket *iohc) {
+bool msgRcvd(IOHC::iohcPacket *iohc) {
     JsonDocument doc;
     doc["type"] = "Unk";
     switch (iohc->payload.packet.header.cmd) {
@@ -405,10 +448,24 @@ bool IRAM_ATTR msgRcvd(IOHC::iohcPacket *iohc) {
         case 0x01:
         case 0x03:
         case 0x19: {
-            //                memorizeSend.memorizedData = toSend;
-            doc["type"] = "Other";
-            otherDevice2W->memorizeOther2W.memorizedCmd = iohc->payload.packet.header.cmd;
-            cozyDevice2W->memorizeSend.memorizedCmd = iohc->payload.packet.header.cmd;
+            if (iohc->payload.packet.header.CtrlByte1.asStruct.Protocol == 1 && iohc->payload.packet.header.cmd == 0x00) {
+                doc["type"] = "1W";
+                uint16_t main = (iohc->payload.packet.msg.p0x00_14.main[0] << 8) | iohc->payload.packet.msg.p0x00_14.main[1];
+                const char *action = "unknown";
+                switch (main) {
+                    case 0x0000: action = "open"; break;
+                    case 0xC800: action = "close"; break;
+                    case 0xD200: action = "stop"; break;
+                    case 0xD803: action = "vent"; break;
+                    case 0x6400: action = "force"; break;
+                    default: break;
+                }
+                doc["action"] = action;
+            } else {
+                doc["type"] = "Other";
+                otherDevice2W->memorizeOther2W.memorizedCmd = iohc->payload.packet.header.cmd;
+                cozyDevice2W->memorizeSend.memorizedCmd = iohc->payload.packet.header.cmd;
+            }
             break;
         }
         case iohcDevice::RECEIVED_GET_NAME_0x50: {
@@ -508,6 +565,7 @@ bool IRAM_ATTR msgRcvd(IOHC::iohcPacket *iohc) {
             break;
     }
 
+    publishMsg(iohc);
     return true;
 }
 
@@ -522,19 +580,38 @@ bool IRAM_ATTR msgRcvd(IOHC::iohcPacket *iohc) {
  * @return The function `publishMsg` is returning `false`.
  */
 bool publishMsg(IOHC::iohcPacket *iohc) {
-    //                if(iohc->payload.packet.header.cmd == 0x20 || iohc->payload.packet.header.cmd == 0x00) {
-    JsonDocument doc; 
+    JsonDocument doc;
+
     doc["type"] = "Cozy";
     doc["from"] = bytesToHexString(iohc->payload.packet.header.target, 3);
     doc["to"] = bytesToHexString(iohc->payload.packet.header.source, 3);
     doc["cmd"] = to_hex_str(iohc->payload.packet.header.cmd).c_str();
     doc["_data"] = bytesToHexString(iohc->payload.buffer + 9, iohc->buffer_length - 9);
+
+    if (iohc->payload.packet.header.CtrlByte1.asStruct.Protocol == 1 &&
+        iohc->payload.packet.header.cmd == 0x00) {
+        uint16_t main =
+                (iohc->payload.packet.msg.p0x00_14.main[0] << 8) |
+                iohc->payload.packet.msg.p0x00_14.main[1];
+        const char *action = "unknown";
+        switch (main) {
+            case 0x0000: action = "open"; break;
+            case 0xC800: action = "close"; break;
+            case 0xD200: action = "stop"; break;
+            case 0xD803: action = "vent"; break;
+            case 0x6400: action = "force"; break;
+            default: break;
+        }
+        doc["type"] = "1W";
+        doc["action"] = action;
+    }
+
     std::string message;
     size_t messageSize = serializeJson(doc, message);
 #if defined(MQTT)
     mqttClient.publish("iown/Frame", 1, false, message.c_str(), messageSize);
+    mqttClient.publish("homeassistant/sensor/iohc_frame/state", 0, false, message.c_str(), messageSize);
 #endif
-    // }
     return false;
 }
 

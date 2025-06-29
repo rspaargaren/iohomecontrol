@@ -533,7 +533,6 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
         JsonDocument doc; 
         for (const auto&r: remotes) {
             // jobj["key"] = bytesToHexString(_key, sizeof(_key));
-//            JsonObject jobj = doc.createNestedObject(bytesToHexString(r.node, sizeof(r.node)));
             auto jobj = doc[bytesToHexString(r.node, sizeof(r.node))].to<JsonObject>();
             jobj["key"] = bytesToHexString(r.key, sizeof(r.key));
 
