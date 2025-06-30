@@ -19,6 +19,33 @@
 #include <iohcOtherDevice2W.h>
 #include <interact.h>
 
+#if defined(MQTT)
+void publishDiscovery(const std::string &id, const std::string &name) {
+    JsonDocument doc;
+    doc["name"] = name;
+    doc["command_topic"] = "iown/" + id + "/set";
+    doc["state_topic"] = "iown/" + id + "/state";
+    doc["unique_id"] = id;
+    doc["payload_open"] = "OPEN";
+    doc["payload_close"] = "CLOSE";
+    doc["payload_stop"] = "STOP";
+    doc["device_class"] = "blind";
+
+    std::string payload;
+    size_t len = serializeJson(doc, payload);
+
+    std::string topic = "homeassistant/cover/" + id + "/config";
+    mqttClient.publish(topic.c_str(), 0, true, payload.c_str(), len);
+}
+
+void handleMqttConnect() {
+    auto remotes = IOHC::iohcRemote1W::getInstance()->listRemotes();
+    for (const auto &p : remotes) {
+        publishDiscovery(p.first, p.second);
+    }
+}
+#endif
+
 namespace Cmd {
 /**
  * The function `createCommands()` initializes and adds various command handlers for controlling

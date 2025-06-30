@@ -20,6 +20,8 @@
 #include <interact.h>
 #include <iohcDevice.h>
 #include <vector>
+#include <string>
+#include <utility>
 
 #define IOHC_1W_REMOTE  "/1W.json"
 
@@ -53,6 +55,8 @@ namespace IOHC {
 //        void scanDump() override { }
 
         static void forgePacket(iohcPacket* packet, uint16_t typn);
+
+        std::vector<std::pair<std::string, std::string>> listRemotes() const;
 
     private:
         iohcRemote1W();
