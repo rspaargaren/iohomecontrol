@@ -44,6 +44,14 @@ namespace IOHC {
 
     class iohcRemote1W : public iohcDevice {
     public:
+        struct remote {
+            address node{};
+            uint16_t sequence{};
+            uint8_t key[16]{};
+            std::vector<uint8_t> type{};
+            uint8_t manufacturer{};
+            std::string description;
+        };
         static iohcRemote1W* getInstance();
         ~iohcRemote1W() override = default;
 
@@ -63,14 +71,7 @@ namespace IOHC {
 
     protected:
         int8_t target[3];
-        struct remote {
-            address node{};
-            uint16_t sequence{};
-            uint8_t key[16]{};
-            std::vector<uint8_t> type{};
-            uint8_t manufacturer{};
-            std::string description;
-        };
+
 
         std::vector<remote> remotes;
 
