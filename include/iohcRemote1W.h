@@ -56,7 +56,9 @@ namespace IOHC {
 
         static void forgePacket(iohcPacket* packet, uint16_t typn);
 
+
         std::vector<std::pair<std::string, std::string>> listRemotes() const;
+
 
     private:
         iohcRemote1W();

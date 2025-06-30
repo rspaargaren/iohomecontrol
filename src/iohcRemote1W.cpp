@@ -564,6 +564,7 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
         return true;
     }
 
+
     std::vector<std::pair<std::string, std::string>> iohcRemote1W::listRemotes() const {
         std::vector<std::pair<std::string, std::string>> result;
         result.reserve(remotes.size());
@@ -571,5 +572,6 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
             result.emplace_back(bytesToHexString(r.node, sizeof(r.node)), r.description);
         }
         return result;
+
     }
 }
