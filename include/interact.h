@@ -71,6 +71,9 @@ using Tokens = std::vector<std::string>;
 inline AsyncMqttClient mqttClient;
 inline TimerHandle_t mqttReconnectTimer;
 
+void publishDiscovery(const std::string &id, const std::string &name);
+void handleMqttConnect();
+
 inline  void connectToMqtt() {
     Serial.println("Connecting to MQTT...");
     // //        esp_log_level_set("mqtt_client", ESP_LOG_VERBOSE);
@@ -103,6 +106,7 @@ inline void onMqttConnect(bool sessionPresent) {
   mqttClient.subscribe("iown/heatState", 0); 
 
   mqttClient.publish("iown/Frame", 0, false, R"({"cmd": "powerOn", "_data": "Gateway"})", 38);
+  handleMqttConnect();
   // Serial.println("Publishing at QoS 0");
   // uint16_t packetIdPub1 = mqttClient.publish("test/lol", 1, true, "test 2");
   // Serial.print("Publishing at QoS 1, packetId: ");
