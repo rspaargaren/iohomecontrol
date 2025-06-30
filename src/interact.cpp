@@ -18,6 +18,35 @@
 #include <iohcCozyDevice2W.h>
 #include <iohcOtherDevice2W.h>
 #include <interact.h>
+#include <iohcCryptoHelpers.h>
+
+#if defined(MQTT)
+void publishDiscovery(const std::string &id, const std::string &name) {
+    JsonDocument doc;
+    doc["name"] = name;
+    doc["command_topic"] = "iown/" + id + "/set";
+    doc["state_topic"] = "iown/" + id + "/state";
+    doc["unique_id"] = id;
+    doc["payload_open"] = "OPEN";
+    doc["payload_close"] = "CLOSE";
+    doc["payload_stop"] = "STOP";
+    doc["device_class"] = "blind";
+
+    std::string payload;
+    size_t len = serializeJson(doc, payload);
+
+    std::string topic = "homeassistant/cover/" + id + "/config";
+    mqttClient.publish(topic.c_str(), 0, true, payload.c_str(), len);
+}
+
+void handleMqttConnect() {
+    const auto &remotes = IOHC::iohcRemote1W::getInstance()->getRemotes();
+    for (const auto &r : remotes) {
+        std::string id = bytesToHexString(r.node, sizeof(r.node));
+        publishDiscovery(id, r.description);
+    }
+}
+#endif
 
 namespace Cmd {
 /**
