@@ -33,11 +33,14 @@
 #include "LittleFS.h"
 #include <WiFi.h> // Assuming WiFi is used and initialized elsewhere or will be here.
 
+#ifdef HELTEC
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <Wire.h>
-//#include "HT_SSD1306Wire.h"
+////#include "HT_SSD1306Wire.h"
+#endif
 
+#ifdef HELTEC
 // OLED configuration for Heltec WiFi LoRa 32 V2
 #define OLED_ADDRESS 0x3c
 #define OLED_SDA     4
@@ -45,12 +48,15 @@
 #define OLED_RST     16
 #define SCREEN_WIDTH 128 // OLED display width
 #define SCREEN_HEIGHT 64 // OLED display height
+#endif
 
 
+#ifdef HELTEC
 //SSD1306Wire display(OLED_ADDRESS, 400000, OLED_SDA, OLED_SCL, GEOMETRY_128_64, OLED_RST);
 
 // Create display object
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RST);
+#endif
 
 extern "C" {
 #include "freertos/FreeRTOS.h"
@@ -87,13 +93,15 @@ using namespace IOHC;
 void setup() {
     Serial.begin(115200);
     
+#ifdef HELTEC
     Wire.begin(OLED_SDA, OLED_SCL);  // SDA = 21, SCL = 22 (ESP32 default, change if needed)
 
     // Initialize display
     if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
       Serial.println(F("SSD1306 allocation failed"));
-    for (;;);
+      for (;;);
     }
+#endif
 
     //display.init();
     //display.setFont(ArialMT_Plain_10);
@@ -134,6 +142,7 @@ void setup() {
         Serial.print("Connected to WiFi. IP Address: ");
         Serial.println(WiFi.localIP());
 
+#ifdef HELTEC
         display.clearDisplay();
         display.setTextSize(1);
         display.setTextColor(SSD1306_WHITE);
@@ -141,6 +150,7 @@ void setup() {
         String ipStr = "IP: " + WiFi.localIP().toString();
         display.println(ipStr);
         display.display();
+#endif
 
         // --- End WiFi Setup ---
 
