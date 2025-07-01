@@ -17,7 +17,6 @@
 #include <board-config.h>
 #include <user_config.h>
 
-#include <interact.h>
 #include <crypto2Wutils.h>
 #include <iohcCryptoHelpers.h>
 #include <iohcRadio.h>
@@ -28,6 +27,7 @@
 #include <iohcRemote1W.h>
 #include <iohcCozyDevice2W.h>
 #include <iohcOtherDevice2W.h>
+#include <interact.h>
 
 #include <web_server_handler.h>
 #include "LittleFS.h"
