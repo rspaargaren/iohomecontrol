@@ -22,9 +22,10 @@
 #include <board-config.h>
 #include <user_config.h>
 
-#include <vector> 
-#include <sstream> 
+#include <vector>
+#include <sstream>
 #include <cstring>
+#include <algorithm>
 
 extern "C" {
 	#include "freertos/FreeRTOS.h"
@@ -168,27 +169,50 @@ inline void onMqttConnect(bool sessionPresent) {
   inline void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) {
     if (topic[0] == '\0') return;
 
-    JsonDocument doc;
-
-	  payload[len] = '\0';
-
+    payload[len] = '\0';
     Serial.printf("Received MQTT %s %s %d\n", topic, payload, len);
 
+    std::string topicStr(topic);
+    std::string payloadStr(payload);
+
+    // Handle Home Assistant cover commands (iown/<id>/set)
+    if (topicStr.rfind("iown/", 0) == 0 && topicStr.find("/set", 5) != std::string::npos) {
+      std::string id = topicStr.substr(5, topicStr.find("/set", 5) - 5);
+      const auto &remotes = IOHC::iohcRemote1W::getInstance()->getRemotes();
+      auto it = std::find_if(remotes.begin(), remotes.end(), [&](const auto &r){
+        return bytesToHexString(r.node, sizeof(r.node)) == id;
+      });
+      if (it != remotes.end()) {
+        Tokens t;
+        std::transform(payloadStr.begin(), payloadStr.end(), payloadStr.begin(), ::tolower);
+        t.push_back(payloadStr);
+        t.push_back(it->description);
+
+        Serial.printf("MQTT exec %s on %s (%s)\n", payloadStr.c_str(), it->description.c_str(), id.c_str());
+
+        if (payloadStr == "open") IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Open, &t);
+        else if (payloadStr == "close") IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Close, &t);
+        else if (payloadStr == "stop") IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Stop, &t);
+        else if (payloadStr == "vent") IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Vent, &t);
+        else if (payloadStr == "force") IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::ForceOpen, &t);
+        else Serial.printf("*> MQTT Unknown %s <*\n", payloadStr.c_str());
+      } else {
+        Serial.printf("*> MQTT Unknown device %s <*\n", id.c_str());
+      }
+      return;
+    }
+
+    JsonDocument doc;
     if (deserializeJson(doc, payload) != DeserializationError::Ok) {
       Serial.println(F("Failed to parse JSON"));
       return;
     }
 
     const char *data = doc["_data"];
-
-    // Calcul de la taille du tampon nécessaire
-    size_t bufferSize = strlen(topic) + len + 7; // +5 word "MQTT " +2 pour l'espace et le caractère nul de fin de chaîne
-    // Allouer le tampon
+    size_t bufferSize = strlen(topic) + strlen(data) + 7;
     char message[bufferSize];
-    if (len == 0) {snprintf(message, sizeof(message), "MQTT %s", topic); }
-    // Utiliser snprintf pour éviter les dépassements de tampon
+    if (!data) snprintf(message, sizeof(message), "MQTT %s", topic);
     else snprintf(message, sizeof(message), "MQTT %s %s", topic, data);
-      
     mqttFuncHandler(message);
   }
 
