@@ -97,4 +97,8 @@ Example payload for `B60D1A`:
 
 Configure your MQTT broker settings in `include/user_config.h` (`MQTT_SERVER`, `MQTT_USER`, `MQTT_PASSWD`). After boot and connection, Home Assistant should automatically discover the covers.
 
+Once discovery is complete you can control a blind by publishing `OPEN`, `CLOSE`
+or `STOP` to `iown/<id>/set`. The firmware listens on these topics and issues the
+corresponding command to the device.
+
 #### **License**
