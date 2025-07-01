@@ -188,6 +188,7 @@ inline void onMqttConnect(bool sessionPresent) {
         t.push_back(payloadStr);
         t.push_back(it->description);
 
+
         Serial.printf("MQTT exec %s on %s (%s)\n", payloadStr.c_str(), it->description.c_str(), id.c_str());
 
         if (payloadStr == "open") IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Open, &t);
