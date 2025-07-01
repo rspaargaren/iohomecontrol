@@ -20,7 +20,7 @@
 #include <string>
 #include <vector>
 #include <iohcDevice.h>
-#include <interact.h>
+#include <tokens.h>
 
 #define OTHER_2W_FILE  "/Other2W.json"
 

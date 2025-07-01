@@ -40,6 +40,11 @@ extern "C" {
 #endif
 
 #include <utils.h>
+#include <tokens.h>
+
+namespace IOHC {
+  class iohcRemote1W;
+}
 
 #if defined(ESP32)
   #include <TickerUsESP32.h>
@@ -48,8 +53,6 @@ extern "C" {
 
 inline TimerHandle_t wifiReconnectTimer;
 inline WiFiClient wifiClient;                 // Create an ESP32 WiFiClient class to connect to the MQTT server
-
-using Tokens = std::vector<std::string>;
 
   inline void tokenize(std::string const &str, const char delim, Tokens &out) {
       // construct a stream from the string 
@@ -178,6 +181,7 @@ inline void onMqttConnect(bool sessionPresent) {
     // Handle Home Assistant cover commands (iown/<id>/set)
     if (topicStr.rfind("iown/", 0) == 0 && topicStr.find("/set", 5) != std::string::npos) {
       std::string id = topicStr.substr(5, topicStr.find("/set", 5) - 5);
+      std::transform(id.begin(), id.end(), id.begin(), ::tolower);
       const auto &remotes = IOHC::iohcRemote1W::getInstance()->getRemotes();
       auto it = std::find_if(remotes.begin(), remotes.end(), [&](const auto &r){
         return bytesToHexString(r.node, sizeof(r.node)) == id;

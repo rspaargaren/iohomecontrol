@@ -17,9 +17,9 @@
 #ifndef IOHC_1W_DEVICE_H
 #define IOHC_1W_DEVICE_H
 
-#include <interact.h>
 #include <iohcDevice.h>
 #include <vector>
+#include <tokens.h>
 
 #define IOHC_1W_REMOTE  "/1W.json"
 
