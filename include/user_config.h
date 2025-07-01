@@ -24,7 +24,7 @@
 inline const char *wifi_ssid = "";
 inline const char *wifi_passwd = "";
 
-//#define MQTT
+#define MQTT
 #define MQTT_SERVER "192.168.1.40"
 #define MQTT_USER "user"
 #define MQTT_PASSWD "passwd"
