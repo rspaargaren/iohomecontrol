@@ -40,6 +40,11 @@ extern "C" {
 #endif
 
 #include <utils.h>
+#include <tokens.h>
+
+namespace IOHC {
+  class iohcRemote1W;
+}
 
 #if defined(ESP32)
   #include <TickerUsESP32.h>
@@ -48,8 +53,6 @@ extern "C" {
 
 inline TimerHandle_t wifiReconnectTimer;
 inline WiFiClient wifiClient;                 // Create an ESP32 WiFiClient class to connect to the MQTT server
-
-using Tokens = std::vector<std::string>;
 
   inline void tokenize(std::string const &str, const char delim, Tokens &out) {
       // construct a stream from the string 
