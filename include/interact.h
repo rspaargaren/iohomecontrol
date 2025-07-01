@@ -178,6 +178,7 @@ inline void onMqttConnect(bool sessionPresent) {
     // Handle Home Assistant cover commands (iown/<id>/set)
     if (topicStr.rfind("iown/", 0) == 0 && topicStr.find("/set", 5) != std::string::npos) {
       std::string id = topicStr.substr(5, topicStr.find("/set", 5) - 5);
+      std::transform(id.begin(), id.end(), id.begin(), ::tolower);
       const auto &remotes = IOHC::iohcRemote1W::getInstance()->getRemotes();
       auto it = std::find_if(remotes.begin(), remotes.end(), [&](const auto &r){
         return bytesToHexString(r.node, sizeof(r.node)) == id;
