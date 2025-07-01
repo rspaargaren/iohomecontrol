@@ -169,6 +169,7 @@ inline void onMqttConnect(bool sessionPresent) {
   inline void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) {
     if (topic[0] == '\0') return;
 
+
     std::string topicStr(topic);
     std::string payloadStr(payload, len);
     Serial.printf("Received MQTT %s %s %d\n", topicStr.c_str(), payloadStr.c_str(), len);
@@ -200,6 +201,7 @@ inline void onMqttConnect(bool sessionPresent) {
       return;
     }
 
+
     JsonDocument doc;
     if (deserializeJson(doc, payload) != DeserializationError::Ok) {
       Serial.println(F("Failed to parse JSON"));
@@ -207,7 +209,9 @@ inline void onMqttConnect(bool sessionPresent) {
     }
 
     const char *data = doc["_data"];
+
     size_t bufferSize = strlen(topic) + (data ? strlen(data) : 0) + 7;
+
     char message[bufferSize];
     if (!data) snprintf(message, sizeof(message), "MQTT %s", topic);
     else snprintf(message, sizeof(message), "MQTT %s %s", topic, data);
