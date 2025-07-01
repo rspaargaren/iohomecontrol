@@ -44,6 +44,9 @@ void handleMqttConnect() {
     for (const auto &r : remotes) {
         std::string id = bytesToHexString(r.node, sizeof(r.node));
         publishDiscovery(id, r.description);
+        std::string t = "iown/" + id + "/set";
+        mqttClient.subscribe(t.c_str(), 0);
+        Serial.printf("Subscribed to %s\n", t.c_str());
     }
 }
 #endif
