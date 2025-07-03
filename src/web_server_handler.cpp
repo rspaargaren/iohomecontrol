@@ -24,6 +24,10 @@ const int numDevices = sizeof(devices) / sizeof(Device);
 
 void handleApiDevices(AsyncWebServerRequest *request) {
     AsyncJsonResponse* response = new AsyncJsonResponse();
+    if(!response){
+        request->send(500, "text/plain", "Out of memory");
+        return;
+    }
     JsonArray root = response->getRoot().to<JsonArray>();
 
     for (int i = 0; i < numDevices; i++) {
@@ -64,6 +68,10 @@ void handleApiCommand(AsyncWebServerRequest *request, JsonVariant &json) {
     bool success = true;
 
     AsyncJsonResponse* response = new AsyncJsonResponse();
+    if(!response){
+        request->send(500, "application/json", "{\"success\":false,\"message\":\"OOM\"}");
+        return;
+    }
     JsonObject root = response->getRoot().to<JsonObject>();
     root["success"] = success;
     root["message"] = message;
