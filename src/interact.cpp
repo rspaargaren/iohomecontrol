@@ -41,6 +41,8 @@ void publishDiscovery(const std::string &id, const std::string &name) {
 
     std::string topic = "homeassistant/cover/" + id + "/config";
     mqttClient.publish(topic.c_str(), 0, true, payload.c_str(), len);
+    topic = "iown/" + id + "/availability";
+    mqttClient.setWill(topic.c_str(), 0, true, "offline"); 
 }
 
 void publishHeartbeat(TimerHandle_t) {
