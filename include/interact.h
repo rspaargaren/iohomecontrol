@@ -75,6 +75,7 @@ inline WiFiClient wifiClient;                 // Create an ESP32 WiFiClient clas
 inline AsyncMqttClient mqttClient;
 inline TimerHandle_t mqttReconnectTimer;
 inline TimerHandle_t heartbeatTimer;
+constexpr char AVAILABILITY_TOPIC[] = "iown/status";
 
 void publishDiscovery(const std::string &id, const std::string &name);
 void handleMqttConnect();
@@ -94,6 +95,7 @@ inline  void connectToMqtt() {
     // esp_mqtt_client_handle_t client = esp_mqtt_client_init(&mqtt_cfg);
     // esp_mqtt_client_reconnect(client);
     // //    esp_mqtt_client_start(client);
+    mqttClient.setWill(AVAILABILITY_TOPIC, 0, true, "offline");
     mqttClient.connect();
   }
 inline void onMqttConnect(bool sessionPresent) {
