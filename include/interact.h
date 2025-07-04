@@ -65,16 +65,35 @@ inline void updateDisplayStatus() {
   display.setCursor(0, 0);
   display.print("WiFi: ");
   switch (wifiStatus) {
-    case ConnState::Connected: display.println("connected"); break;
-    case ConnState::Connecting: display.println("connecting"); break;
-    default: display.println("disconnected"); break;
+    case ConnState::Connected:
+      display.println("connected");
+      break;
+    case ConnState::Connecting:
+      display.println("connecting");
+      break;
+    default:
+      display.println("disconnected");
+      break;
   }
   display.setCursor(0, 10);
+  display.print("IP: ");
+  if (wifiStatus == ConnState::Connected) {
+    display.println(WiFi.localIP());
+  } else {
+    display.println("-");
+  }
+  display.setCursor(0, 20);
   display.print("MQTT: ");
   switch (mqttStatus) {
-    case ConnState::Connected: display.println("connected"); break;
-    case ConnState::Connecting: display.println("connecting"); break;
-    default: display.println("disconnected"); break;
+    case ConnState::Connected:
+      display.println("connected");
+      break;
+    case ConnState::Connecting:
+      display.println("connecting");
+      break;
+    default:
+      display.println("disconnected");
+      break;
   }
   display.display();
 }
