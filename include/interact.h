@@ -74,9 +74,11 @@ inline WiFiClient wifiClient;                 // Create an ESP32 WiFiClient clas
 #if defined(MQTT)
 inline AsyncMqttClient mqttClient;
 inline TimerHandle_t mqttReconnectTimer;
+inline TimerHandle_t heartbeatTimer;
 
 void publishDiscovery(const std::string &id, const std::string &name);
 void handleMqttConnect();
+void publishHeartbeat(TimerHandle_t timer);
 
 inline  void connectToMqtt() {
     Serial.println("Connecting to MQTT...");
