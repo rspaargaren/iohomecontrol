@@ -55,6 +55,7 @@ namespace IOHC {
 inline TimerHandle_t wifiReconnectTimer;
 inline WiFiClient wifiClient;                 // Create an ESP32 WiFiClient class to connect to the MQTT server
 extern Adafruit_SSD1306 display;
+
 enum class ConnState { Connecting, Connected, Disconnected };
 inline ConnState wifiStatus = ConnState::Connecting;
 inline ConnState mqttStatus = ConnState::Disconnected;
@@ -99,6 +100,7 @@ inline void updateDisplayStatus() {
 inline AsyncMqttClient mqttClient;
 inline TimerHandle_t mqttReconnectTimer;
 inline TimerHandle_t heartbeatTimer;
+constexpr char AVAILABILITY_TOPIC[] = "iown/status";
 
 void publishDiscovery(const std::string &id, const std::string &name);
 void handleMqttConnect();
@@ -106,14 +108,18 @@ void publishHeartbeat(TimerHandle_t timer);
 
 inline  void connectToMqtt() {
     Serial.println("Connecting to MQTT...");
+
     mqttStatus = ConnState::Connecting;
     updateDisplayStatus();
+
     mqttClient.connect();
   }
 inline void onMqttConnect(bool sessionPresent) {
   Serial.println("Connected to MQTT.");
+
   mqttStatus = ConnState::Connected;
   updateDisplayStatus();
+
   mqttClient.subscribe("iown/powerOn", 0);
   mqttClient.subscribe("iown/setPresence", 0);
   mqttClient.subscribe("iown/setWindow", 0);
@@ -154,8 +160,10 @@ inline void onMqttConnect(bool sessionPresent) {
 
 inline void onMqttDisconnect(AsyncMqttClientDisconnectReason) {
   Serial.println("Disconnected from MQTT.");
+
   mqttStatus = ConnState::Disconnected;
   updateDisplayStatus();
+
   xTimerStart(mqttReconnectTimer, 0);
 }
   inline void mqttFuncHandler(const char *_cmd) {
