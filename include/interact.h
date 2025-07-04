@@ -56,6 +56,29 @@ inline TimerHandle_t wifiReconnectTimer;
 inline WiFiClient wifiClient;                 // Create an ESP32 WiFiClient class to connect to the MQTT server
 extern Adafruit_SSD1306 display;
 
+enum class ConnState { Connecting, Connected, Disconnected };
+inline ConnState wifiStatus = ConnState::Connecting;
+inline ConnState mqttStatus = ConnState::Disconnected;
+
+inline void updateDisplayStatus() {
+  display.clearDisplay();
+  display.setCursor(0, 0);
+  display.print("WiFi: ");
+  switch (wifiStatus) {
+    case ConnState::Connected: display.println("connected"); break;
+    case ConnState::Connecting: display.println("connecting"); break;
+    default: display.println("disconnected"); break;
+  }
+  display.setCursor(0, 10);
+  display.print("MQTT: ");
+  switch (mqttStatus) {
+    case ConnState::Connected: display.println("connected"); break;
+    case ConnState::Connecting: display.println("connecting"); break;
+    default: display.println("disconnected"); break;
+  }
+  display.display();
+}
+
   inline void tokenize(std::string const &str, const char delim, Tokens &out) {
       // construct a stream from the string 
       std::stringstream ss(str); 
@@ -85,17 +108,18 @@ void publishHeartbeat(TimerHandle_t timer);
 
 inline  void connectToMqtt() {
     Serial.println("Connecting to MQTT...");
-    display.setCursor(0, 10);
-    display.println("MQTT: connecting");
-    display.display();
-    mqttClient.setWill(AVAILABILITY_TOPIC, 0, true, "offline");
+
+    mqttStatus = ConnState::Connecting;
+    updateDisplayStatus();
+
     mqttClient.connect();
   }
 inline void onMqttConnect(bool sessionPresent) {
   Serial.println("Connected to MQTT.");
-  display.setCursor(0, 10);
-  display.println("MQTT: connected");
-  display.display();
+
+  mqttStatus = ConnState::Connected;
+  updateDisplayStatus();
+
   mqttClient.subscribe("iown/powerOn", 0);
   mqttClient.subscribe("iown/setPresence", 0);
   mqttClient.subscribe("iown/setWindow", 0);
@@ -136,9 +160,10 @@ inline void onMqttConnect(bool sessionPresent) {
 
 inline void onMqttDisconnect(AsyncMqttClientDisconnectReason) {
   Serial.println("Disconnected from MQTT.");
-  display.setCursor(0, 10);
-  display.println("MQTT: disconnected");
-  display.display();
+
+  mqttStatus = ConnState::Disconnected;
+  updateDisplayStatus();
+
   xTimerStart(mqttReconnectTimer, 0);
 }
   inline void mqttFuncHandler(const char *_cmd) {
@@ -230,6 +255,8 @@ inline void onMqttDisconnect(AsyncMqttClientDisconnectReason) {
 
   inline void connectToWifi() {
     Serial.println("Connecting to Wi-Fi...");
+    wifiStatus = ConnState::Connecting;
+    updateDisplayStatus();
     WiFiClass::mode(WIFI_STA);
     // IPAddress ip(192, 168, 1, 68);
     // IPAddress dns(192, 168, 1, 1);
@@ -263,6 +290,8 @@ inline void WiFiEvent(WiFiEvent_t event) {
         //byte mac[6];
         Serial.printf(WiFi.macAddress().c_str());
         Serial.printf(" IP address: %s ", WiFi.localIP().toString().c_str());
+        wifiStatus = ConnState::Connected;
+        updateDisplayStatus();
         xTimerStop(wifiReconnectTimer, 0);
         #if defined(MQTT)
           connectToMqtt();
@@ -271,6 +300,8 @@ inline void WiFiEvent(WiFiEvent_t event) {
         break;
     case SYSTEM_EVENT_STA_DISCONNECTED:
         Serial.println("WiFi lost connection");
+        wifiStatus = ConnState::Disconnected;
+        updateDisplayStatus();
         #if defined(MQTT)
           xTimerStop(mqttReconnectTimer, 0); // ensure we don't reconnect to MQTT while reconnecting to Wi-Fi
         #endif
