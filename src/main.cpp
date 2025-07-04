@@ -38,11 +38,10 @@
 #include <Wire.h>
 //#include "HT_SSD1306Wire.h"
 
-// OLED configuration for Heltec WiFi LoRa 32 V2
+// OLED configuration
 #define OLED_ADDRESS 0x3c
-
-#define OLED_SDA     4
-#define OLED_SCL     15
+#define OLED_SDA     I2C_SDA_PIN
+#define OLED_SCL     I2C_SCL_PIN
 #define OLED_RST     16
 #define SCREEN_WIDTH 128 // OLED display width
 #define SCREEN_HEIGHT 64 // OLED display height
@@ -88,7 +87,7 @@ using namespace IOHC;
 void setup() {
     Serial.begin(115200);
     
-    Wire.begin(OLED_SDA, OLED_SCL);  // SDA = 21, SCL = 22 (ESP32 default, change if needed)
+    Wire.begin(OLED_SDA, OLED_SCL);  // pins defined per board in board-config.h
 
     // Initialize display
     if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
