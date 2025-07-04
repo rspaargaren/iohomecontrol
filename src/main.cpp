@@ -40,6 +40,7 @@
 
 // OLED configuration for Heltec WiFi LoRa 32 V2
 #define OLED_ADDRESS 0x3c
+
 #define OLED_SDA     4
 #define OLED_SCL     15
 #define OLED_RST     16
