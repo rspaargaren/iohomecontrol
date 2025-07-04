@@ -77,6 +77,7 @@ extern Adafruit_SSD1306 display;
 inline AsyncMqttClient mqttClient;
 inline TimerHandle_t mqttReconnectTimer;
 inline TimerHandle_t heartbeatTimer;
+constexpr char AVAILABILITY_TOPIC[] = "iown/status";
 
 void publishDiscovery(const std::string &id, const std::string &name);
 void handleMqttConnect();
@@ -87,6 +88,7 @@ inline  void connectToMqtt() {
     display.setCursor(0, 10);
     display.println("MQTT: connecting");
     display.display();
+    mqttClient.setWill(AVAILABILITY_TOPIC, 0, true, "offline");
     mqttClient.connect();
   }
 inline void onMqttConnect(bool sessionPresent) {
