@@ -33,24 +33,7 @@
 #include "LittleFS.h"
 #include <WiFi.h> // Assuming WiFi is used and initialized elsewhere or will be here.
 
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
-#include <Wire.h>
-//#include "HT_SSD1306Wire.h"
-
-// OLED configuration for Heltec WiFi LoRa 32 V2
-#define OLED_ADDRESS 0x3c
-#define OLED_SDA     4
-#define OLED_SCL     15
-#define OLED_RST     16
-#define SCREEN_WIDTH 128 // OLED display width
-#define SCREEN_HEIGHT 64 // OLED display height
-
-
-//SSD1306Wire display(OLED_ADDRESS, 400000, OLED_SDA, OLED_SCL, GEOMETRY_128_64, OLED_RST);
-
-// Create display object
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RST);
+#include <oled_display.h>
 
 extern "C" {
 #include "freertos/FreeRTOS.h"
@@ -63,6 +46,7 @@ void scanDump();
 bool publishMsg(IOHC::iohcPacket *iohc);
 bool msgRcvd(IOHC::iohcPacket *iohc);
 bool msgArchive(IOHC::iohcPacket *iohc);
+
 
 uint8_t keyCap[16] = {};
 //uint8_t source_originator[3] = {0};
@@ -87,16 +71,7 @@ using namespace IOHC;
 void setup() {
     Serial.begin(115200);
     
-    Wire.begin(OLED_SDA, OLED_SCL);  // SDA = 21, SCL = 22 (ESP32 default, change if needed)
-
-    // Initialize display
-    if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
-      Serial.println(F("SSD1306 allocation failed"));
-    for (;;);
-    }
-
-    //display.init();
-    //display.setFont(ArialMT_Plain_10);
+    initDisplay();
 
     //Heltec.begin(true /*DisplayEnable*/, false /*LoRaEnable*/, true /*SerialEnable*/);
     //Heltec.display->clear();
@@ -134,13 +109,7 @@ void setup() {
         Serial.print("Connected to WiFi. IP Address: ");
         Serial.println(WiFi.localIP());
 
-        display.clearDisplay();
-        display.setTextSize(1);
-        display.setTextColor(SSD1306_WHITE);
-        display.setCursor(0, 0);
-        String ipStr = "IP: " + WiFi.localIP().toString();
-        display.println(ipStr);
-        display.display();
+        displayIpAddress(WiFi.localIP());
 
         // --- End WiFi Setup ---
 
@@ -453,14 +422,15 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
                 uint16_t main = (iohc->payload.packet.msg.p0x00_14.main[0] << 8) | iohc->payload.packet.msg.p0x00_14.main[1];
                 const char *action = "unknown";
                 switch (main) {
-                    case 0x0000: action = "open"; break;
-                    case 0xC800: action = "close"; break;
-                    case 0xD200: action = "stop"; break;
-                    case 0xD803: action = "vent"; break;
-                    case 0x6400: action = "force"; break;
+                    case 0x0000: action = "OPEN"; break;
+                    case 0xC800: action = "CLOSE"; break;
+                    case 0xD200: action = "STOP"; break;
+                    case 0xD803: action = "VENT"; break;
+                    case 0x6400: action = "FORCE"; break;
                     default: break;
                 }
                 doc["action"] = action;
+                display1WAction(iohc->payload.packet.header.source, action);
             } else {
                 doc["type"] = "Other";
                 otherDevice2W->memorizeOther2W.memorizedCmd = iohc->payload.packet.header.cmd;
