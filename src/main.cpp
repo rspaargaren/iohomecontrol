@@ -438,20 +438,19 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
                 }
                 doc["action"] = action;
                 display1WAction(iohc->payload.packet.header.source, action, "RX");
-                IOHC::RemoteButton btn = IOHC::RemoteButton::Open;
-                switch (main) {
-                    case 0x0000: btn = IOHC::RemoteButton::Open; break;
-                    case 0xC800: btn = IOHC::RemoteButton::Close; break;
-                    case 0xD200: btn = IOHC::RemoteButton::Stop; break;
-                    case 0xD803: btn = IOHC::RemoteButton::Vent; break;
-                    case 0x6400: btn = IOHC::RemoteButton::ForceOpen; break;
-                    default: btn = IOHC::RemoteButton::Open; break;
-                }
                 if (const auto *map = remoteMap->find(iohc->payload.packet.header.source)) {
-                    Tokens tok(2);
+                    const auto &remotes = iohcRemote1W::getInstance()->getRemotes();
                     for (const auto &desc : map->devices) {
-                        tok[1] = desc;
-                        iohcRemote1W::getInstance()->cmd(btn, &tok);
+                        auto rit = std::find_if(remotes.begin(), remotes.end(), [&](const auto &r){
+                            return r.description == desc;
+                        });
+                        if (rit != remotes.end()) {
+                            std::string id = bytesToHexString(rit->node, sizeof(rit->node));
+#if defined(MQTT)
+                            std::string topic = "iown/" + id + "/state";
+                            mqttClient.publish(topic.c_str(), 0, false, action);
+#endif
+                        }
                     }
                 }
             } else {
