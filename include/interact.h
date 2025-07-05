@@ -155,7 +155,7 @@ inline void onMqttConnect(bool sessionPresent) {
   mqttClient.publish("iown/Frame", 0, false, R"({"cmd": "powerOn", "_data": "Gateway"})", 38);
   // Home Assistant MQTT discovery for a generic sensor showing last frame
   {
-    StaticJsonDocument<256> configDoc;
+    JsonDocument configDoc;
     configDoc["name"] = "IOHC Frame";
     configDoc["state_topic"] = "homeassistant/sensor/iohc_frame/state";
     configDoc["unique_id"] = "iohc_frame";
