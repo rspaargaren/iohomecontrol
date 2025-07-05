@@ -92,9 +92,18 @@ Each blind configuration is sent to the topic `homeassistant/cover/<id>/config` 
 Example payload for `B60D1A`:
 
 ```json
-{"name":"IZY1","command_topic":"iown/B60D1A/set","state_topic":"iown/B60D1A/state","unique_id":"B60D1A","payload_open":"OPEN","payload_close":"CLOSE","payload_stop":"STOP","device_class":"blind"}
+{"name":"IZY1","command_topic":"iown/B60D1A/set","state_topic":"iown/B60D1A/state","unique_id":"B60D1A","payload_open":"OPEN","payload_close":"CLOSE","payload_stop":"STOP","device_class":"blind","availability_topic":"iown/status"}
 ```
 
 Configure your MQTT broker settings in `include/user_config.h` (`MQTT_SERVER`, `MQTT_USER`, `MQTT_PASSWD`). After boot and connection, Home Assistant should automatically discover the covers.
+
+Once discovery is complete you can control a blind by publishing `OPEN`, `CLOSE`
+or `STOP` to `iown/<id>/set`. The firmware listens on these topics and issues the
+corresponding command to the device.
+
+The gateway publishes `online` every minute to `iown/status` and has a Last Will
+configured to send `offline` on the same topic if it disconnects unexpectedly.
+Home Assistant uses this message to mark all covers as unavailable when the
+gateway goes offline.
 
 #### **License**

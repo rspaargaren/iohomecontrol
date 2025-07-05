@@ -41,6 +41,18 @@
 #define RADIO_BUSY_PIN      32
 #endif
 
+// I2C pin definitions for OLED or peripherals
+#if defined(LILYGO)
+#define I2C_SDA_PIN 21
+#define I2C_SCL_PIN 22
+#elif defined(HELTEC)
+#define I2C_SDA_PIN 4
+#define I2C_SCL_PIN 15
+#else
+#define I2C_SDA_PIN 21
+#define I2C_SCL_PIN 22
+#endif
+
 // OK LilyGo Wifi ESP32 Lora v2.1.6
 // https://github.com/LilyGO/ESP32-Paxcounter/blob/master/src/hal/ttgov2.h 
 

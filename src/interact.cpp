@@ -26,6 +26,10 @@ void publishDiscovery(const std::string &id, const std::string &name) {
     doc["name"] = name;
     doc["command_topic"] = "iown/" + id + "/set";
     doc["state_topic"] = "iown/" + id + "/state";
+    doc["availability_topic"] = AVAILABILITY_TOPIC;
+    doc["payload_available"] = "online";
+    doc["payload_not_available"] = "offline";
+    doc["expire_after"] = 120;
     doc["unique_id"] = id;
     doc["payload_open"] = "OPEN";
     doc["payload_close"] = "CLOSE";
@@ -39,12 +43,22 @@ void publishDiscovery(const std::string &id, const std::string &name) {
     mqttClient.publish(topic.c_str(), 0, true, payload.c_str(), len);
 }
 
+void publishHeartbeat(TimerHandle_t) {
+    mqttClient.publish(AVAILABILITY_TOPIC, 0, true, "online");
+}
+
 void handleMqttConnect() {
     const auto &remotes = IOHC::iohcRemote1W::getInstance()->getRemotes();
     for (const auto &r : remotes) {
         std::string id = bytesToHexString(r.node, sizeof(r.node));
         publishDiscovery(id, r.description);
+        std::string t = "iown/" + id + "/set";
+        mqttClient.subscribe(t.c_str(), 0);
     }
+    if (!heartbeatTimer)
+        heartbeatTimer = xTimerCreate("hb", pdMS_TO_TICKS(60000), pdTRUE, nullptr, publishHeartbeat);
+    xTimerStart(heartbeatTimer, 0);
+    publishHeartbeat(nullptr);
 }
 #endif
 

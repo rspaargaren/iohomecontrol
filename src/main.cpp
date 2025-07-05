@@ -17,7 +17,6 @@
 #include <board-config.h>
 #include <user_config.h>
 
-#include <interact.h>
 #include <crypto2Wutils.h>
 #include <iohcCryptoHelpers.h>
 #include <iohcRadio.h>
@@ -28,12 +27,15 @@
 #include <iohcRemote1W.h>
 #include <iohcCozyDevice2W.h>
 #include <iohcOtherDevice2W.h>
+#include <interact.h>
 
 #include <web_server_handler.h>
 #include "LittleFS.h"
 #include <WiFi.h> // Assuming WiFi is used and initialized elsewhere or will be here.
 
+
 #include <oled_display.h>
+
 
 extern "C" {
 #include "freertos/FreeRTOS.h"
@@ -71,7 +73,9 @@ using namespace IOHC;
 void setup() {
     Serial.begin(115200);
     
+
     initDisplay();
+
 
     //Heltec.begin(true /*DisplayEnable*/, false /*LoRaEnable*/, true /*SerialEnable*/);
     //Heltec.display->clear();
