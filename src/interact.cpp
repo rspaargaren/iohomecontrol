@@ -23,20 +23,62 @@
 #if defined(MQTT)
 void publishDiscovery(const std::string &id, const std::string &name) {
     JsonDocument doc;
-    doc["name"] = name;
-    doc["identifiers"] = "io_gateway";
-    doc["name"] = "MyOpenIO";
+    //doc["name"] = name;
+    //doc["unique_id"] = id;
+    
+    //doc["command_topic"] = "iown/" + id + "/set";
+    //doc["state_topic"] = "iown/" + id + "/state";
+    //doc["availability_topic"] = AVAILABILITY_TOPIC;
+    //doc["payload_available"] = "online";
+    //doc["payload_not_available"] = "offline";
+    
+    
+    //doc["payload_open"] = "OPEN";
+    //doc["payload_close"] = "CLOSE";
+    //doc["payload_stop"] = "STOP";
+    //doc["device_class"] = "blind";
+    //doc["expire_after"] = 120;
+    //doc["identifiers"] = "MyOpenIO";
+    // Root fields
+    doc["name"] = name;  // Friendly name shown in HA
+    doc["unique_id"] = id;  // Unique ID for the entity in HA
+
+    // MQTT topics
     doc["command_topic"] = "iown/" + id + "/set";
     doc["state_topic"] = "iown/" + id + "/state";
     doc["availability_topic"] = AVAILABILITY_TOPIC;
+
+    // Availability
     doc["payload_available"] = "online";
     doc["payload_not_available"] = "offline";
-    doc["expire_after"] = 120;
-    doc["unique_id"] = id;
+
+    // Blind control payloads
     doc["payload_open"] = "OPEN";
     doc["payload_close"] = "CLOSE";
     doc["payload_stop"] = "STOP";
-    doc["device_class"] = "blind";
+
+    // State mapping payloads (device → HA)
+    doc["state_closed"] = "CLOSE";
+    doc["state_open"] = "OPEN";
+    doc["state_closing"] = "CLOSING";
+    doc["state_opening"] = "OPENING";
+    doc["state_stopped"] = "STOP";
+
+    // Optional
+    doc["device_class"] = "blind"; // Could also be "shade", "shutter", etc.
+    doc["expire_after"] = 120;     // Mark unavailable if no state received for 120s
+    doc["optimistic"] = false;     // Set true if your device does NOT report its own state
+    doc["retain"] = true;          // Retain config message across broker restarts
+    doc["qos"] = 0;                // Set MQTT QoS (0, 1, or 2)
+
+    // Nested "device" object
+    JsonObject device = doc.createNestedObject("device");
+    device["identifiers"] = "MyOpenIO";          // Unique device id for HA (can be array)
+    device["name"] = "My Open IO Gateway";       // Device name in HA UI
+    device["manufacturer"] = "Somfy";            // Manufacturer name
+    device["model"] = "IO Blind Bridge";         // Model name
+    device["sw_version"] = "1.0.0";               // Optional software version
+
 
     std::string payload;
     size_t len = serializeJson(doc, payload);
