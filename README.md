@@ -100,6 +100,9 @@ Configure your MQTT broker settings in `include/user_config.h` (`MQTT_SERVER`, `
 Once discovery is complete you can control a blind by publishing `OPEN`, `CLOSE`
 or `STOP` to `iown/<id>/set`. The firmware listens on these topics and issues the
 corresponding command to the device.
+When an `OPEN` or `CLOSE` command is received, it immediately publishes the new
+state (`open` or `closed`) to `iown/<id>/state` so Home Assistant can update the
+cover status.
 
 The gateway publishes `online` every minute to `iown/status` and has a Last Will
 configured to send `offline` on the same topic if it disconnects unexpectedly.
