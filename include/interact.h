@@ -244,9 +244,15 @@ inline void onMqttDisconnect(AsyncMqttClientDisconnectReason) {
         std::transform(payloadStr.begin(), payloadStr.end(), payloadStr.begin(), ::tolower);
         t.push_back(payloadStr);
         t.push_back(it->description);
-
-        if (payloadStr == "open") IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Open, &t);
-        else if (payloadStr == "close") IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Close, &t);
+        std::string stateTopic = "iown/" + id + "/state";
+        if (payloadStr == "open") {
+          IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Open, &t);
+          mqttClient.publish(stateTopic.c_str(), 0, true, "OPEN");
+        }
+        else if (payloadStr == "close") {
+          IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Close, &t);
+          mqttClient.publish(stateTopic.c_str(), 0, true, "CLOSE");
+        }
         else if (payloadStr == "stop") IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Stop, &t);
         else if (payloadStr == "vent") IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Vent, &t);
         else if (payloadStr == "force") IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::ForceOpen, &t);

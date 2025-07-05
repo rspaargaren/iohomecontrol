@@ -72,7 +72,8 @@ void publishDiscovery(const std::string &id, const std::string &name) {
     doc["qos"] = 0;                // Set MQTT QoS (0, 1, or 2)
 
     // Nested "device" object
-    JsonObject device = doc.createNestedObject("device");
+    //JsonObject device = doc.createNestedObject("device");
+    JsonObject device = doc["device"].to<JsonObject>();
     device["identifiers"] = "MyOpenIO";          // Unique device id for HA (can be array)
     device["name"] = "My Open IO Gateway";       // Device name in HA UI
     device["manufacturer"] = "Somfy";            // Manufacturer name
