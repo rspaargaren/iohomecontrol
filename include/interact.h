@@ -160,9 +160,10 @@ inline void onMqttConnect(bool sessionPresent) {
     configDoc["state_topic"] = "homeassistant/sensor/iohc_frame/state";
     configDoc["unique_id"] = "iohc_frame";
     configDoc["json_attributes_topic"] = "homeassistant/sensor/iohc_frame/state";
-    JsonObject device = configDoc.createNestedObject("device");
-    device["identifiers"] = "iohc_gateway";
-    device["name"] = "IO Homecontrol Gateway";
+    //JsonObject device = configDoc.createNestedObject("device");
+    JsonObject device = configDoc["device"].to<JsonObject>();
+    device["identifiers"] = "iogateway";
+    device["name"] = "MyOpenIO";
     std::string cfg;
     size_t cfgLen = serializeJson(configDoc, cfg);
     mqttClient.publish("homeassistant/sensor/iohc_frame/config", 0, true, cfg.c_str(), cfgLen);
@@ -245,6 +246,7 @@ inline void onMqttDisconnect(AsyncMqttClientDisconnectReason) {
         t.push_back(it->description);
         std::string stateTopic = "iown/" + id + "/state";
 
+
         if (payloadStr == "open") {
           IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Open, &t);
           mqttClient.publish(stateTopic.c_str(), 0, true, "open");
@@ -252,6 +254,7 @@ inline void onMqttDisconnect(AsyncMqttClientDisconnectReason) {
         else if (payloadStr == "close") {
           IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Close, &t);
           mqttClient.publish(stateTopic.c_str(), 0, true, "closed");
+
         }
         else if (payloadStr == "stop") IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Stop, &t);
         else if (payloadStr == "vent") IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Vent, &t);
