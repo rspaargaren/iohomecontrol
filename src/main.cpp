@@ -27,6 +27,7 @@
 #include <iohcRemote1W.h>
 #include <iohcCozyDevice2W.h>
 #include <iohcOtherDevice2W.h>
+#include <iohcRemoteMap.h>
 #include <interact.h>
 
 #include <web_server_handler.h>
@@ -65,6 +66,7 @@ IOHC::iohcSystemTable *sysTable;
 IOHC::iohcRemote1W *remote1W;
 IOHC::iohcCozyDevice2W *cozyDevice2W;
 IOHC::iohcOtherDevice2W *otherDevice2W;
+IOHC::iohcRemoteMap *remoteMap;
 
 uint32_t frequencies[] = FREQS2SCAN;
 
@@ -131,6 +133,7 @@ void setup() {
     remote1W = IOHC::iohcRemote1W::getInstance();
     cozyDevice2W = IOHC::iohcCozyDevice2W::getInstance();
     otherDevice2W = IOHC::iohcOtherDevice2W::getInstance();
+    remoteMap = IOHC::iohcRemoteMap::getInstance();
 
     //   AES_init_ctx(&ctx, transfert_key); // PreInit AES for cozy (1W use original version) TODO
 
@@ -435,6 +438,22 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
                 }
                 doc["action"] = action;
                 display1WAction(iohc->payload.packet.header.source, action, "RX");
+                IOHC::RemoteButton btn = IOHC::RemoteButton::Open;
+                switch (main) {
+                    case 0x0000: btn = IOHC::RemoteButton::Open; break;
+                    case 0xC800: btn = IOHC::RemoteButton::Close; break;
+                    case 0xD200: btn = IOHC::RemoteButton::Stop; break;
+                    case 0xD803: btn = IOHC::RemoteButton::Vent; break;
+                    case 0x6400: btn = IOHC::RemoteButton::ForceOpen; break;
+                    default: btn = IOHC::RemoteButton::Open; break;
+                }
+                if (const auto *map = remoteMap->find(iohc->payload.packet.header.source)) {
+                    Tokens tok(2);
+                    for (const auto &desc : map->devices) {
+                        tok[1] = desc;
+                        iohcRemote1W::getInstance()->cmd(btn, &tok);
+                    }
+                }
             } else {
                 doc["type"] = "Other";
                 otherDevice2W->memorizeOther2W.memorizedCmd = iohc->payload.packet.header.cmd;
@@ -561,6 +580,11 @@ bool publishMsg(IOHC::iohcPacket *iohc) {
     doc["to"] = bytesToHexString(iohc->payload.packet.header.source, 3);
     doc["cmd"] = to_hex_str(iohc->payload.packet.header.cmd).c_str();
     doc["_data"] = bytesToHexString(iohc->payload.buffer + 9, iohc->buffer_length - 9);
+    if (remoteMap) {
+        if (const auto *map = remoteMap->find(iohc->payload.packet.header.source)) {
+            doc["remote"] = map->name;
+        }
+    }
 
     if (iohc->payload.packet.header.CtrlByte1.asStruct.Protocol == 1 &&
         iohc->payload.packet.header.cmd == 0x00) {
