@@ -434,7 +434,7 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
                     default: break;
                 }
                 doc["action"] = action;
-                display1WAction(iohc->payload.packet.header.source, action);
+                display1WAction(iohc->payload.packet.header.source, action, "RX");
             } else {
                 doc["type"] = "Other";
                 otherDevice2W->memorizeOther2W.memorizedCmd = iohc->payload.packet.header.cmd;
