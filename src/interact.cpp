@@ -24,6 +24,8 @@
 void publishDiscovery(const std::string &id, const std::string &name) {
     JsonDocument doc;
     doc["name"] = name;
+    doc["identifiers"] = "io_gateway";
+    doc["name"] = "MyOpenIO";
     doc["command_topic"] = "iown/" + id + "/set";
     doc["state_topic"] = "iown/" + id + "/state";
     doc["availability_topic"] = AVAILABILITY_TOPIC;

@@ -160,9 +160,10 @@ inline void onMqttConnect(bool sessionPresent) {
     configDoc["state_topic"] = "homeassistant/sensor/iohc_frame/state";
     configDoc["unique_id"] = "iohc_frame";
     configDoc["json_attributes_topic"] = "homeassistant/sensor/iohc_frame/state";
-    JsonObject device = configDoc.createNestedObject("device");
-    device["identifiers"] = "iohc_gateway";
-    device["name"] = "IO Homecontrol Gateway";
+    //JsonObject device = configDoc.createNestedObject("device");
+    JsonObject device = configDoc["device"].to<JsonObject>();
+    device["identifiers"] = "iogateway";
+    device["name"] = "MyOpenIO";
     std::string cfg;
     size_t cfgLen = serializeJson(configDoc, cfg);
     mqttClient.publish("homeassistant/sensor/iohc_frame/config", 0, true, cfg.c_str(), cfgLen);
