@@ -22,9 +22,10 @@
 #include <board-config.h>
 #include <user_config.h>
 
-#include <vector> 
-#include <sstream> 
+#include <vector>
+#include <sstream>
 #include <cstring>
+#include <algorithm>
 
 extern "C" {
 	#include "freertos/FreeRTOS.h"
@@ -33,12 +34,18 @@ extern "C" {
 
 #include <WiFi.h>
 #include <esp_wifi.h>
+#include <Adafruit_SSD1306.h>
 #if defined(MQTT)
   #include <AsyncMqttClient.h>
   #include <ArduinoJson.h>
 #endif
 
 #include <utils.h>
+#include <tokens.h>
+
+namespace IOHC {
+  class iohcRemote1W;
+}
 
 #if defined(ESP32)
   #include <TickerUsESP32.h>
@@ -47,8 +54,49 @@ extern "C" {
 
 inline TimerHandle_t wifiReconnectTimer;
 inline WiFiClient wifiClient;                 // Create an ESP32 WiFiClient class to connect to the MQTT server
+extern Adafruit_SSD1306 display;
 
-using Tokens = std::vector<std::string>;
+enum class ConnState { Connecting, Connected, Disconnected };
+inline ConnState wifiStatus = ConnState::Connecting;
+inline ConnState mqttStatus = ConnState::Disconnected;
+
+inline void updateDisplayStatus() {
+  display.clearDisplay();
+  display.setCursor(0, 0);
+  display.print("WiFi: ");
+  switch (wifiStatus) {
+    case ConnState::Connected:
+      display.println("connected");
+      break;
+    case ConnState::Connecting:
+      display.println("connecting");
+      break;
+    default:
+      display.println("disconnected");
+      break;
+  }
+  display.setCursor(0, 10);
+  display.print("IP: ");
+  if (wifiStatus == ConnState::Connected) {
+    display.println(WiFi.localIP());
+  } else {
+    display.println("-");
+  }
+  display.setCursor(0, 20);
+  display.print("MQTT: ");
+  switch (mqttStatus) {
+    case ConnState::Connected:
+      display.println("connected");
+      break;
+    case ConnState::Connecting:
+      display.println("connecting");
+      break;
+    default:
+      display.println("disconnected");
+      break;
+  }
+  display.display();
+}
 
   inline void tokenize(std::string const &str, const char delim, Tokens &out) {
       // construct a stream from the string 
@@ -70,28 +118,27 @@ using Tokens = std::vector<std::string>;
 #if defined(MQTT)
 inline AsyncMqttClient mqttClient;
 inline TimerHandle_t mqttReconnectTimer;
+inline TimerHandle_t heartbeatTimer;
+constexpr char AVAILABILITY_TOPIC[] = "iown/status";
 
 void publishDiscovery(const std::string &id, const std::string &name);
 void handleMqttConnect();
+void publishHeartbeat(TimerHandle_t timer);
 
 inline  void connectToMqtt() {
     Serial.println("Connecting to MQTT...");
-    // //        esp_log_level_set("mqtt_client", ESP_LOG_VERBOSE);
-    // esp_mqtt_client_config_t mqtt_cfg = {0};
-    // //        mqtt_cfg.host = "192.168.1.40";
-    //     mqtt_cfg.uri = "mqtt://192.168.1.40:1883";
-    // //        mqtt_cfg.host = "192.168.1.40";
-    //     mqtt_cfg.event_handle = NULL;
-    //     mqtt_cfg.client_id = "iown";
-    //     mqtt_cfg.username = "user";
-    //     mqtt_cfg.password = "passwd";
-    // esp_mqtt_client_handle_t client = esp_mqtt_client_init(&mqtt_cfg);
-    // esp_mqtt_client_reconnect(client);
-    // //    esp_mqtt_client_start(client);
+
+    mqttStatus = ConnState::Connecting;
+    updateDisplayStatus();
+
     mqttClient.connect();
   }
 inline void onMqttConnect(bool sessionPresent) {
   Serial.println("Connected to MQTT.");
+
+  mqttStatus = ConnState::Connected;
+  updateDisplayStatus();
+
   mqttClient.subscribe("iown/powerOn", 0);
   mqttClient.subscribe("iown/setPresence", 0);
   mqttClient.subscribe("iown/setWindow", 0);
@@ -128,6 +175,15 @@ inline void onMqttConnect(bool sessionPresent) {
   // uint16_t packetIdPub2 = mqttClient.publish("test/lol", 2, true, "test 3");
   // Serial.print("Publishing at QoS 2, packetId: ");
   // Serial.println(packetIdPub2);
+}
+
+inline void onMqttDisconnect(AsyncMqttClientDisconnectReason) {
+  Serial.println("Disconnected from MQTT.");
+
+  mqttStatus = ConnState::Disconnected;
+  updateDisplayStatus();
+
+  xTimerStart(mqttReconnectTimer, 0);
 }
   inline void mqttFuncHandler(const char *_cmd) {
 
@@ -168,27 +224,49 @@ inline void onMqttConnect(bool sessionPresent) {
   inline void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) {
     if (topic[0] == '\0') return;
 
-    JsonDocument doc;
-
-	  payload[len] = '\0';
-
+    payload[len] = '\0';
     Serial.printf("Received MQTT %s %s %d\n", topic, payload, len);
 
+    std::string topicStr(topic);
+    std::string payloadStr(payload);
+
+    // Handle Home Assistant cover commands (iown/<id>/set)
+    if (topicStr.rfind("iown/", 0) == 0 && topicStr.find("/set", 5) != std::string::npos) {
+      std::string id = topicStr.substr(5, topicStr.find("/set", 5) - 5);
+      std::transform(id.begin(), id.end(), id.begin(), ::tolower);
+      const auto &remotes = IOHC::iohcRemote1W::getInstance()->getRemotes();
+      auto it = std::find_if(remotes.begin(), remotes.end(), [&](const auto &r){
+        return bytesToHexString(r.node, sizeof(r.node)) == id;
+      });
+      if (it != remotes.end()) {
+        Tokens t;
+        std::transform(payloadStr.begin(), payloadStr.end(), payloadStr.begin(), ::tolower);
+        t.push_back(payloadStr);
+        t.push_back(it->description);
+
+        if (payloadStr == "open") IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Open, &t);
+        else if (payloadStr == "close") IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Close, &t);
+        else if (payloadStr == "stop") IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Stop, &t);
+        else if (payloadStr == "vent") IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Vent, &t);
+        else if (payloadStr == "force") IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::ForceOpen, &t);
+        else Serial.printf("*> MQTT Unknown %s <*\n", payloadStr.c_str());
+      } else {
+        Serial.printf("*> MQTT Unknown device %s <*\n", id.c_str());
+      }
+      return;
+    }
+
+    JsonDocument doc;
     if (deserializeJson(doc, payload) != DeserializationError::Ok) {
       Serial.println(F("Failed to parse JSON"));
       return;
     }
 
     const char *data = doc["_data"];
-
-    // Calcul de la taille du tampon nécessaire
-    size_t bufferSize = strlen(topic) + len + 7; // +5 word "MQTT " +2 pour l'espace et le caractère nul de fin de chaîne
-    // Allouer le tampon
+    size_t bufferSize = strlen(topic) + strlen(data) + 7;
     char message[bufferSize];
-    if (len == 0) {snprintf(message, sizeof(message), "MQTT %s", topic); }
-    // Utiliser snprintf pour éviter les dépassements de tampon
+    if (!data) snprintf(message, sizeof(message), "MQTT %s", topic);
     else snprintf(message, sizeof(message), "MQTT %s %s", topic, data);
-      
     mqttFuncHandler(message);
   }
 
@@ -196,6 +274,8 @@ inline void onMqttConnect(bool sessionPresent) {
 
   inline void connectToWifi() {
     Serial.println("Connecting to Wi-Fi...");
+    wifiStatus = ConnState::Connecting;
+    updateDisplayStatus();
     WiFiClass::mode(WIFI_STA);
     // IPAddress ip(192, 168, 1, 68);
     // IPAddress dns(192, 168, 1, 1);
@@ -229,6 +309,8 @@ inline void WiFiEvent(WiFiEvent_t event) {
         //byte mac[6];
         Serial.printf(WiFi.macAddress().c_str());
         Serial.printf(" IP address: %s ", WiFi.localIP().toString().c_str());
+        wifiStatus = ConnState::Connected;
+        updateDisplayStatus();
         xTimerStop(wifiReconnectTimer, 0);
         #if defined(MQTT)
           connectToMqtt();
@@ -237,6 +319,8 @@ inline void WiFiEvent(WiFiEvent_t event) {
         break;
     case SYSTEM_EVENT_STA_DISCONNECTED:
         Serial.println("WiFi lost connection");
+        wifiStatus = ConnState::Disconnected;
+        updateDisplayStatus();
         #if defined(MQTT)
           xTimerStop(mqttReconnectTimer, 0); // ensure we don't reconnect to MQTT while reconnecting to Wi-Fi
         #endif
@@ -353,6 +437,7 @@ namespace Cmd {
       mqttClient.setCredentials(MQTT_USER, MQTT_PASSWD);
       mqttClient.setServer(MQTT_SERVER, 1883);
       mqttClient.onConnect(onMqttConnect);
+      mqttClient.onDisconnect(onMqttDisconnect);
       mqttClient.onMessage(onMqttMessage);
       mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(5000), pdFALSE, nullptr, reinterpret_cast<TimerCallbackFunction_t>(connectToMqtt));
     #endif

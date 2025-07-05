@@ -1,5 +1,6 @@
 {
     "B60D1A": {"key": "2D36BD8B4D4FB1E1A1B3099B394D3A9E", "sequence": "2402", "type": [0,0], "manufacturer_id": 2, "description":"IZY1"},
     "B60D1B": {"key": "B794883327810507C2A5419EEEAE54B4", "sequence": "08D0", "type": [0,0], "manufacturer_id": 2, "description":"IZY2"},
-    "E8E150": {"key": "77999E593262E207C8F992904EC4C4F2", "sequence": "08D0", "type": [0,0], "manufacturer_id": 2, "description":"DYNA"}
+    "E8E150": {"key": "77999E593262E207C8F992904EC4C4F2", "sequence": "08D0", "type": [0,0], "manufacturer_id": 2, "description":"DYNA"},
+    "E0000A": {"key": "7AB132C95F843DA7116ED03B9CF20845", "sequence": "0000", "type": [0,0], "manufacturer_id": 2, "description":"SUNS"}
 }    
