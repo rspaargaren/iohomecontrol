@@ -16,6 +16,7 @@
 
 #include <oled_display.h>
 #include <iohcCryptoHelpers.h>
+#include <iohcRemoteMap.h>
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RST);
 
@@ -39,14 +40,22 @@ void displayIpAddress(IPAddress ip) {
     display.display();
 }
 
-void display1WAction(const uint8_t *remote, const char *action) {
+void display1WAction(const uint8_t *remote, const char *action, const char *dir) {
     std::string id = bytesToHexString(remote, 3);
+    const auto *entry = IOHC::iohcRemoteMap::getInstance()->find(remote);
+
     display.clearDisplay();
     display.setTextSize(1);
     display.setTextColor(SSD1306_WHITE);
     display.setCursor(0, 0);
-    display.print("ID: ");
-    display.println(id.c_str());
+    display.print(dir);
+    display.println(":");
+    if (entry) {
+        display.println(entry->name.c_str());
+    } else {
+        display.print("ID: ");
+        display.println(id.c_str());
+    }
     display.print("Action: ");
     display.println(action);
     display.display();

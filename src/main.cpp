@@ -27,6 +27,7 @@
 #include <iohcRemote1W.h>
 #include <iohcCozyDevice2W.h>
 #include <iohcOtherDevice2W.h>
+#include <iohcRemoteMap.h>
 #include <interact.h>
 
 #include <web_server_handler.h>
@@ -65,6 +66,7 @@ IOHC::iohcSystemTable *sysTable;
 IOHC::iohcRemote1W *remote1W;
 IOHC::iohcCozyDevice2W *cozyDevice2W;
 IOHC::iohcOtherDevice2W *otherDevice2W;
+IOHC::iohcRemoteMap *remoteMap;
 
 uint32_t frequencies[] = FREQS2SCAN;
 
@@ -131,6 +133,7 @@ void setup() {
     remote1W = IOHC::iohcRemote1W::getInstance();
     cozyDevice2W = IOHC::iohcCozyDevice2W::getInstance();
     otherDevice2W = IOHC::iohcOtherDevice2W::getInstance();
+    remoteMap = IOHC::iohcRemoteMap::getInstance();
 
     //   AES_init_ctx(&ctx, transfert_key); // PreInit AES for cozy (1W use original version) TODO
 
@@ -434,7 +437,22 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
                     default: break;
                 }
                 doc["action"] = action;
-                display1WAction(iohc->payload.packet.header.source, action);
+                display1WAction(iohc->payload.packet.header.source, action, "RX");
+                if (const auto *map = remoteMap->find(iohc->payload.packet.header.source)) {
+                    const auto &remotes = iohcRemote1W::getInstance()->getRemotes();
+                    for (const auto &desc : map->devices) {
+                        auto rit = std::find_if(remotes.begin(), remotes.end(), [&](const auto &r){
+                            return r.description == desc;
+                        });
+                        if (rit != remotes.end()) {
+                            std::string id = bytesToHexString(rit->node, sizeof(rit->node));
+#if defined(MQTT)
+                            std::string topic = "iown/" + id + "/state";
+                            mqttClient.publish(topic.c_str(), 0, false, action);
+#endif
+                        }
+                    }
+                }
             } else {
                 doc["type"] = "Other";
                 otherDevice2W->memorizeOther2W.memorizedCmd = iohc->payload.packet.header.cmd;
@@ -561,6 +579,11 @@ bool publishMsg(IOHC::iohcPacket *iohc) {
     doc["to"] = bytesToHexString(iohc->payload.packet.header.source, 3);
     doc["cmd"] = to_hex_str(iohc->payload.packet.header.cmd).c_str();
     doc["_data"] = bytesToHexString(iohc->payload.buffer + 9, iohc->buffer_length - 9);
+    if (remoteMap) {
+        if (const auto *map = remoteMap->find(iohc->payload.packet.header.source)) {
+            doc["remote"] = map->name;
+        }
+    }
 
     if (iohc->payload.packet.header.CtrlByte1.asStruct.Protocol == 1 &&
         iohc->payload.packet.header.cmd == 0x00) {
