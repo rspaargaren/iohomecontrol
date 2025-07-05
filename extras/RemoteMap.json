@@ -1,0 +1,4 @@
+{
+    "AABBCC": {"name": "Remote Bedroom", "devices": ["IZY1"]},
+    "DDEEFF": {"name": "Remote Living", "devices": ["IZY2", "DYNA"]}
+}
