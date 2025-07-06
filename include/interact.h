@@ -35,9 +35,13 @@ extern "C" {
 #include <WiFi.h>
 #include <esp_wifi.h>
 #include <Adafruit_SSD1306.h>
+//#if defined(MQTT)
+//  #include <AsyncMqttClient.h>
+//  #include <ArduinoJson.h>
+//#endif
+
 #if defined(MQTT)
-  #include <AsyncMqttClient.h>
-  #include <ArduinoJson.h>
+#include "mqtt_handler.h"
 #endif
 
 #include <utils.h>
@@ -115,172 +119,7 @@ inline void updateDisplayStatus() {
 
   inline uint8_t lastEntry = 0;
 
-#if defined(MQTT)
-inline AsyncMqttClient mqttClient;
-inline TimerHandle_t mqttReconnectTimer;
-inline TimerHandle_t heartbeatTimer;
-constexpr char AVAILABILITY_TOPIC[] = "iown/status";
 
-void publishDiscovery(const std::string &id, const std::string &name);
-void handleMqttConnect();
-void publishHeartbeat(TimerHandle_t timer);
-
-inline  void connectToMqtt() {
-    Serial.println("Connecting to MQTT...");
-
-    mqttStatus = ConnState::Connecting;
-    updateDisplayStatus();
-
-    mqttClient.connect();
-  }
-inline void onMqttConnect(bool sessionPresent) {
-  Serial.println("Connected to MQTT.");
-
-  mqttStatus = ConnState::Connected;
-  updateDisplayStatus();
-
-  mqttClient.subscribe("iown/powerOn", 0);
-  mqttClient.subscribe("iown/setPresence", 0);
-  mqttClient.subscribe("iown/setWindow", 0);
-  mqttClient.subscribe("iown/setTemp", 0);
-  /*    0c61 0100 00 Mode AUTO 
-        0c61 0100 01 Mode MANUEL
-        0c61 0100 02 Mode PROG
-        0c61 0100 04 Mode OFF*/
-  mqttClient.subscribe("iown/setMode", 0);
-  mqttClient.subscribe("iown/midnight", 0); 
-  mqttClient.subscribe("iown/associate", 0); 
-  mqttClient.subscribe("iown/heatState", 0); 
-
-  mqttClient.publish("iown/Frame", 0, false, R"({"cmd": "powerOn", "_data": "Gateway"})", 38);
-  // Home Assistant MQTT discovery for a generic sensor showing last frame
-  {
-    JsonDocument configDoc;
-    configDoc["name"] = "IOHC Frame";
-    configDoc["state_topic"] = "homeassistant/sensor/iohc_frame/state";
-    configDoc["unique_id"] = "iohc_frame";
-    configDoc["json_attributes_topic"] = "homeassistant/sensor/iohc_frame/state";
-    //JsonObject device = configDoc.createNestedObject("device");
-    JsonObject device = configDoc["device"].to<JsonObject>();
-    device["identifiers"] = "iogateway";
-    device["name"] = "MyOpenIO";
-    std::string cfg;
-    size_t cfgLen = serializeJson(configDoc, cfg);
-    mqttClient.publish("homeassistant/sensor/iohc_frame/config", 0, true, cfg.c_str(), cfgLen);
-  }
-  handleMqttConnect();
-  // Serial.println("Publishing at QoS 0");
-  // uint16_t packetIdPub1 = mqttClient.publish("test/lol", 1, true, "test 2");
-  // Serial.print("Publishing at QoS 1, packetId: ");
-  // Serial.println(packetIdPub1);
-  // uint16_t packetIdPub2 = mqttClient.publish("test/lol", 2, true, "test 3");
-  // Serial.print("Publishing at QoS 2, packetId: ");
-  // Serial.println(packetIdPub2);
-}
-
-inline void onMqttDisconnect(AsyncMqttClientDisconnectReason) {
-  Serial.println("Disconnected from MQTT.");
-
-  mqttStatus = ConnState::Disconnected;
-  updateDisplayStatus();
-
-  xTimerStart(mqttReconnectTimer, 0);
-}
-  inline void mqttFuncHandler(const char *_cmd) {
-
-//    char *_cmd;
-    constexpr char delim = ' ';
-    Tokens segments; 
-
-    // _cmd = cmdReceived(true);
-    // if (!_cmd) return;
-    // if (!strlen(_cmd)) return;
-
-    tokenize(_cmd + 5, delim, segments);
-    // if (strcmp((char *)"help", segments[0].c_str()) == 0) {
-    //   Serial.printf("\nRegistered commands:\n");
-    //   for (uint8_t idx=0; idx<=lastEntry; ++idx) {
-    //     if (_cmdHandler[idx] == nullptr) continue;
-    //     Serial.printf("- %s\t%s\n", _cmdHandler[idx]->cmd, _cmdHandler[idx]->description);
-    //   }
-    //   Serial.printf("- %s\t%s\n\n", (char*)"help", (char*)"This command");
-    //   Serial.printf("\n");
-    //   return;
-    // }
-    Serial.printf("Search for %s\t", segments[0].c_str());
-    for (uint8_t idx=0; idx<=lastEntry; ++idx) {
-      if (_cmdHandler[idx] == nullptr) continue;
-        if (segments[0].find(_cmdHandler[idx]->cmd) != std::string::npos) {
-
-        Serial.printf(" %s %s (%s)\n", _cmdHandler[idx]->cmd, segments[1].c_str()!=nullptr?segments[1].c_str():"No param", _cmdHandler[idx]->description);
-        _cmdHandler[idx]->handler(&segments);
-        return;
-      }
-    }
-    Serial.printf("*> MQTT Unknown %s <*\n", segments[0].c_str());
-  }
-
-  inline std::vector<uint8_t> mqttData;
-
-  inline void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) {
-    if (topic[0] == '\0') return;
-
-    payload[len] = '\0';
-    Serial.printf("Received MQTT %s %s %d\n", topic, payload, len);
-
-    std::string topicStr(topic);
-    std::string payloadStr(payload);
-
-    // Handle Home Assistant cover commands (iown/<id>/set)
-    if (topicStr.rfind("iown/", 0) == 0 && topicStr.find("/set", 5) != std::string::npos) {
-      std::string id = topicStr.substr(5, topicStr.find("/set", 5) - 5);
-      std::transform(id.begin(), id.end(), id.begin(), ::tolower);
-      const auto &remotes = IOHC::iohcRemote1W::getInstance()->getRemotes();
-      auto it = std::find_if(remotes.begin(), remotes.end(), [&](const auto &r){
-        return bytesToHexString(r.node, sizeof(r.node)) == id;
-      });
-      if (it != remotes.end()) {
-        Tokens t;
-        std::transform(payloadStr.begin(), payloadStr.end(), payloadStr.begin(), ::tolower);
-        t.push_back(payloadStr);
-        t.push_back(it->description);
-        std::string stateTopic = "iown/" + id + "/state";
-
-
-        if (payloadStr == "open") {
-          IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Open, &t);
-          mqttClient.publish(stateTopic.c_str(), 0, true, "open");
-        }
-        else if (payloadStr == "close") {
-          IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Close, &t);
-          mqttClient.publish(stateTopic.c_str(), 0, true, "closed");
-
-        }
-        else if (payloadStr == "stop") IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Stop, &t);
-        else if (payloadStr == "vent") IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Vent, &t);
-        else if (payloadStr == "force") IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::ForceOpen, &t);
-        else Serial.printf("*> MQTT Unknown %s <*\n", payloadStr.c_str());
-      } else {
-        Serial.printf("*> MQTT Unknown device %s <*\n", id.c_str());
-      }
-      return;
-    }
-
-    JsonDocument doc;
-    if (deserializeJson(doc, payload) != DeserializationError::Ok) {
-      Serial.println(F("Failed to parse JSON"));
-      return;
-    }
-
-    const char *data = doc["_data"];
-    size_t bufferSize = strlen(topic) + strlen(data) + 7;
-    char message[bufferSize];
-    if (!data) snprintf(message, sizeof(message), "MQTT %s", topic);
-    else snprintf(message, sizeof(message), "MQTT %s %s", topic, data);
-    mqttFuncHandler(message);
-  }
-
-#endif
 
   inline void connectToWifi() {
     Serial.println("Connecting to Wi-Fi...");
