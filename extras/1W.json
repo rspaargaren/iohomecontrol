@@ -1,7 +1,57 @@
 {
-    "b60d1a":{"key":"2d36bd8b4d4fb1e1a1b3099b394d3a9e","sequence":"2410","type":[0,0],"manufacturer_id":2,"description":"IZY1"},
-    "b60d1b":{"key":"b794883327810507c2a5419eeeae54b4","sequence":"08d7","type":[0,0],"manufacturer_id":2,"description":"IZY2"},
-    "e8e150":{"key":"77999e593262e207c8f992904ec4c4f2","sequence":"08d7","type":[0,0],"manufacturer_id":2,"description":"DYNA"},
-    "e00001":{"key":"7ab132c95f843da7116ed03b9cf20845","sequence":"0079","type":[0,0],"manufacturer_id":2,"description":"SUNS"},
-    "e00002":{"key":"bba24bbb61508fc78c5ad0e57ff66210","sequence":"0200","type":[0,0],"manufacturer_id":2,"description":"SUNG"}
+    "b60d1a": {
+        "key": "2d36bd8b4d4fb1e1a1b3099b394d3a9e",
+        "sequence": "2410",
+        "type": [
+            0,
+            0
+        ],
+        "manufacturer_id": 2,
+        "description": "IZY1",
+        "name": "IZY1"
+    },
+    "b60d1b": {
+        "key": "b794883327810507c2a5419eeeae54b4",
+        "sequence": "08d7",
+        "type": [
+            0,
+            0
+        ],
+        "manufacturer_id": 2,
+        "description": "IZY2",
+        "name": "IZY2"
+    },
+    "e8e150": {
+        "key": "77999e593262e207c8f992904ec4c4f2",
+        "sequence": "08d7",
+        "type": [
+            0,
+            0
+        ],
+        "manufacturer_id": 2,
+        "description": "DYNA",
+        "name": "DYNA"
+    },
+    "e00001": {
+        "key": "7ab132c95f843da7116ed03b9cf20845",
+        "sequence": "00be",
+        "type": [
+            0,
+            0
+        ],
+        "manufacturer_id": 2,
+        "description": "SUNS",
+        "name": "Luifel Tuin"
+    },
+    "e00002": {
+        "key": "bba24bbb61508fc78c5ad0e57ff66210",
+        "sequence": "0297",
+        "type": [
+            0,
+            0
+        ],
+        "manufacturer_id": 2,
+        "description": "SUNG",
+        "name": "Screen G"
+    }
 }

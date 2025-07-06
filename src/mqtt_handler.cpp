@@ -2,12 +2,9 @@
 
 #include <iohcRemote1W.h>
 #include <iohcCryptoHelpers.h>
-
-//#if defined(MQTT)
 #include <AsyncMqttClient.h>
 #include <ArduinoJson.h>
 #include <interact.h>
-
 
 AsyncMqttClient mqttClient;
 TimerHandle_t mqttReconnectTimer;
@@ -59,7 +56,7 @@ void handleMqttConnect() {
     const auto &remotes = IOHC::iohcRemote1W::getInstance()->getRemotes();
     for (const auto &r : remotes) {
         std::string id = bytesToHexString(r.node, sizeof(r.node));
-        publishDiscovery(id, r.description);
+        publishDiscovery(id, r.name.empty() ? r.description : r.name);
         std::string t = "iown/" + id + "/set";
         mqttClient.subscribe(t.c_str(), 0);
     }
@@ -98,8 +95,14 @@ void onMqttConnect(bool sessionPresent) {
         configDoc["unique_id"] = "iohc_frame";
         configDoc["json_attributes_topic"] = "homeassistant/sensor/iohc_frame/state";
         JsonObject device = configDoc["device"].to<JsonObject>();
-        device["identifiers"] = "iogateway";
-        device["name"] = "MyOpenIO";
+        device["identifiers"] = "MyOpenIO";
+        device["name"] = "My Open IO Gateway";
+        device["manufacturer"] = "Somfy";
+        device["model"] = "IO Blind Bridge";
+        device["sw_version"] = "1.0.0";
+       
+       
+       
         std::string cfg;
         size_t cfgLen = serializeJson(configDoc, cfg);
         mqttClient.publish("homeassistant/sensor/iohc_frame/config", 0, true, cfg.c_str(), cfgLen);
@@ -134,12 +137,17 @@ void mqttFuncHandler(const char *cmd) {
 
 void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties properties,
                    size_t len, size_t index, size_t total) {
-    if (topic[0] == '\0') return;
-    payload[len] = '\0';
-    Serial.printf("Received MQTT %s %s %d\n", topic, payload, len);
+    if (!topic || !payload || len == 0) return;
+
+    // Safe copy of payload
+    char buf[len + 1];
+    memcpy(buf, payload, len);
+    buf[len] = '\0';
+
+    Serial.printf("Received MQTT %s %s %d\n", topic, buf, len);
 
     std::string topicStr(topic);
-    std::string payloadStr(payload);
+    std::string payloadStr(buf);
 
     if (topicStr.rfind("iown/", 0) == 0 && topicStr.find("/set", 5) != std::string::npos) {
         std::string id = topicStr.substr(5, topicStr.find("/set", 5) - 5);
@@ -157,12 +165,13 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
 
             if (payloadStr == "open") {
                 IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Open, &t);
-                mqttClient.publish(stateTopic.c_str(), 0, true, "open");
+                mqttClient.publish(stateTopic.c_str(), 0, true, "OPEN");
             } else if (payloadStr == "close") {
                 IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Close, &t);
-                mqttClient.publish(stateTopic.c_str(), 0, true, "closed");
+                mqttClient.publish(stateTopic.c_str(), 0, true, "CLOSE");
             } else if (payloadStr == "stop") {
                 IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Stop, &t);
+                mqttClient.publish(stateTopic.c_str(), 0, true, "STOP");
             } else if (payloadStr == "vent") {
                 IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Vent, &t);
             } else if (payloadStr == "force") {
@@ -170,7 +179,7 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
             } else {
                 Serial.printf("*> MQTT Unknown %s <*\n", payloadStr.c_str());
             }
-            // Clear retained set message to avoid re-trigger on reconnect
+            // Clear retained set message
             mqttClient.publish(topicStr.c_str(), 0, true, "", 0);
         } else {
             Serial.printf("*> MQTT Unknown device %s <*\n", id.c_str());
@@ -179,13 +188,13 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
     }
 
     JsonDocument doc;
-    if (deserializeJson(doc, payload) != DeserializationError::Ok) {
+    if (deserializeJson(doc, buf) != DeserializationError::Ok) {
         Serial.println(F("Failed to parse JSON"));
         return;
     }
 
     const char *data = doc["_data"];
-    size_t bufferSize = strlen(topic) + strlen(data) + 7;
+    size_t bufferSize = strlen(topic) + (data ? strlen(data) : 0) + 7;
     char message[bufferSize];
     if (!data)
         snprintf(message, sizeof(message), "MQTT %s", topic);
@@ -193,6 +202,3 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
         snprintf(message, sizeof(message), "MQTT %s %s", topic, data);
     mqttFuncHandler(message);
 }
-
-//#endif // MQTT
-

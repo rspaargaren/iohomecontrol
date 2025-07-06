@@ -19,6 +19,6 @@ extern Adafruit_SSD1306 display;
 
 bool initDisplay();
 void displayIpAddress(IPAddress ip);
-void display1WAction(const uint8_t *remote, const char *action, const char *dir);
+void display1WAction(const uint8_t *remote, const char *action, const char *dir, const char *name = nullptr);
 
 #endif // OLED_DISPLAY_H

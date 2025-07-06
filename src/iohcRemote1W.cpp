@@ -166,7 +166,7 @@ namespace IOHC {
                     digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
 //                }
                 _radioInstance->send(packets2send);
-                display1WAction(r.node, remoteButtonToString(cmd), "TX");
+                display1WAction(r.node, remoteButtonToString(cmd), "TX", r.name.c_str());
                 break;
             }
 
@@ -210,7 +210,7 @@ namespace IOHC {
 //                }
                 _radioInstance->send(packets2send);
                 //printf("\n");
-                display1WAction(r.node, remoteButtonToString(cmd), "TX");
+                display1WAction(r.node, remoteButtonToString(cmd), "TX", r.name.c_str());
                 break;
             }
 
@@ -253,7 +253,7 @@ namespace IOHC {
                     digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
 //                }
                 _radioInstance->send(packets2send);
-                display1WAction(r.node, remoteButtonToString(cmd), "TX");
+                display1WAction(r.node, remoteButtonToString(cmd), "TX", r.name.c_str());
                 break;
             }
            default: {
@@ -481,7 +481,7 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
                     digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
                 }
                 _radioInstance->send(packets2send);
-                display1WAction(r.node, remoteButtonToString(cmd), "TX");
+                display1WAction(r.node, remoteButtonToString(cmd), "TX", r.name.c_str());
                 break;
 //            }
         }
@@ -544,6 +544,7 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
             // _manufacturer = jobj["manufacturer_id"].as<uint8_t>();
             r.manufacturer = jobj["manufacturer_id"].as<uint8_t>();
             r.description = jobj["description"].as<std::string>();
+            r.name = jobj["name"].as<std::string>();
             remotes.push_back(r);
         }
 
@@ -579,6 +580,7 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
             // jobj["manufacturer_id"] = _manufacturer;
             jobj["manufacturer_id"] = r.manufacturer;
             jobj["description"] = r.description;
+            jobj["name"] = r.name;
         }
         serializeJson(doc, f);
         f.close();
