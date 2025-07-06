@@ -29,6 +29,7 @@
 #include <iohcOtherDevice2W.h>
 #include <iohcRemoteMap.h>
 #include <interact.h>
+#include <mqtt_handler.h>
 
 #include <web_server_handler.h>
 #include "LittleFS.h"
