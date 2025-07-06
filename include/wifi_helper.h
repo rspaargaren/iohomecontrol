@@ -12,7 +12,7 @@
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
- */
+*/
 
 #ifndef WIFI_HELPER_H
 #define WIFI_HELPER_H
@@ -26,6 +26,6 @@ extern ConnState wifiStatus;
 
 void initWifi();
 void connectToWifi();
-void WiFiEvent(WiFiEvent_t event);
+void checkWifiConnection();
 
 #endif // WIFI_HELPER_H

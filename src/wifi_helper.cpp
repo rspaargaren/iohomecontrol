@@ -12,67 +12,63 @@
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
- */
+*/
 
 #include <wifi_helper.h>
 #include <oled_display.h>
 #include <mqtt_handler.h>
+#include <WiFiManager.h>
 
 TimerHandle_t wifiReconnectTimer;
-ConnState wifiStatus = ConnState::Connecting;
+
+ConnState wifiStatus = ConnState::Disconnected;
 
 void initWifi() {
-  wifiReconnectTimer = xTimerCreate("wifiTimer", pdMS_TO_TICKS(5000), pdFALSE,
-                                    nullptr,
-                                    reinterpret_cast<TimerCallbackFunction_t>(connectToWifi));
-  WiFi.onEvent(WiFiEvent);
-  connectToWifi();
+    wifiReconnectTimer = xTimerCreate(
+        "wifiTimer",
+        pdMS_TO_TICKS(10000),  // 10 seconds retry interval
+        pdFALSE,
+        nullptr,
+        reinterpret_cast<TimerCallbackFunction_t>(connectToWifi)
+    );
+    connectToWifi();
 }
 
 void connectToWifi() {
-  Serial.println("Connecting to Wi-Fi via WiFiManager...");
-  wifiStatus = ConnState::Connecting;
-  updateDisplayStatus();
-  WiFiClass::mode(WIFI_STA);
+    Serial.println("Connecting to Wi-Fi via WiFiManager...");
+    wifiStatus = ConnState::Connecting;
+    updateDisplayStatus();
 
-  WiFiManager wm;
-  bool res = wm.autoConnect("iohc-setup");
-  if (!res) {
-    Serial.println("WiFiManager failed to connect");
-    wifiStatus = ConnState::Disconnected;
-  } else {
-    Serial.printf("Connected to WiFi. IP address: %s\n", WiFi.localIP().toString().c_str());
-    wifiStatus = ConnState::Connected;
-  }
-  updateDisplayStatus();
-}
+    WiFi.mode(WIFI_STA);
+    WiFiManager wm;
 
-void WiFiEvent(WiFiEvent_t event) {
-    switch(event) {
-    case SYSTEM_EVENT_STA_GOT_IP:
-        Serial.println("WiFi connected");
-        Serial.printf(WiFi.macAddress().c_str());
-        Serial.printf(" IP address: %s ", WiFi.localIP().toString().c_str());
-        wifiStatus = ConnState::Connected;
-        updateDisplayStatus();
-        setupWebServer();
-        xTimerStop(wifiReconnectTimer, 0);
-#if defined(MQTT)
-        connectToMqtt();
-#endif
-        printf("\n");
-        break;
-    case SYSTEM_EVENT_STA_DISCONNECTED:
-        Serial.println("WiFi lost connection");
+    bool res = wm.autoConnect("iohc-setup");
+    if (!res) {
+        Serial.println("WiFiManager failed to connect");
         wifiStatus = ConnState::Disconnected;
         updateDisplayStatus();
-#if defined(MQTT)
-        xTimerStop(mqttReconnectTimer, 0);
-#endif
+
+        // Retry later
         xTimerStart(wifiReconnectTimer, 0);
-        break;
-    default:
-        break;
+    } else {
+        Serial.printf("Connected to WiFi. IP address: %s\n", WiFi.localIP().toString().c_str());
+        wifiStatus = ConnState::Connected;
+        updateDisplayStatus();
     }
 }
 
+void checkWifiConnection() {
+    if (WiFi.status() != WL_CONNECTED) {
+        if (wifiStatus == ConnState::Connected) {
+            Serial.println("WiFi connection lost");
+            wifiStatus = ConnState::Disconnected;
+            updateDisplayStatus();
+
+#if defined(MQTT)
+            Serial.println("Stopping MQTT reconnect timer");
+            xTimerStop(mqttReconnectTimer, 0);
+#endif
+            xTimerStart(wifiReconnectTimer, 0);
+        }
+    }
+}
