@@ -19,7 +19,6 @@
 #include <mqtt_handler.h>
 
 TimerHandle_t wifiReconnectTimer;
-WiFiClient wifiClient;
 ConnState wifiStatus = ConnState::Connecting;
 
 void initWifi() {
@@ -35,14 +34,6 @@ void connectToWifi() {
   wifiStatus = ConnState::Connecting;
   updateDisplayStatus();
   WiFiClass::mode(WIFI_STA);
-
-  ESP_ERROR_CHECK(esp_wifi_set_promiscuous(true));
-  uint8_t primaryChan = 10;
-  wifi_second_chan_t secondChan = WIFI_SECOND_CHAN_NONE;
-  esp_wifi_set_channel(primaryChan, secondChan);
-  ESP_ERROR_CHECK(esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11B|WIFI_PROTOCOL_11G));
-  ESP_ERROR_CHECK(esp_wifi_set_promiscuous(false));
-  ESP_ERROR_CHECK(esp_wifi_scan_stop());
 
   WiFiManager wm;
   bool res = wm.autoConnect("iohc-setup");
