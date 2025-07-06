@@ -29,6 +29,11 @@ bool initDisplay() {
         return false;
     }
     display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(SSD1306_WHITE);
+    display.setCursor(0, 0);
+    String ipStr = "INIT DISPLAY";
+    display.println(ipStr);
     display.display();
     return true;
 }
