@@ -22,6 +22,14 @@ TimerHandle_t wifiReconnectTimer;
 WiFiClient wifiClient;
 ConnState wifiStatus = ConnState::Connecting;
 
+void initWifi() {
+  wifiReconnectTimer = xTimerCreate("wifiTimer", pdMS_TO_TICKS(5000), pdFALSE,
+                                    nullptr,
+                                    reinterpret_cast<TimerCallbackFunction_t>(connectToWifi));
+  WiFi.onEvent(WiFiEvent);
+  connectToWifi();
+}
+
 void connectToWifi() {
   Serial.println("Connecting to Wi-Fi via WiFiManager...");
   wifiStatus = ConnState::Connecting;

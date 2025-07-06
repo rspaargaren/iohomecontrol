@@ -306,12 +306,7 @@ void init() {
 initMqtt();
 #endif
 
-  wifiReconnectTimer = xTimerCreate("wifiTimer", pdMS_TO_TICKS(5000), pdFALSE,
-                                    nullptr,
-                                    reinterpret_cast<TimerCallbackFunction_t>(connectToWifi));
-
-  WiFi.onEvent(WiFiEvent);
-  connectToWifi();
+  initWifi();
 
   kbd_tick.attach_ms(500, cmdFuncHandler);
 }
