@@ -20,10 +20,8 @@
 #include <interact.h>
 #include <WiFi.h>
 #include <WiFiManager.h>
-#include <esp_wifi.h>
 
 extern TimerHandle_t wifiReconnectTimer;
-extern WiFiClient wifiClient;
 extern ConnState wifiStatus;
 
 void initWifi();
