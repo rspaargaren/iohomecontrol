@@ -170,6 +170,8 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
             } else {
                 Serial.printf("*> MQTT Unknown %s <*\n", payloadStr.c_str());
             }
+            // Clear retained set message to avoid re-trigger on reconnect
+            mqttClient.publish(topicStr.c_str(), 0, true, "", 0);
         } else {
             Serial.printf("*> MQTT Unknown device %s <*\n", id.c_str());
         }
