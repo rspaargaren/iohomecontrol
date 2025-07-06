@@ -65,8 +65,6 @@ extern Adafruit_SSD1306 display;
 enum class ConnState { Connecting, Connected, Disconnected };
 extern ConnState wifiStatus;
 extern ConnState mqttStatus;
-
-void updateDisplayStatus();
 void tokenize(std::string const &str, const char delim, Tokens &out);
 
 struct _cmdEntry {
