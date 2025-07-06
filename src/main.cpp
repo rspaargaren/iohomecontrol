@@ -99,32 +99,7 @@ void setup() {
     Serial.println("LittleFS mounted successfully");
 #endif
 
-    // --- WiFi Setup ---
-    // Credentials are defined in include/user_config.h
-
-    WiFi.begin(WIFI_SSID, WIFI_PASSWD);
-    Serial.print("Connecting to WiFi...");
-    int retries = 0;
-    while (WiFi.status() != WL_CONNECTED && retries < 30) { // Retry for 15 seconds
-        delay(500);
-        Serial.print(".");
-        retries++;
-    }
-    Serial.println();
-
-    if (WiFi.status() == WL_CONNECTED) {
-        Serial.print("Connected to WiFi. IP Address: ");
-        Serial.println(WiFi.localIP());
-
-        displayIpAddress(WiFi.localIP());
-
-        // --- End WiFi Setup ---
-
-        // Call setupWebServer() only if WiFi connected
-        setupWebServer();
-    } else {
-        Serial.println("Failed to connect to WiFi. Web server not started.");
-    }
+    // WiFi connection handled in Cmd::init() using WiFiManager
 
     radioInstance = IOHC::iohcRadio::getInstance();
     radioInstance->start(MAX_FREQS, frequencies, 0, msgRcvd, publishMsg); //msgArchive); //, msgRcvd);

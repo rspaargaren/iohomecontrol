@@ -33,8 +33,10 @@ extern "C" {
 }
 
 #include <WiFi.h>
+#include <WiFiManager.h>
 #include <esp_wifi.h>
 #include <Adafruit_SSD1306.h>
+#include <web_server_handler.h>
 //#if defined(MQTT)
 //  #include <AsyncMqttClient.h>
 //  #include <ArduinoJson.h>
@@ -122,32 +124,30 @@ inline void updateDisplayStatus() {
 
 
   inline void connectToWifi() {
-    Serial.println("Connecting to Wi-Fi...");
+    Serial.println("Connecting to Wi-Fi via WiFiManager...");
     wifiStatus = ConnState::Connecting;
     updateDisplayStatus();
     WiFiClass::mode(WIFI_STA);
-    // IPAddress ip(192, 168, 1, 68);
-    // IPAddress dns(192, 168, 1, 1);
-    // IPAddress gateway(192, 168, 1, 1);
-    // IPAddress subnet(255, 255, 255, 0);
-    // WiFi.config(ip, gateway, subnet, dns);
 
-    // Dont use wifi N some errors happen
+    // Keep radio tweaks
     ESP_ERROR_CHECK(esp_wifi_set_promiscuous(true));
     uint8_t primaryChan = 10;
     wifi_second_chan_t secondChan = WIFI_SECOND_CHAN_NONE;
     esp_wifi_set_channel(primaryChan, secondChan);
     ESP_ERROR_CHECK(esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11B|WIFI_PROTOCOL_11G));
     ESP_ERROR_CHECK(esp_wifi_set_promiscuous(false));
-     
-    // TODO put the wifi task in core 1 as tickerUS cant be changed of core
-    // constexpr wifi_init_config_t tweak = {.wifi_task_core_id = 0, }; // For fun
-    // ESP_ERROR_CHECK(esp_wifi_init(&tweak));
+    ESP_ERROR_CHECK(esp_wifi_scan_stop());
 
-    // esp_wifi_scan_stop do the job avoiding crash with MQTT
-    ESP_ERROR_CHECK(esp_wifi_scan_stop()); 
-    // WiFi.printDiag(Serial);
-    WiFi.begin(WIFI_SSID, WIFI_PASSWD);
+    WiFiManager wm;
+    bool res = wm.autoConnect("iohc-setup");
+    if (!res) {
+      Serial.println("WiFiManager failed to connect");
+      wifiStatus = ConnState::Disconnected;
+    } else {
+      Serial.printf("Connected to WiFi. IP address: %s\n", WiFi.localIP().toString().c_str());
+      wifiStatus = ConnState::Connected;
+    }
+    updateDisplayStatus();
   }
 
 inline void WiFiEvent(WiFiEvent_t event) {
@@ -160,6 +160,7 @@ inline void WiFiEvent(WiFiEvent_t event) {
         Serial.printf(" IP address: %s ", WiFi.localIP().toString().c_str());
         wifiStatus = ConnState::Connected;
         updateDisplayStatus();
+        setupWebServer();
         xTimerStop(wifiReconnectTimer, 0);
         #if defined(MQTT)
           connectToMqtt();
