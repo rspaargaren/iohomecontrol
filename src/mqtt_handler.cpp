@@ -5,6 +5,7 @@
 #include <AsyncMqttClient.h>
 #include <ArduinoJson.h>
 #include <interact.h>
+#include <oled_display.h>
 
 AsyncMqttClient mqttClient;
 TimerHandle_t mqttReconnectTimer;

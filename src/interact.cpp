@@ -18,6 +18,7 @@
 #include <iohcCozyDevice2W.h>
 #include <iohcOtherDevice2W.h>
 #include <interact.h>
+#include <oled_display.h>
 #include <iohcCryptoHelpers.h>
 #include <mqtt_handler.h>
 
@@ -29,43 +30,6 @@ ConnState mqttStatus = ConnState::Disconnected;
 _cmdEntry* _cmdHandler[MAXCMDS];
 uint8_t lastEntry = 0;
 
-void updateDisplayStatus() {
-  display.clearDisplay();
-  display.setCursor(0, 0);
-  display.print("WiFi: ");
-  switch (wifiStatus) {
-    case ConnState::Connected:
-      display.println("connected");
-      break;
-    case ConnState::Connecting:
-      display.println("connecting");
-      break;
-    default:
-      display.println("disconnected");
-      break;
-  }
-  display.setCursor(0, 10);
-  display.print("IP: ");
-  if (wifiStatus == ConnState::Connected) {
-    display.println(WiFi.localIP());
-  } else {
-    display.println("-");
-  }
-  display.setCursor(0, 20);
-  display.print("MQTT: ");
-  switch (mqttStatus) {
-    case ConnState::Connected:
-      display.println("connected");
-      break;
-    case ConnState::Connecting:
-      display.println("connecting");
-      break;
-    default:
-      display.println("disconnected");
-      break;
-  }
-  display.display();
-}
 
 void tokenize(std::string const &str, const char delim, Tokens &out) {
   std::stringstream ss(str);
