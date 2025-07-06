@@ -34,24 +34,24 @@
     },
     "e00001": {
         "key": "7ab132c95f843da7116ed03b9cf20845",
-        "sequence": "0079",
+        "sequence": "00be",
         "type": [
             0,
             0
         ],
         "manufacturer_id": 2,
         "description": "SUNS",
-        "name": "SUNS"
+        "name": "Luifel Tuin"
     },
     "e00002": {
         "key": "bba24bbb61508fc78c5ad0e57ff66210",
-        "sequence": "0200",
+        "sequence": "0297",
         "type": [
             0,
             0
         ],
         "manufacturer_id": 2,
         "description": "SUNG",
-        "name": "SUNG"
+        "name": "Screen G"
     }
 }

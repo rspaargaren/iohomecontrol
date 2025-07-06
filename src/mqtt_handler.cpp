@@ -95,8 +95,14 @@ void onMqttConnect(bool sessionPresent) {
         configDoc["unique_id"] = "iohc_frame";
         configDoc["json_attributes_topic"] = "homeassistant/sensor/iohc_frame/state";
         JsonObject device = configDoc["device"].to<JsonObject>();
-        device["identifiers"] = "iogateway";
-        device["name"] = "MyOpenIO";
+        device["identifiers"] = "MyOpenIO";
+        device["name"] = "My Open IO Gateway";
+        device["manufacturer"] = "Somfy";
+        device["model"] = "IO Blind Bridge";
+        device["sw_version"] = "1.0.0";
+       
+       
+       
         std::string cfg;
         size_t cfgLen = serializeJson(configDoc, cfg);
         mqttClient.publish("homeassistant/sensor/iohc_frame/config", 0, true, cfg.c_str(), cfgLen);
