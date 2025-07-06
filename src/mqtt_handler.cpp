@@ -11,6 +11,18 @@ TimerHandle_t mqttReconnectTimer;
 TimerHandle_t heartbeatTimer;
 const char AVAILABILITY_TOPIC[] = "iown/status";
 
+void initMqtt() {
+    mqttClient.setClientId("iown");
+    mqttClient.setCredentials(MQTT_USER, MQTT_PASSWD);
+    mqttClient.setServer(MQTT_SERVER, 1883);
+    mqttClient.onConnect(onMqttConnect);
+    mqttClient.onDisconnect(onMqttDisconnect);
+    mqttClient.onMessage(onMqttMessage);
+    mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(5000), pdFALSE,
+                                      nullptr,
+                                      reinterpret_cast<TimerCallbackFunction_t>(connectToMqtt));
+}
+
 void publishDiscovery(const std::string &id, const std::string &name) {
     JsonDocument doc;
     doc["name"] = name;
