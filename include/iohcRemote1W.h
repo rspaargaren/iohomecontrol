@@ -51,6 +51,7 @@ namespace IOHC {
             std::vector<uint8_t> type{};
             uint8_t manufacturer{};
             std::string description;
+            std::string name;
         };
 
         static iohcRemote1W* getInstance();

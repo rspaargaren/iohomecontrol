@@ -40,7 +40,7 @@ void displayIpAddress(IPAddress ip) {
     display.display();
 }
 
-void display1WAction(const uint8_t *remote, const char *action, const char *dir) {
+void display1WAction(const uint8_t *remote, const char *action, const char *dir, const char *name) {
     std::string id = bytesToHexString(remote, 3);
     const auto *entry = IOHC::iohcRemoteMap::getInstance()->find(remote);
 
@@ -50,7 +50,9 @@ void display1WAction(const uint8_t *remote, const char *action, const char *dir)
     display.setCursor(0, 0);
     display.print(dir);
     display.println(":");
-    if (entry) {
+    if (name) {
+        display.println(name);
+    } else if (entry) {
         display.println(entry->name.c_str());
     } else {
         display.print("ID: ");

@@ -59,7 +59,7 @@ void handleMqttConnect() {
     const auto &remotes = IOHC::iohcRemote1W::getInstance()->getRemotes();
     for (const auto &r : remotes) {
         std::string id = bytesToHexString(r.node, sizeof(r.node));
-        publishDiscovery(id, r.description);
+        publishDiscovery(id, r.name.empty() ? r.description : r.name);
         std::string t = "iown/" + id + "/set";
         mqttClient.subscribe(t.c_str(), 0);
     }
