@@ -27,30 +27,17 @@
 #include <iohcRemote1W.h>
 #include <iohcCozyDevice2W.h>
 #include <iohcOtherDevice2W.h>
+#include <iohcRemoteMap.h>
 #include <interact.h>
+#include <mqtt_handler.h>
 
 #include <web_server_handler.h>
 #include "LittleFS.h"
 #include <WiFi.h> // Assuming WiFi is used and initialized elsewhere or will be here.
 
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
-#include <Wire.h>
-//#include "HT_SSD1306Wire.h"
 
-// OLED configuration
-#define OLED_ADDRESS 0x3c
-#define OLED_SDA     I2C_SDA_PIN
-#define OLED_SCL     I2C_SCL_PIN
-#define OLED_RST     16
-#define SCREEN_WIDTH 128 // OLED display width
-#define SCREEN_HEIGHT 64 // OLED display height
+#include <oled_display.h>
 
-
-//SSD1306Wire display(OLED_ADDRESS, 400000, OLED_SDA, OLED_SCL, GEOMETRY_128_64, OLED_RST);
-
-// Create display object
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RST);
 
 extern "C" {
 #include "freertos/FreeRTOS.h"
@@ -63,6 +50,7 @@ void scanDump();
 bool publishMsg(IOHC::iohcPacket *iohc);
 bool msgRcvd(IOHC::iohcPacket *iohc);
 bool msgArchive(IOHC::iohcPacket *iohc);
+
 
 uint8_t keyCap[16] = {};
 //uint8_t source_originator[3] = {0};
@@ -79,6 +67,7 @@ IOHC::iohcSystemTable *sysTable;
 IOHC::iohcRemote1W *remote1W;
 IOHC::iohcCozyDevice2W *cozyDevice2W;
 IOHC::iohcOtherDevice2W *otherDevice2W;
+IOHC::iohcRemoteMap *remoteMap;
 
 uint32_t frequencies[] = FREQS2SCAN;
 
@@ -87,16 +76,9 @@ using namespace IOHC;
 void setup() {
     Serial.begin(115200);
     
-    Wire.begin(OLED_SDA, OLED_SCL);  // pins defined per board in board-config.h
 
-    // Initialize display
-    if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
-      Serial.println(F("SSD1306 allocation failed"));
-    for (;;);
-    }
+    initDisplay();
 
-    //display.init();
-    //display.setFont(ArialMT_Plain_10);
 
     //Heltec.begin(true /*DisplayEnable*/, false /*LoRaEnable*/, true /*SerialEnable*/);
     //Heltec.display->clear();
@@ -134,13 +116,7 @@ void setup() {
         Serial.print("Connected to WiFi. IP Address: ");
         Serial.println(WiFi.localIP());
 
-        display.clearDisplay();
-        display.setTextSize(1);
-        display.setTextColor(SSD1306_WHITE);
-        display.setCursor(0, 0);
-        String ipStr = "IP: " + WiFi.localIP().toString();
-        display.println(ipStr);
-        display.display();
+        displayIpAddress(WiFi.localIP());
 
         // --- End WiFi Setup ---
 
@@ -158,6 +134,7 @@ void setup() {
     remote1W = IOHC::iohcRemote1W::getInstance();
     cozyDevice2W = IOHC::iohcCozyDevice2W::getInstance();
     otherDevice2W = IOHC::iohcOtherDevice2W::getInstance();
+    remoteMap = IOHC::iohcRemoteMap::getInstance();
 
     //   AES_init_ctx(&ctx, transfert_key); // PreInit AES for cozy (1W use original version) TODO
 
@@ -453,14 +430,30 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
                 uint16_t main = (iohc->payload.packet.msg.p0x00_14.main[0] << 8) | iohc->payload.packet.msg.p0x00_14.main[1];
                 const char *action = "unknown";
                 switch (main) {
-                    case 0x0000: action = "open"; break;
-                    case 0xC800: action = "close"; break;
-                    case 0xD200: action = "stop"; break;
-                    case 0xD803: action = "vent"; break;
-                    case 0x6400: action = "force"; break;
+                    case 0x0000: action = "OPEN"; break;
+                    case 0xC800: action = "CLOSE"; break;
+                    case 0xD200: action = "STOP"; break;
+                    case 0xD803: action = "VENT"; break;
+                    case 0x6400: action = "FORCE"; break;
                     default: break;
                 }
                 doc["action"] = action;
+                display1WAction(iohc->payload.packet.header.source, action, "RX");
+                if (const auto *map = remoteMap->find(iohc->payload.packet.header.source)) {
+                    const auto &remotes = iohcRemote1W::getInstance()->getRemotes();
+                    for (const auto &desc : map->devices) {
+                        auto rit = std::find_if(remotes.begin(), remotes.end(), [&](const auto &r){
+                            return r.description == desc;
+                        });
+                        if (rit != remotes.end()) {
+                            std::string id = bytesToHexString(rit->node, sizeof(rit->node));
+#if defined(MQTT)
+                            std::string topic = "iown/" + id + "/state";
+                            mqttClient.publish(topic.c_str(), 0, false, action);
+#endif
+                        }
+                    }
+                }
             } else {
                 doc["type"] = "Other";
                 otherDevice2W->memorizeOther2W.memorizedCmd = iohc->payload.packet.header.cmd;
@@ -587,6 +580,11 @@ bool publishMsg(IOHC::iohcPacket *iohc) {
     doc["to"] = bytesToHexString(iohc->payload.packet.header.source, 3);
     doc["cmd"] = to_hex_str(iohc->payload.packet.header.cmd).c_str();
     doc["_data"] = bytesToHexString(iohc->payload.buffer + 9, iohc->buffer_length - 9);
+    if (remoteMap) {
+        if (const auto *map = remoteMap->find(iohc->payload.packet.header.source)) {
+            doc["remote"] = map->name;
+        }
+    }
 
     if (iohc->payload.packet.header.CtrlByte1.asStruct.Protocol == 1 &&
         iohc->payload.packet.header.cmd == 0x00) {

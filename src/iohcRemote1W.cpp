@@ -19,9 +19,28 @@
 #include <ArduinoJson.h>
 
 #include <iohcCryptoHelpers.h>
+#include <oled_display.h>
 
 namespace IOHC {
     iohcRemote1W* iohcRemote1W::_iohcRemote1W = nullptr;
+
+    static const char *remoteButtonToString(RemoteButton cmd) {
+        switch (cmd) {
+            case RemoteButton::Open: return "OPEN";
+            case RemoteButton::Close: return "CLOSE";
+            case RemoteButton::Stop: return "STOP";
+            case RemoteButton::Vent: return "VENT";
+            case RemoteButton::ForceOpen: return "FORCE";
+            case RemoteButton::Pair: return "PAIR";
+            case RemoteButton::Add: return "ADD";
+            case RemoteButton::Remove: return "REMOVE";
+            case RemoteButton::Mode1: return "MODE1";
+            case RemoteButton::Mode2: return "MODE2";
+            case RemoteButton::Mode3: return "MODE3";
+            case RemoteButton::Mode4: return "MODE4";
+            default: return "UNKNOWN";
+        }
+    }
 
     iohcRemote1W::iohcRemote1W() = default;
 
@@ -147,6 +166,7 @@ namespace IOHC {
                     digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
 //                }
                 _radioInstance->send(packets2send);
+                display1WAction(r.node, remoteButtonToString(cmd), "TX");
                 break;
             }
 
@@ -190,6 +210,7 @@ namespace IOHC {
 //                }
                 _radioInstance->send(packets2send);
                 //printf("\n");
+                display1WAction(r.node, remoteButtonToString(cmd), "TX");
                 break;
             }
 
@@ -232,6 +253,7 @@ namespace IOHC {
                     digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
 //                }
                 _radioInstance->send(packets2send);
+                display1WAction(r.node, remoteButtonToString(cmd), "TX");
                 break;
             }
            default: {
@@ -459,6 +481,7 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
                     digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
                 }
                 _radioInstance->send(packets2send);
+                display1WAction(r.node, remoteButtonToString(cmd), "TX");
                 break;
 //            }
         }

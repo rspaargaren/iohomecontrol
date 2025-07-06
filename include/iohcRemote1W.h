@@ -73,6 +73,7 @@ namespace IOHC {
     protected:
         int8_t target[3];
 
+
         std::vector<remote> remotes;
 
         std::vector<iohcPacket *> packets2send{};
