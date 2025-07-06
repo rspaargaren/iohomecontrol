@@ -93,12 +93,8 @@ void setup() {
     Serial.println("LittleFS mounted successfully");
 #endif
 
-    // Initialize WiFi, MQTT and WebServer
-    wifiReconnectTimer = xTimerCreate("wifiTimer", pdMS_TO_TICKS(5000), pdFALSE,
-                                      nullptr,
-                                      reinterpret_cast<TimerCallbackFunction_t>(connectToWifi));
-    WiFi.onEvent(WiFiEvent);
-    connectToWifi();
+    // Initialize network services
+    initWifi();
 #if defined(MQTT)
     initMqtt();
 #endif
