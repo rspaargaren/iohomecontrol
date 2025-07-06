@@ -51,9 +51,9 @@ This project now includes an experimental web interface to control IOHC devices.
 ### Setup & Access
 
 1.  **Configure WiFi:**
-    *   Open `src/main.cpp`.
-    *   Locate the `YOUR_SSID` and `YOUR_PASSWORD` placeholders.
-    *   Replace them with your actual WiFi network SSID and password.
+    *   On first boot the device starts an access point named `iohc-setup`.
+    *   Connect to this AP and follow the WiFiManager captive portal to enter
+        your WiFi credentials.
 
 2.  **Build and Upload Filesystem:**
     *   The web interface files (`index.html`, `style.css`, `script.js`) are located in `extras/web_interface_data/`.
