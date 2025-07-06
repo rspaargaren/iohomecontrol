@@ -18,13 +18,11 @@
 #include <iohcCozyDevice2W.h>
 #include <iohcOtherDevice2W.h>
 #include <interact.h>
+#include <wifi_helper.h>
 #include <oled_display.h>
 #include <iohcCryptoHelpers.h>
 #include <mqtt_handler.h>
 
-TimerHandle_t wifiReconnectTimer;
-WiFiClient wifiClient;
-ConnState wifiStatus = ConnState::Connecting;
 ConnState mqttStatus = ConnState::Disconnected;
 
 _cmdEntry* _cmdHandler[MAXCMDS];
@@ -39,60 +37,6 @@ void tokenize(std::string const &str, const char delim, Tokens &out) {
   }
 }
 
-void connectToWifi() {
-  Serial.println("Connecting to Wi-Fi via WiFiManager...");
-  wifiStatus = ConnState::Connecting;
-  updateDisplayStatus();
-  WiFiClass::mode(WIFI_STA);
-
-  ESP_ERROR_CHECK(esp_wifi_set_promiscuous(true));
-  uint8_t primaryChan = 10;
-  wifi_second_chan_t secondChan = WIFI_SECOND_CHAN_NONE;
-  esp_wifi_set_channel(primaryChan, secondChan);
-  ESP_ERROR_CHECK(esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11B|WIFI_PROTOCOL_11G));
-  ESP_ERROR_CHECK(esp_wifi_set_promiscuous(false));
-  ESP_ERROR_CHECK(esp_wifi_scan_stop());
-
-  WiFiManager wm;
-  bool res = wm.autoConnect("iohc-setup");
-  if (!res) {
-    Serial.println("WiFiManager failed to connect");
-    wifiStatus = ConnState::Disconnected;
-  } else {
-    Serial.printf("Connected to WiFi. IP address: %s\n", WiFi.localIP().toString().c_str());
-    wifiStatus = ConnState::Connected;
-  }
-  updateDisplayStatus();
-}
-
-void WiFiEvent(WiFiEvent_t event) {
-    switch(event) {
-    case SYSTEM_EVENT_STA_GOT_IP:
-        Serial.println("WiFi connected");
-        Serial.printf(WiFi.macAddress().c_str());
-        Serial.printf(" IP address: %s ", WiFi.localIP().toString().c_str());
-        wifiStatus = ConnState::Connected;
-        updateDisplayStatus();
-        setupWebServer();
-        xTimerStop(wifiReconnectTimer, 0);
-#if defined(MQTT)
-        connectToMqtt();
-#endif
-        printf("\n");
-        break;
-    case SYSTEM_EVENT_STA_DISCONNECTED:
-        Serial.println("WiFi lost connection");
-        wifiStatus = ConnState::Disconnected;
-        updateDisplayStatus();
-#if defined(MQTT)
-        xTimerStop(mqttReconnectTimer, 0);
-#endif
-        xTimerStart(wifiReconnectTimer, 0);
-        break;
-    default:
-        break;
-    }
-}
 
 namespace Cmd {
 bool verbosity = true;

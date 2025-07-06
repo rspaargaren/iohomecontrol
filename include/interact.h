@@ -32,9 +32,6 @@ extern "C" {
         #include "freertos/timers.h"
 }
 
-#include <WiFi.h>
-#include <WiFiManager.h>
-#include <esp_wifi.h>
 #include <Adafruit_SSD1306.h>
 #include <web_server_handler.h>
 //#if defined(MQTT)
@@ -58,12 +55,9 @@ namespace IOHC {
   #define MAXCMDS 50
 #endif
 
-extern TimerHandle_t wifiReconnectTimer;
-extern WiFiClient wifiClient;                 // Create an ESP32 WiFiClient class to connect to the MQTT server
 extern Adafruit_SSD1306 display;
 
 enum class ConnState { Connecting, Connected, Disconnected };
-extern ConnState wifiStatus;
 extern ConnState mqttStatus;
 void tokenize(std::string const &str, const char delim, Tokens &out);
 
@@ -75,8 +69,6 @@ struct _cmdEntry {
 extern _cmdEntry* _cmdHandler[MAXCMDS];
 extern uint8_t lastEntry;
 
-void connectToWifi();
-void WiFiEvent(WiFiEvent_t event);
 
 #if defined(DEBUG)
   #ifndef DEBUG_PORT

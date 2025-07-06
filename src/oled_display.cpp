@@ -18,6 +18,7 @@
 #include <iohcCryptoHelpers.h>
 #include <iohcRemoteMap.h>
 #include <interact.h>
+#include <wifi_helper.h>
 #include <WiFi.h>
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RST);
