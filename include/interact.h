@@ -35,9 +35,13 @@ extern "C" {
 #include <WiFi.h>
 #include <esp_wifi.h>
 #include <Adafruit_SSD1306.h>
+//#if defined(MQTT)
+//  #include <AsyncMqttClient.h>
+//  #include <ArduinoJson.h>
+//#endif
+
 #if defined(MQTT)
-  #include <AsyncMqttClient.h>
-  #include <ArduinoJson.h>
+#include "mqtt_handler.h"
 #endif
 
 #include <utils.h>

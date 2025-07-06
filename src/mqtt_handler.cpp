@@ -1,8 +1,13 @@
 #include <mqtt_handler.h>
+
 #include <iohcRemote1W.h>
 #include <iohcCryptoHelpers.h>
 
-#if defined(MQTT)
+//#if defined(MQTT)
+#include <AsyncMqttClient.h>
+#include <ArduinoJson.h>
+#include <interact.h>
+
 
 AsyncMqttClient mqttClient;
 TimerHandle_t mqttReconnectTimer;
@@ -187,5 +192,5 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
     mqttFuncHandler(message);
 }
 
-#endif // MQTT
+//#endif // MQTT
 

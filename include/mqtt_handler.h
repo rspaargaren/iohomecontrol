@@ -1,9 +1,9 @@
 #ifndef MQTT_HANDLER_H
 #define MQTT_HANDLER_H
 
-#include <interact.h>
+//#include <interact.h>
 
-#if defined(MQTT)
+//#if defined(MQTT)
 
 #include <AsyncMqttClient.h>
 #include <ArduinoJson.h>
@@ -24,7 +24,7 @@ void handleMqttConnect();
 void publishHeartbeat(TimerHandle_t timer);
 void mqttFuncHandler(const char *cmd);
 
-#endif // MQTT
+//#endif // MQTT
 
 #endif // MQTT_HANDLER_H
 
