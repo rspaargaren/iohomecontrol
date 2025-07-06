@@ -13,6 +13,7 @@ extern TimerHandle_t mqttReconnectTimer;
 extern TimerHandle_t heartbeatTimer;
 extern const char AVAILABILITY_TOPIC[];
 
+void initMqtt();
 void connectToMqtt();
 void onMqttConnect(bool sessionPresent);
 void onMqttDisconnect(AsyncMqttClientDisconnectReason reason);

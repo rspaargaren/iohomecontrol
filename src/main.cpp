@@ -33,7 +33,7 @@
 
 #include <web_server_handler.h>
 #include "LittleFS.h"
-#include <WiFi.h> // Assuming WiFi is used and initialized elsewhere or will be here.
+//#include <WiFi.h> // Assuming WiFi is used and initialized elsewhere or will be here.
 
 
 #include <oled_display.h>
@@ -74,16 +74,9 @@ uint32_t frequencies[] = FREQS2SCAN;
 using namespace IOHC;
 
 void setup() {
-    Serial.begin(115200);
-    
+    Serial.begin(115200);       //Start serial connection for debug and manual input
 
-    initDisplay();
-
-
-    //Heltec.begin(true /*DisplayEnable*/, false /*LoRaEnable*/, true /*SerialEnable*/);
-    //Heltec.display->clear();
-    //Heltec.display->drawString(0, 0, "Booting...");
-    //Heltec.display->display();
+    initDisplay(); // Init Olded display
 
     pinMode(RX_LED, OUTPUT); // Blink this LED
     digitalWrite(RX_LED, 1);
