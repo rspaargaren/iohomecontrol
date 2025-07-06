@@ -30,6 +30,7 @@
 #include <iohcRemoteMap.h>
 #include <interact.h>
 #include <mqtt_handler.h>
+#include <wifi_helper.h>
 
 #include <web_server_handler.h>
 #include "LittleFS.h"
@@ -92,7 +93,17 @@ void setup() {
     Serial.println("LittleFS mounted successfully");
 #endif
 
-    // WiFi connection handled in Cmd::init() using WiFiManager
+    // Initialize WiFi, MQTT and WebServer
+    wifiReconnectTimer = xTimerCreate("wifiTimer", pdMS_TO_TICKS(5000), pdFALSE,
+                                      nullptr,
+                                      reinterpret_cast<TimerCallbackFunction_t>(connectToWifi));
+    WiFi.onEvent(WiFiEvent);
+    connectToWifi();
+#if defined(MQTT)
+    initMqtt();
+#endif
+    setupWebServer();
+    Cmd::kbd_tick.attach_ms(500, Cmd::cmdFuncHandler);
 
     radioInstance = IOHC::iohcRadio::getInstance();
     radioInstance->start(MAX_FREQS, frequencies, 0, msgRcvd, publishMsg); //msgArchive); //, msgRcvd);
