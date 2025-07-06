@@ -5,6 +5,7 @@
 #include <AsyncMqttClient.h>
 #include <ArduinoJson.h>
 #include <interact.h>
+#include <oled_display.h>
 
 AsyncMqttClient mqttClient;
 TimerHandle_t mqttReconnectTimer;
@@ -21,7 +22,11 @@ void initMqtt() {
     mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(5000), pdFALSE,
                                       nullptr,
                                       reinterpret_cast<TimerCallbackFunction_t>(connectToMqtt));
+
+    connectToMqtt();
 }
+
+
 
 void publishDiscovery(const std::string &id, const std::string &name) {
     JsonDocument doc;

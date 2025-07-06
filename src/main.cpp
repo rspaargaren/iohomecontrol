@@ -30,10 +30,11 @@
 #include <iohcRemoteMap.h>
 #include <interact.h>
 #include <mqtt_handler.h>
+#include <wifi_helper.h>
 
 #include <web_server_handler.h>
 #include "LittleFS.h"
-#include <WiFi.h> // Assuming WiFi is used and initialized elsewhere or will be here.
+//#include <WiFi.h> // Assuming WiFi is used and initialized elsewhere or will be here.
 
 
 #include <oled_display.h>
@@ -74,16 +75,9 @@ uint32_t frequencies[] = FREQS2SCAN;
 using namespace IOHC;
 
 void setup() {
-    Serial.begin(115200);
-    
+    Serial.begin(115200);       //Start serial connection for debug and manual input
 
-    initDisplay();
-
-
-    //Heltec.begin(true /*DisplayEnable*/, false /*LoRaEnable*/, true /*SerialEnable*/);
-    //Heltec.display->clear();
-    //Heltec.display->drawString(0, 0, "Booting...");
-    //Heltec.display->display();
+    initDisplay(); // Init Olded display
 
     pinMode(RX_LED, OUTPUT); // Blink this LED
     digitalWrite(RX_LED, 1);
@@ -99,32 +93,13 @@ void setup() {
     Serial.println("LittleFS mounted successfully");
 #endif
 
-    // --- WiFi Setup ---
-    // Credentials are defined in include/user_config.h
-
-    WiFi.begin(WIFI_SSID, WIFI_PASSWD);
-    Serial.print("Connecting to WiFi...");
-    int retries = 0;
-    while (WiFi.status() != WL_CONNECTED && retries < 30) { // Retry for 15 seconds
-        delay(500);
-        Serial.print(".");
-        retries++;
-    }
-    Serial.println();
-
-    if (WiFi.status() == WL_CONNECTED) {
-        Serial.print("Connected to WiFi. IP Address: ");
-        Serial.println(WiFi.localIP());
-
-        displayIpAddress(WiFi.localIP());
-
-        // --- End WiFi Setup ---
-
-        // Call setupWebServer() only if WiFi connected
-        setupWebServer();
-    } else {
-        Serial.println("Failed to connect to WiFi. Web server not started.");
-    }
+    // Initialize network services
+    initWifi();
+#if defined(MQTT)
+    initMqtt();
+#endif
+    setupWebServer();
+    Cmd::kbd_tick.attach_ms(500, Cmd::cmdFuncHandler);
 
     radioInstance = IOHC::iohcRadio::getInstance();
     radioInstance->start(MAX_FREQS, frequencies, 0, msgRcvd, publishMsg); //msgArchive); //, msgRcvd);
@@ -689,4 +664,5 @@ void txUserBuffer(Tokens *cmd) {
 
 void loop() {
     // loopWebServer(); // For ESPAsyncWebServer, this is typically not needed.
+    checkWifiConnection();
 }

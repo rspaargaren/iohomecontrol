@@ -19,6 +19,7 @@
 
 #include <board-config.h>
 
+// WiFi credentials are handled via WiFiManager
 #define WIFI_SSID ""
 #define WIFI_PASSWD ""
 inline const char *wifi_ssid = "";
