@@ -282,13 +282,7 @@ namespace Cmd {
   inline void init() {
     
     #if defined(MQTT)
-      mqttClient.setClientId("iown");
-      mqttClient.setCredentials(MQTT_USER, MQTT_PASSWD);
-      mqttClient.setServer(MQTT_SERVER, 1883);
-      mqttClient.onConnect(onMqttConnect);
-      mqttClient.onDisconnect(onMqttDisconnect);
-      mqttClient.onMessage(onMqttMessage);
-      mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(5000), pdFALSE, nullptr, reinterpret_cast<TimerCallbackFunction_t>(connectToMqtt));
+      initMqtt();
     #endif
 
     wifiReconnectTimer = xTimerCreate("wifiTimer", pdMS_TO_TICKS(5000), pdFALSE, nullptr, reinterpret_cast<TimerCallbackFunction_t>(connectToWifi));
