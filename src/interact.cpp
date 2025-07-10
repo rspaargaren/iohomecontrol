@@ -302,11 +302,11 @@ void cmdFuncHandler() {
 }
 
 void init() {
-#if defined(MQTT)
-initMqtt();
-#endif
+//#if defined(MQTT)
+//initMqtt();
+//#endif
 
-  initWifi();
+//  initWifi();
 
   kbd_tick.attach_ms(500, cmdFuncHandler);
 }
