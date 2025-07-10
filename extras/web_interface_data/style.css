@@ -7,7 +7,7 @@ body {
 }
 
 header {
-    background-color: #333;
+    background-color: #5A6E8C;
     color: #fff;
     padding: 1em 0;
     text-align: center;
@@ -88,9 +88,10 @@ input[type="text"], select {
 footer {
     text-align: center;
     padding: 1em 0;
-    background-color: #333;
+    background-color: #5A6E8C;
     color: #fff;
     position: relative; /* Changed from fixed to relative for simplicity */
     bottom: 0;
     width: 100%;
 }
+
