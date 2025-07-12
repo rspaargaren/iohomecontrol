@@ -91,11 +91,13 @@ extern bool scanMode;
 
 extern TimerHandle_t consoleTimer;
 
+
 bool addHandler(char *cmd, char *description, void (*handler)(Tokens*));
 char *cmdReceived(bool echo = false);
 void cmdFuncHandler();
 void createCommands();
 void init();
+
 }
 
 #endif
