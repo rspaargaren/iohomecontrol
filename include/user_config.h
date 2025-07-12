@@ -33,6 +33,9 @@ inline const char *mqtt_server = "192.168.1.40";
 inline const char *mqtt_user = "user";
 inline const char *mqtt_password = "passwd";
 
+// Comment out the next line if no display is connected
+#define DISPLAY
+
 #define HTTP_LISTEN_PORT    80
 #define HTTP_USERNAME       "admin"
 #define HTTP_PASSWORD       "admin"

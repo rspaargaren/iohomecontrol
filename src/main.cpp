@@ -37,7 +37,10 @@
 //#include <WiFi.h> // Assuming WiFi is used and initialized elsewhere or will be here.
 
 
+#include <user_config.h>
+#if defined(DISPLAY)
 #include <oled_display.h>
+#endif
 
 
 extern "C" {
@@ -77,7 +80,9 @@ using namespace IOHC;
 void setup() {
     Serial.begin(115200);       //Start serial connection for debug and manual input
 
-    initDisplay(); // Init Olded display
+#if defined(DISPLAY)
+    initDisplay(); // Init OLED display
+#endif
 
     pinMode(RX_LED, OUTPUT); // Blink this LED
     digitalWrite(RX_LED, 1);
