@@ -2,6 +2,7 @@
 #define WEB_SERVER_HANDLER_H
 
 #include <Arduino.h>
+#include <user_config.h>
 
 // Forward declaration if ESPAsyncWebServer is used
 class ESPAsyncWebServer;

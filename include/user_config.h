@@ -26,9 +26,9 @@ inline const char *wifi_ssid = "";
 inline const char *wifi_passwd = "";
 
 #define MQTT
-#define MQTT_SERVER "XXX"
+#define MQTT_SERVER ""
 #define MQTT_USER "mosquitto"
-#define MQTT_PASSWD "XXXX"
+#define MQTT_PASSWD ""
 //inline const char *mqtt_server = "192.168.1.40";
 //inline const char *mqtt_user = "user";
 //inline const char *mqtt_password = "passwd";
@@ -37,7 +37,7 @@ inline const char *wifi_passwd = "";
 //#define SSD1306_DISPLAY
 
 // Comment out the next line to disable the built-in web server
-#define WEBSERVER
+//#define WEBSERVER
 
 #define HTTP_LISTEN_PORT    80
 #define HTTP_USERNAME       "admin"
