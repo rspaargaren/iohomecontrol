@@ -41,6 +41,8 @@ void connectToWifi() {
 
     WiFi.mode(WIFI_STA);
     WiFiManager wm;
+    wm.setConnectTimeout(30);        // 10 sec voor verbinding met AP
+    wm.setConfigPortalTimeout(180);  // 3 min captive portal open
 
     bool res = wm.autoConnect("iohc-setup");
     if (!res) {
