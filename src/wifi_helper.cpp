@@ -31,6 +31,9 @@ void initWifi() {
         nullptr,
         reinterpret_cast<TimerCallbackFunction_t>(connectToWifi)
     );
+    if (!wifiReconnectTimer) {
+        Serial.println("Failed to create WiFi reconnect timer");
+    }
     connectToWifi();
 }
 
@@ -51,14 +54,18 @@ void connectToWifi() {
         updateDisplayStatus();
 
         // Retry later
-        xTimerStart(wifiReconnectTimer, 0);
+        if (wifiReconnectTimer) {
+            xTimerStart(wifiReconnectTimer, 0);
+        }
     } else {
         Serial.printf("Connected to WiFi. IP address: %s\n", WiFi.localIP().toString().c_str());
         wifiStatus = ConnState::Connected;
         updateDisplayStatus();
 #if defined(MQTT)
         // Kick off MQTT connection when WiFi becomes available
-        xTimerStart(mqttReconnectTimer, 0);
+        if (mqttReconnectTimer) {
+            xTimerStart(mqttReconnectTimer, 0);
+        }
 #endif
     }
 }
@@ -72,9 +79,13 @@ void checkWifiConnection() {
 
 #if defined(MQTT)
             Serial.println("Stopping MQTT reconnect timer");
-            xTimerStop(mqttReconnectTimer, 0);
+            if (mqttReconnectTimer) {
+                xTimerStop(mqttReconnectTimer, 0);
+            }
 #endif
-            xTimerStart(wifiReconnectTimer, 0);
+            if (wifiReconnectTimer) {
+                xTimerStart(wifiReconnectTimer, 0);
+            }
         }
     }
 }
