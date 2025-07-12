@@ -1,5 +1,6 @@
 #ifndef MQTT_HANDLER_H
 #define MQTT_HANDLER_H
+#include <user_config.h>
 
 /* MQTT support can be enabled or disabled via the `MQTT` define in
  * `user_config.h`.  When disabled, this header becomes effectively empty so
