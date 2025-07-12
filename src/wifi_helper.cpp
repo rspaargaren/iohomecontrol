@@ -16,7 +16,9 @@
 
 #include <wifi_helper.h>
 #include <oled_display.h>
+#if defined(MQTT)
 #include <mqtt_handler.h>
+#endif
 #include <WiFiManager.h>
 
 TimerHandle_t wifiReconnectTimer;
@@ -31,6 +33,9 @@ void initWifi() {
         nullptr,
         reinterpret_cast<TimerCallbackFunction_t>(connectToWifi)
     );
+    if (!wifiReconnectTimer) {
+        Serial.println("Failed to create WiFi reconnect timer");
+    }
     connectToWifi();
 }
 
@@ -41,6 +46,8 @@ void connectToWifi() {
 
     WiFi.mode(WIFI_STA);
     WiFiManager wm;
+    wm.setConnectTimeout(30);        // 10 sec voor verbinding met AP
+    wm.setConfigPortalTimeout(180);  // 3 min captive portal open
 
     bool res = wm.autoConnect("iohc-setup");
     if (!res) {
@@ -49,11 +56,19 @@ void connectToWifi() {
         updateDisplayStatus();
 
         // Retry later
-        xTimerStart(wifiReconnectTimer, 0);
+        if (wifiReconnectTimer) {
+            xTimerStart(wifiReconnectTimer, 0);
+        }
     } else {
         Serial.printf("Connected to WiFi. IP address: %s\n", WiFi.localIP().toString().c_str());
         wifiStatus = ConnState::Connected;
         updateDisplayStatus();
+#if defined(MQTT)
+        // Kick off MQTT connection when WiFi becomes available
+        if (mqttReconnectTimer) {
+            xTimerStart(mqttReconnectTimer, 0);
+        }
+#endif
     }
 }
 
@@ -66,9 +81,13 @@ void checkWifiConnection() {
 
 #if defined(MQTT)
             Serial.println("Stopping MQTT reconnect timer");
-            xTimerStop(mqttReconnectTimer, 0);
+            if (mqttReconnectTimer) {
+                xTimerStop(mqttReconnectTimer, 0);
+            }
 #endif
-            xTimerStart(wifiReconnectTimer, 0);
+            if (wifiReconnectTimer) {
+                xTimerStart(wifiReconnectTimer, 0);
+            }
         }
     }
 }

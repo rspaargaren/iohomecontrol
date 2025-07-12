@@ -32,8 +32,13 @@ extern "C" {
         #include "freertos/timers.h"
 }
 
+#if defined(SSD1306_DISPLAY)
 #include <Adafruit_SSD1306.h>
+#endif
+
+#if defined(WEBSERVER)
 #include <web_server_handler.h>
+#endif
 //#if defined(MQTT)
 //#  include <AsyncMqttClient.h>
 //#  include <ArduinoJson.h>
@@ -55,7 +60,9 @@ namespace IOHC {
   #define MAXCMDS 50
 #endif
 
+#if defined(SSD1306_DISPLAY)
 extern Adafruit_SSD1306 display;
+#endif
 
 enum class ConnState { Connecting, Connected, Disconnected };
 extern ConnState mqttStatus;

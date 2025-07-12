@@ -1,4 +1,6 @@
 #include <web_server_handler.h>
+
+#if defined(WEBSERVER)
 #include "ESPAsyncWebServer.h" // Or WebServer.h if that's preferred for memory
 #include "ArduinoJson.h"       // For creating JSON responses
 #include <LittleFS.h>
@@ -122,3 +124,5 @@ void loopWebServer() {
     // For ESPAsyncWebServer, most work is done asynchronously.
     // For the basic WebServer.h, you would need server.handleClient() here.
 }
+
+#endif // defined(WEBSERVER)

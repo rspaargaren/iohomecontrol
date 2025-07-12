@@ -1,11 +1,15 @@
 #include <mqtt_handler.h>
 
+#if defined(MQTT)
+
 #include <iohcRemote1W.h>
 #include <iohcCryptoHelpers.h>
 #include <AsyncMqttClient.h>
 #include <ArduinoJson.h>
 #include <interact.h>
 #include <oled_display.h>
+#include <cstring>
+#include <WiFi.h>
 
 AsyncMqttClient mqttClient;
 TimerHandle_t mqttReconnectTimer;
@@ -84,7 +88,16 @@ void handleMqttConnect() {
 }
 
 void connectToMqtt() {
-    Serial.println("Connecting to MQTT...");
+    if (WiFi.status() != WL_CONNECTED) {
+        Serial.println("WiFi not connected, delaying MQTT connection");
+        xTimerStart(mqttReconnectTimer, pdMS_TO_TICKS(5000));
+        return;
+    }
+    if (strlen(MQTT_SERVER) == 0) {
+        Serial.println("MQTT server not configured");
+        return;
+    }
+    Serial.printf("Connecting to MQTT at %s...\n", MQTT_SERVER);
     mqttStatus = ConnState::Connecting;
     updateDisplayStatus();
     mqttClient.connect();
@@ -127,8 +140,9 @@ void onMqttConnect(bool sessionPresent) {
     handleMqttConnect();
 }
 
-void onMqttDisconnect(AsyncMqttClientDisconnectReason) {
-    Serial.println("Disconnected from MQTT.");
+void onMqttDisconnect(AsyncMqttClientDisconnectReason reason) {
+    Serial.print("Disconnected from MQTT. Reason: ");
+    Serial.println(static_cast<uint8_t>(reason));
     mqttStatus = ConnState::Disconnected;
     updateDisplayStatus();
     xTimerStart(mqttReconnectTimer, 0);
@@ -219,3 +233,4 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
         snprintf(message, sizeof(message), "MQTT %s %s", topic, data);
     mqttFuncHandler(message);
 }
+#endif // MQTT

@@ -29,15 +29,22 @@
 #include <iohcOtherDevice2W.h>
 #include <iohcRemoteMap.h>
 #include <interact.h>
+#if defined(MQTT)
 #include <mqtt_handler.h>
+#endif
 #include <wifi_helper.h>
 
+#if defined(WEBSERVER)
 #include <web_server_handler.h>
+#endif
 #include "LittleFS.h"
 //#include <WiFi.h> // Assuming WiFi is used and initialized elsewhere or will be here.
 
 
+#include <user_config.h>
+#if defined(SSD1306_DISPLAY)
 #include <oled_display.h>
+#endif
 
 
 extern "C" {
@@ -77,7 +84,9 @@ using namespace IOHC;
 void setup() {
     Serial.begin(115200);       //Start serial connection for debug and manual input
 
-    initDisplay(); // Init Olded display
+#if defined(SSD1306_DISPLAY)
+    initDisplay(); // Init OLED display
+#endif
 
     pinMode(RX_LED, OUTPUT); // Blink this LED
     digitalWrite(RX_LED, 1);
@@ -98,7 +107,9 @@ void setup() {
 #if defined(MQTT)
     initMqtt();
 #endif
+#if defined(WEBSERVER)
     setupWebServer();
+#endif
     Cmd::kbd_tick.attach_ms(500, Cmd::cmdFuncHandler);
 
     radioInstance = IOHC::iohcRadio::getInstance();
@@ -413,7 +424,9 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
                     default: break;
                 }
                 doc["action"] = action;
+                #if defined(SSD1306_DISPLAY)
                 display1WAction(iohc->payload.packet.header.source, action, "RX");
+                #endif
                 if (const auto *map = remoteMap->find(iohc->payload.packet.header.source)) {
                     const auto &remotes = iohcRemote1W::getInstance()->getRemotes();
                     for (const auto &desc : map->devices) {
