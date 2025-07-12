@@ -32,7 +32,9 @@
 #include <mqtt_handler.h>
 #include <wifi_helper.h>
 
+#if defined(WEBSERVER)
 #include <web_server_handler.h>
+#endif
 #include "LittleFS.h"
 //#include <WiFi.h> // Assuming WiFi is used and initialized elsewhere or will be here.
 
@@ -103,7 +105,9 @@ void setup() {
 #if defined(MQTT)
     initMqtt();
 #endif
+#if defined(WEBSERVER)
     setupWebServer();
+#endif
     Cmd::kbd_tick.attach_ms(500, Cmd::cmdFuncHandler);
 
     radioInstance = IOHC::iohcRadio::getInstance();

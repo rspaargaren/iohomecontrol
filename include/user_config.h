@@ -36,6 +36,9 @@ inline const char *wifi_passwd = "";
 // Comment out the next line if no display is connected
 //#define SSD1306_DISPLAY
 
+// Comment out the next line to disable the built-in web server
+#define WEBSERVER
+
 #define HTTP_LISTEN_PORT    80
 #define HTTP_USERNAME       "admin"
 #define HTTP_PASSWORD       "admin"
