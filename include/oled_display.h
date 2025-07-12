@@ -2,6 +2,9 @@
 #define OLED_DISPLAY_H
 
 #include <board-config.h>
+#include <user_config.h>
+
+#if defined(DISPLAY)
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <Wire.h>
@@ -21,5 +24,11 @@ bool initDisplay();
 void displayIpAddress(IPAddress ip);
 void display1WAction(const uint8_t *remote, const char *action, const char *dir, const char *name = nullptr);
 void updateDisplayStatus();
+#else
+inline bool initDisplay() { return true; }
+inline void displayIpAddress(IPAddress) {}
+inline void display1WAction(const uint8_t *, const char *, const char *, const char * = nullptr) {}
+inline void updateDisplayStatus() {}
+#endif
 
 #endif // OLED_DISPLAY_H

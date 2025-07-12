@@ -14,6 +14,8 @@
    limitations under the License.
  */
 
+#include <user_config.h>
+#if defined(DISPLAY)
 #include <oled_display.h>
 #include <iohcCryptoHelpers.h>
 #include <iohcRemoteMap.h>
@@ -108,3 +110,5 @@ void updateDisplayStatus() {
     }
     display.display();
 }
+
+#endif
