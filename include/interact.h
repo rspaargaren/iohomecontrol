@@ -35,7 +35,10 @@ extern "C" {
 #if defined(DISPLAY)
 #include <Adafruit_SSD1306.h>
 #endif
+
+#if defined(WEBSERVER)
 #include <web_server_handler.h>
+#endif
 //#if defined(MQTT)
 //#  include <AsyncMqttClient.h>
 //#  include <ArduinoJson.h>
