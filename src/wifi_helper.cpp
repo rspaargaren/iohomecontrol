@@ -56,6 +56,10 @@ void connectToWifi() {
         Serial.printf("Connected to WiFi. IP address: %s\n", WiFi.localIP().toString().c_str());
         wifiStatus = ConnState::Connected;
         updateDisplayStatus();
+#if defined(MQTT)
+        // Kick off MQTT connection when WiFi becomes available
+        xTimerStart(mqttReconnectTimer, 0);
+#endif
     }
 }
 
