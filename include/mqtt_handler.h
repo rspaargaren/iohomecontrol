@@ -1,9 +1,11 @@
 #ifndef MQTT_HANDLER_H
 #define MQTT_HANDLER_H
 
-//#include <interact.h>
+/* MQTT support can be enabled or disabled via the `MQTT` define in
+ * `user_config.h`.  When disabled, this header becomes effectively empty so
+ * other source files can include it unconditionally. */
 
-//#if defined(MQTT)
+#if defined(MQTT)
 
 #include <AsyncMqttClient.h>
 #include <ArduinoJson.h>
@@ -25,7 +27,7 @@ void handleMqttConnect();
 void publishHeartbeat(TimerHandle_t timer);
 void mqttFuncHandler(const char *cmd);
 
-//#endif // MQTT
+#endif // MQTT
 
 #endif // MQTT_HANDLER_H
 

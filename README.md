@@ -85,7 +85,7 @@ This feature is under development, and functionality will be expanded in the fut
 
 ## Home Assistant Discovery
 
-When MQTT is enabled (`#define MQTT` in `include/user_config.h`) the firmware publishes Home Assistant discovery messages for every blind defined in `extras/1W.json` as soon as the MQTT connection is established.
+When MQTT is enabled (`#define MQTT` in `include/user_config.h`) the firmware publishes Home Assistant discovery messages for every blind defined in `extras/1W.json` as soon as the MQTT connection is established. Comment out the `MQTT` definition if you do not wish to compile the firmware with MQTT support.
 
 Each blind configuration is sent to the topic `homeassistant/cover/<id>/config` where `<id>` is the hexadecimal address from `1W.json`.
 
@@ -96,6 +96,8 @@ Example payload for `B60D1A`:
 ```
 
 Configure your MQTT broker settings in `include/user_config.h` (`MQTT_SERVER`, `MQTT_USER`, `MQTT_PASSWD`). After boot and connection, Home Assistant should automatically discover the covers.
+
+If you don't have an OLED display connected, comment out the `DISPLAY` definition in `include/user_config.h` to disable all display related code.
 
 Once discovery is complete you can control a blind by publishing `OPEN`, `CLOSE`
 or `STOP` to `iown/<id>/set`. The firmware listens on these topics and issues the
