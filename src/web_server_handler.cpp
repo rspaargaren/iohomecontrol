@@ -125,9 +125,4 @@ void loopWebServer() {
     // For the basic WebServer.h, you would need server.handleClient() here.
 }
 
-#else
-
-void setupWebServer() {}
-void loopWebServer() {}
-
-#endif
+#endif // defined(WEBSERVER)
