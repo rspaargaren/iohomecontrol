@@ -32,7 +32,7 @@ extern "C" {
         #include "freertos/timers.h"
 }
 
-#if defined(DISPLAY)
+#if defined(SSD1306_DISPLAY)
 #include <Adafruit_SSD1306.h>
 #endif
 #include <web_server_handler.h>
@@ -57,7 +57,7 @@ namespace IOHC {
   #define MAXCMDS 50
 #endif
 
-#if defined(DISPLAY)
+#if defined(SSD1306_DISPLAY)
 extern Adafruit_SSD1306 display;
 #endif
 

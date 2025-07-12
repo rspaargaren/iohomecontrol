@@ -15,7 +15,7 @@
  */
 
 #include <user_config.h>
-#if defined(DISPLAY)
+#if defined(SSD1306_DISPLAY)
 #include <oled_display.h>
 #include <iohcCryptoHelpers.h>
 #include <iohcRemoteMap.h>

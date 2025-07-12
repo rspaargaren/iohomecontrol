@@ -4,7 +4,7 @@
 #include <board-config.h>
 #include <user_config.h>
 
-#if defined(DISPLAY)
+#if defined(SSD1306_DISPLAY)
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <Wire.h>

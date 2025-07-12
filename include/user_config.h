@@ -26,15 +26,15 @@ inline const char *wifi_ssid = "";
 inline const char *wifi_passwd = "";
 
 #define MQTT
-#define MQTT_SERVER "192.168.1.40"
-#define MQTT_USER "user"
-#define MQTT_PASSWD "passwd"
-inline const char *mqtt_server = "192.168.1.40";
-inline const char *mqtt_user = "user";
-inline const char *mqtt_password = "passwd";
+#define MQTT_SERVER "XXX"
+#define MQTT_USER "mosquitto"
+#define MQTT_PASSWD "XXXX"
+//inline const char *mqtt_server = "192.168.1.40";
+//inline const char *mqtt_user = "user";
+//inline const char *mqtt_password = "passwd";
 
 // Comment out the next line if no display is connected
-#define DISPLAY
+//#define SSD1306_DISPLAY
 
 #define HTTP_LISTEN_PORT    80
 #define HTTP_USERNAME       "admin"

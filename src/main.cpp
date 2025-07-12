@@ -38,7 +38,7 @@
 
 
 #include <user_config.h>
-#if defined(DISPLAY)
+#if defined(SSD1306_DISPLAY)
 #include <oled_display.h>
 #endif
 
@@ -80,7 +80,7 @@ using namespace IOHC;
 void setup() {
     Serial.begin(115200);       //Start serial connection for debug and manual input
 
-#if defined(DISPLAY)
+#if defined(SSD1306_DISPLAY)
     initDisplay(); // Init OLED display
 #endif
 
@@ -418,7 +418,9 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
                     default: break;
                 }
                 doc["action"] = action;
+                #if defined(SSD1306_DISPLAY)
                 display1WAction(iohc->payload.packet.header.source, action, "RX");
+                #endif
                 if (const auto *map = remoteMap->find(iohc->payload.packet.header.source)) {
                     const auto &remotes = iohcRemote1W::getInstance()->getRemotes();
                     for (const auto &desc : map->devices) {
