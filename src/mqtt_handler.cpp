@@ -1,5 +1,7 @@
 #include <mqtt_handler.h>
 
+#if defined(MQTT)
+
 #include <iohcRemote1W.h>
 #include <iohcCryptoHelpers.h>
 #include <AsyncMqttClient.h>
@@ -219,3 +221,4 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
         snprintf(message, sizeof(message), "MQTT %s %s", topic, data);
     mqttFuncHandler(message);
 }
+#endif // MQTT

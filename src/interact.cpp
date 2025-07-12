@@ -21,7 +21,9 @@
 #include <wifi_helper.h>
 #include <oled_display.h>
 #include <iohcCryptoHelpers.h>
+#if defined(MQTT)
 #include <mqtt_handler.h>
+#endif
 
 ConnState mqttStatus = ConnState::Disconnected;
 

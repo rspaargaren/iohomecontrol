@@ -85,7 +85,7 @@ This feature is under development, and functionality will be expanded in the fut
 
 ## Home Assistant Discovery
 
-When MQTT is enabled (`#define MQTT` in `include/user_config.h`) the firmware publishes Home Assistant discovery messages for every blind defined in `extras/1W.json` as soon as the MQTT connection is established.
+When MQTT is enabled (`#define MQTT` in `include/user_config.h`) the firmware publishes Home Assistant discovery messages for every blind defined in `extras/1W.json` as soon as the MQTT connection is established. Comment out the `MQTT` definition if you do not wish to compile the firmware with MQTT support.
 
 Each blind configuration is sent to the topic `homeassistant/cover/<id>/config` where `<id>` is the hexadecimal address from `1W.json`.
 

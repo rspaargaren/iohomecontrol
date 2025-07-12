@@ -29,7 +29,9 @@
 #include <iohcOtherDevice2W.h>
 #include <iohcRemoteMap.h>
 #include <interact.h>
+#if defined(MQTT)
 #include <mqtt_handler.h>
+#endif
 #include <wifi_helper.h>
 
 #if defined(WEBSERVER)

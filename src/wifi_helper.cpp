@@ -16,7 +16,9 @@
 
 #include <wifi_helper.h>
 #include <oled_display.h>
+#if defined(MQTT)
 #include <mqtt_handler.h>
+#endif
 #include <WiFiManager.h>
 
 TimerHandle_t wifiReconnectTimer;
