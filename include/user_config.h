@@ -26,18 +26,18 @@ inline const char *wifi_ssid = "";
 inline const char *wifi_passwd = "";
 
 #define MQTT
-#define MQTT_SERVER ""
+#define MQTT_SERVER "XX"
 #define MQTT_USER "mosquitto"
-#define MQTT_PASSWD ""
+#define MQTT_PASSWD "XX"
 //inline const char *mqtt_server = "192.168.1.40";
 //inline const char *mqtt_user = "user";
 //inline const char *mqtt_password = "passwd";
 
 // Comment out the next line if no display is connected
-//#define SSD1306_DISPLAY
+#define SSD1306_DISPLAY
 
 // Comment out the next line to disable the built-in web server
-//#define WEBSERVER
+#define WEBSERVER
 
 #define HTTP_LISTEN_PORT    80
 #define HTTP_USERNAME       "admin"
