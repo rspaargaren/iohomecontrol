@@ -56,6 +56,7 @@ namespace IOHC {
             volatile static bool _g_payload;
             volatile static bool f_lock;
             static void tickerCounter(iohcRadio *radio);
+            friend void handle_interrupt_task(void *pvParameters);
 
         private:
             iohcRadio();
@@ -97,6 +98,8 @@ namespace IOHC {
             static void i_preamble();
             static void i_payload();
             static void packetSender(iohcRadio *radio);
+            static void flushTx(iohcRadio *radio);
+            volatile static bool txDoneFlag;
 
         #if defined(CC1101)
             uint8_t lenghtFrame=0;

@@ -29,6 +29,7 @@ namespace IOHC {
     volatile bool iohcRadio::f_lock = false;
     volatile bool iohcRadio::send_lock = false;
     volatile bool iohcRadio::txMode = false;
+    volatile bool iohcRadio::txDoneFlag = false;
 
     TaskHandle_t handle_interrupt;
     /**
@@ -46,6 +47,10 @@ namespace IOHC {
             thread_notification = ulTaskNotifyTake(pdTRUE, xMaxBlockTime/*xNoDelay*/); // Attendre la notification
             if (thread_notification && (iohcRadio::_g_payload || iohcRadio::_g_preamble)) {
                 iohcRadio::tickerCounter((iohcRadio *) pvParameters);
+            }
+            if (iohcRadio::txDoneFlag) {
+                iohcRadio::txDoneFlag = false;
+                iohcRadio::flushTx((iohcRadio *) pvParameters);
             }
         }
     }
@@ -342,6 +347,13 @@ namespace IOHC {
             ret = txCB(packet);
         }
         return ret;
+    }
+
+    void iohcRadio::flushTx(iohcRadio *radio) {
+        Radio::clearFlags();
+        Radio::setRx();
+        f_lock = false;
+        txMode = false;
     }
 
     //    static uint8_t RF96lnaMap[] = { 0, 0, 6, 12, 24, 36, 48, 48 };
