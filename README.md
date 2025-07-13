@@ -35,8 +35,10 @@ _At first time or when a JSON in data folder is modified:_
   1. build filesystem image
   2. upload filesystem image
      
-_After any other changes:_  
+_After any other changes:_
   - upload and monitor
+  - make sure `CONFIG_ESP_TIMER_SUPPORTS_ISR_DISPATCH_METHOD` remains enabled in
+    `sdkconfig` so ESP timers can run callbacks from ISR context
 
 [^1]: I use an SX1276. If CC1101/SX1262: Feel free to use the old code (Not checked/garanted)
 
