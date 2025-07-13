@@ -93,10 +93,13 @@ namespace IOHC {
             IohcPacketDelegate rxCB = nullptr;
             IohcPacketDelegate txCB = nullptr;
             std::vector<iohcPacket*> packets2send{};
+            std::vector<iohcPacket*> sentPackets{};
+            static volatile bool txDoneFlag;
         protected:
             static void i_preamble();
             static void i_payload();
             static void packetSender(iohcRadio *radio);
+            static void flushTx(iohcRadio *radio);
 
         #if defined(CC1101)
             uint8_t lenghtFrame=0;

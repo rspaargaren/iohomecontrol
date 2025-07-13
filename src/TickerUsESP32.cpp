@@ -38,8 +38,7 @@ namespace TimersUS {
         _timerConfig.arg = reinterpret_cast<void *>(arg);
         _timerConfig.callback = callback;
         // Use ISR dispatch method so callbacks run in the hardware timer context
-        //_timerConfig.dispatch_method = ESP_TIMER_ISR;
-        _timerConfig.dispatch_method = ESP_TIMER_TASK;
+        _timerConfig.dispatch_method = ESP_TIMER_ISR;
         _timerConfig.skip_unhandled_events = false; //true;
         _timerConfig.name = "TickerMsESP32";
         if (_timer) {
@@ -63,8 +62,7 @@ namespace TimersUS {
         _timerConfig.arg = reinterpret_cast<void *>(arg);
         _timerConfig.callback = callback;
         // Run delayed callbacks via ISR for consistent timing
-        //_timerConfig.dispatch_method = ESP_TIMER_ISR; // But ISR doesn't work with 100ULL
-        _timerConfig.dispatch_method = ESP_TIMER_TASK;
+        _timerConfig.dispatch_method = ESP_TIMER_ISR;
         //    _timerConfig.skip_unhandled_events = true;
         _timerConfig.name = "TickerMsESP32Delay";
         if (_timer_delayed) {
@@ -80,8 +78,7 @@ namespace TimersUS {
         _timerConfig.arg = reinterpret_cast<void *>(arg);
         _timerConfig.callback = callback;
         // Dispatch microsecond timer callbacks directly from ISR
-        //_timerConfig.dispatch_method = ESP_TIMER_ISR; // But ISR doesn't work with 100ULL
-        _timerConfig.dispatch_method = ESP_TIMER_TASK;
+        _timerConfig.dispatch_method = ESP_TIMER_ISR;
         _timerConfig.skip_unhandled_events = true;
         _timerConfig.name = "TickerUsESP32";
 

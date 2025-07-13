@@ -29,6 +29,7 @@ namespace IOHC {
     volatile bool iohcRadio::f_lock = false;
     volatile bool iohcRadio::send_lock = false;
     volatile bool iohcRadio::txMode = false;
+    volatile bool iohcRadio::txDoneFlag = false;
 
     TaskHandle_t handle_interrupt;
     /**
@@ -46,6 +47,10 @@ namespace IOHC {
             thread_notification = ulTaskNotifyTake(pdTRUE, xMaxBlockTime/*xNoDelay*/); // Attendre la notification
             if (thread_notification && (iohcRadio::_g_payload || iohcRadio::_g_preamble)) {
                 iohcRadio::tickerCounter((iohcRadio *) pvParameters);
+            }
+            if (iohcRadio::txDoneFlag) {
+                iohcRadio::txDoneFlag = false;
+                iohcRadio::flushTx((iohcRadio *) pvParameters);
             }
         }
     }
@@ -247,6 +252,8 @@ namespace IOHC {
         packets2send = iohcTx; //std::move(iohcTx); //
         iohcTx.clear();
 
+        sentPackets.clear();
+
         txCounter = 0;
         Sender.attach_ms(packets2send[txCounter]->repeatTime, packetSender, this);
     }
@@ -293,7 +300,6 @@ namespace IOHC {
 #endif
 
         packetStamp = esp_timer_get_time();
-        radio->iohc->decode(true); //false);
 
         IOHC::lastSendCmd = radio->iohc->payload.packet.header.cmd;
 
@@ -305,7 +311,7 @@ namespace IOHC {
             radio->iohc->repeat -= 1;
         if (radio->iohc->repeat == 0) {
             radio->Sender.detach();
-            //++radio->txCounter;
+            radio->sentPackets.push_back(radio->iohc);
             radio->txCounter = radio->txCounter + 1;
             if (radio->txCounter < radio->packets2send.size() && radio->packets2send[radio->txCounter] != nullptr) {
                 //if (radio->packets2send[++(radio->txCounter)]) {
@@ -318,9 +324,12 @@ namespace IOHC {
                     radio->Sender.attach_ms(radio->packets2send[radio->txCounter]->repeatTime, packetSender, radio);
                 }
             } else {
-                // In any case, after last packet sent, unlock the radio
                 txMode = false;
                 radio->packets2send.clear();
+                iohcRadio::txDoneFlag = true;
+                BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+                vTaskNotifyGiveFromISR(handle_interrupt, &xHigherPriorityTaskWoken);
+                portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
             }
         }
         digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
@@ -461,6 +470,14 @@ namespace IOHC {
         free(iohc); // correct Bug memory
         digitalWrite(RX_LED, false);
         return true;
+    }
+
+    void iohcRadio::flushTx(iohcRadio *radio) {
+        for (auto *pkt : radio->sentPackets) {
+            packetStamp = esp_timer_get_time();
+            pkt->decode(true);
+        }
+        radio->sentPackets.clear();
     }
 
 /**
