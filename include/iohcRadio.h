@@ -53,6 +53,7 @@ namespace IOHC {
             virtual ~iohcRadio() = default;
             void start(uint8_t num_freqs, uint32_t *scan_freqs, uint32_t scanTimeUs, IohcPacketDelegate rxCallback, IohcPacketDelegate txCallback);
             void send(std::vector<iohcPacket*>&iohcTx);
+            void setRadioState(RadioState newState);
             enum class RadioState : uint8_t {
                 IDLE,        ///< Default state: nothing happening
                 RX,          ///< Receiving mode
@@ -84,6 +85,7 @@ namespace IOHC {
             uint32_t *scan_freqs{};
             uint32_t scanTimeUs{};
             uint8_t currentFreqIdx = 0;
+            RadioState currentState = RadioState::IDLE;
 
 
         #if defined(ESP8266)
