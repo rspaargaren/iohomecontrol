@@ -18,6 +18,7 @@
 #define IOHC_RADIO_H
 
 #include <Delegate.h>
+#include <cstdint>
 
 #include <board-config.h>
 #include <iohcCryptoHelpers.h>
@@ -52,9 +53,16 @@ namespace IOHC {
             virtual ~iohcRadio() = default;
             void start(uint8_t num_freqs, uint32_t *scan_freqs, uint32_t scanTimeUs, IohcPacketDelegate rxCallback, IohcPacketDelegate txCallback);
             void send(std::vector<iohcPacket*>&iohcTx);
-            volatile static bool _g_preamble;
-            volatile static bool _g_payload;
-            volatile static bool f_lock;
+            enum class RadioState : uint8_t {
+                IDLE,        ///< Default state: nothing happening
+                RX,          ///< Receiving mode
+                TX,          ///< Transmitting mode
+                PREAMBLE,    ///< Preamble detected
+                PAYLOAD,     ///< Payload available
+                LOCKED,      ///< Frequency locked
+                ERROR        ///< Error or unknown state
+            };
+            volatile static RadioState radioState;
             static void tickerCounter(iohcRadio *radio);
 
         private:
@@ -67,7 +75,6 @@ namespace IOHC {
             volatile static unsigned long _g_payload_millis;
             
             volatile static bool send_lock;
-            volatile static bool txMode;
 
             volatile uint32_t tickCounter = 0;
             volatile uint32_t preCounter = 0;

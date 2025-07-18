@@ -22,13 +22,10 @@
 
 namespace IOHC {
     iohcRadio *iohcRadio::_iohcRadio = nullptr;
-    volatile bool iohcRadio::_g_preamble = false;
-    volatile bool iohcRadio::_g_payload = false;
     volatile unsigned long iohcRadio::_g_payload_millis = 0L;
     uint8_t iohcRadio::_flags[2] = {0, 0};
-    volatile bool iohcRadio::f_lock = false;
     volatile bool iohcRadio::send_lock = false;
-    volatile bool iohcRadio::txMode = false;
+    volatile iohcRadio::RadioState iohcRadio::radioState = iohcRadio::RadioState::IDLE;
 
     TaskHandle_t handle_interrupt;
     /**
@@ -44,7 +41,9 @@ namespace IOHC {
         const TickType_t xMaxBlockTime = pdMS_TO_TICKS(655 * 4); // 218.4 );
         while (true) {
             thread_notification = ulTaskNotifyTake(pdTRUE, xMaxBlockTime/*xNoDelay*/); // Attendre la notification
-            if (thread_notification && (iohcRadio::_g_payload || iohcRadio::_g_preamble)) {
+            if (thread_notification &&
+                (iohcRadio::radioState == iohcRadio::RadioState::PAYLOAD ||
+                 iohcRadio::radioState == iohcRadio::RadioState::PREAMBLE)) {
                 iohcRadio::tickerCounter((iohcRadio *) pvParameters);
             }
         }
@@ -55,9 +54,15 @@ namespace IOHC {
      * the interrupt service routine is complete.
      */
     void IRAM_ATTR handle_interrupt_fromisr(/*void *arg*/) {
-        iohcRadio::_g_preamble = digitalRead(RADIO_PREAMBLE_DETECTED);
-        iohcRadio::f_lock = iohcRadio::_g_preamble;
-        iohcRadio::_g_payload = digitalRead(RADIO_PACKET_AVAIL);
+        bool preamble = digitalRead(RADIO_PREAMBLE_DETECTED);
+        bool payload = digitalRead(RADIO_PACKET_AVAIL);
+        if (payload) {
+            iohcRadio::radioState = iohcRadio::RadioState::PAYLOAD;
+        } else if (preamble) {
+            iohcRadio::radioState = iohcRadio::RadioState::PREAMBLE;
+        } else {
+            iohcRadio::radioState = iohcRadio::RadioState::RX;
+        }
         // Notify the thread so it will wake up when the ISR is complete
         BaseType_t xHigherPriorityTaskWoken = pdFALSE;
         vTaskNotifyGiveFromISR(handle_interrupt/*_task*/, &xHigherPriorityTaskWoken);
@@ -166,14 +171,14 @@ namespace IOHC {
         Radio::readBytes(REG_IRQFLAGS1, _flags, sizeof(_flags));
 
         // If Int of PayLoad
-        if (_g_payload) {
+        if (radioState == iohcRadio::RadioState::PAYLOAD) {
             // if TX ready?
             if (_flags[0] & RF_IRQFLAGS1_TXREADY) {
                 radio->sent(radio->iohc);
                 Radio::clearFlags();
-                if (!txMode) {
+                if (radioState != iohcRadio::RadioState::TX) {
                     Radio::setRx();
-                    f_lock = false;
+                    radioState = iohcRadio::RadioState::RX;
                 }
                 // radio->sent(radio->iohc); // Put after Workaround to permit MQTT sending. No more needed
                 return;
@@ -186,7 +191,7 @@ namespace IOHC {
             return;
         }
 
-        if (_g_preamble) {
+        if (radioState == iohcRadio::RadioState::PREAMBLE) {
             radio->tickCounter = 0;
             radio->preCounter = radio->preCounter + 1;
             //radio->preCounter += 1;
@@ -200,7 +205,7 @@ namespace IOHC {
             }
         }
 
-        if (f_lock) return;
+        if (radioState != iohcRadio::RadioState::RX) return;
 
         //if (++radio->tickCounter * SM_GRANULARITY_US < radio->scanTimeUs) return;
         radio->tickCounter = radio->tickCounter + 1;
@@ -224,7 +229,7 @@ namespace IOHC {
             return;
         }
 
-        if (f_lock)
+        if (radioState != iohcRadio::RadioState::RX)
             return;
 
         if ((++radio->tickCounter * SM_GRANULARITY_US) < radio->scanTimeUs)
@@ -242,12 +247,13 @@ namespace IOHC {
      * code inside the function.
      */
     void iohcRadio::send(std::vector<iohcPacket *> &iohcTx) {
-        if (txMode) return;
+        if (radioState == iohcRadio::RadioState::TX) return;
 
         packets2send = iohcTx; //std::move(iohcTx); //
         iohcTx.clear();
 
         txCounter = 0;
+        radioState = iohcRadio::RadioState::TX;
         Sender.attach_ms(packets2send[txCounter]->repeatTime, packetSender, this);
     }
 
@@ -262,8 +268,7 @@ namespace IOHC {
     void IRAM_ATTR iohcRadio::packetSender(iohcRadio *radio) {
         digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
         // Stop frequency hopping
-        f_lock = true;
-        txMode = true; // Avoid Radio put in Rx mode at next packet sent/received
+        radioState = iohcRadio::RadioState::TX;
         // Using Delayed Packet radio->txCounter)
         if (radio->packets2send[radio->txCounter] == nullptr) {
             // Plus de Delayed Packet
@@ -299,7 +304,7 @@ namespace IOHC {
 
         Radio::setTx();
         // There is no need to maintain radio locked between packets transmission unless clearly asked
-        txMode = radio->iohc->lock;
+        radioState = radio->iohc->lock ? iohcRadio::RadioState::TX : iohcRadio::RadioState::RX;
 
         if (radio->iohc->repeat)
             radio->iohc->repeat -= 1;
@@ -319,7 +324,7 @@ namespace IOHC {
                 }
             } else {
                 // In any case, after last packet sent, unlock the radio
-                txMode = false;
+                radioState = iohcRadio::RadioState::RX;
                 radio->packets2send.clear();
             }
         }
@@ -450,8 +455,8 @@ namespace IOHC {
             Radio::SPIsendCommand(CMD_FLUSH_RX | CMD_READ);     // flush Rx FIFO
         }
 
-        f_lock = false;
         Radio::SPIsendCommand(CMD_RX);
+        radioState = iohcRadio::RadioState::RX;
 
 #endif
 
@@ -464,25 +469,27 @@ namespace IOHC {
     }
 
 /**
- * The function `i_preamble` sets the value of `f_lock` based on the state of `_g_preamble` or
- * `__g_preamble` depending on the defined radio type.
+ * The `i_preamble` interrupt handler updates the radio state when a preamble is
+ * detected on the current channel.
  */
     void IRAM_ATTR iohcRadio::i_preamble() {
 #if defined(RADIO_SX127X)
-        _g_preamble = digitalRead(RADIO_PREAMBLE_DETECTED);
+        bool preamble = digitalRead(RADIO_PREAMBLE_DETECTED);
 #elif defined(CC1101)
         __g_preamble = true;
+        bool preamble = __g_preamble;
 #endif
-        f_lock = _g_preamble;
+        radioState = preamble ? iohcRadio::RadioState::PREAMBLE : iohcRadio::RadioState::RX;
     }
 
 /**
- * The function `iohcRadio::i_payload()` reads the value of a digital pin and stores it in a variable
- * `_g_payload` if the macro `RADIO_SX127X` is defined.
+ * The `i_payload` interrupt handler reads the payload detection pin and sets
+ * the radio state accordingly.
  */
     void IRAM_ATTR iohcRadio::i_payload() {
 #if defined(RADIO_SX127X)
-        _g_payload = digitalRead(RADIO_PACKET_AVAIL);
+        bool payload = digitalRead(RADIO_PACKET_AVAIL);
+        radioState = payload ? iohcRadio::RadioState::PAYLOAD : iohcRadio::RadioState::RX;
 #endif
     }
 }
