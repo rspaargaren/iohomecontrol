@@ -57,11 +57,11 @@ namespace IOHC {
         bool preamble = digitalRead(RADIO_PREAMBLE_DETECTED);
         bool payload = digitalRead(RADIO_PACKET_AVAIL);
         if (payload) {
-            iohcRadio::radioState = iohcRadio::RadioState::PAYLOAD;
+            iohcRadio::getInstance()->setRadioState(iohcRadio::RadioState::PAYLOAD);
         } else if (preamble) {
-            iohcRadio::radioState = iohcRadio::RadioState::PREAMBLE;
+            iohcRadio::getInstance()->setRadioState(iohcRadio::RadioState::PREAMBLE);
         } else {
-            iohcRadio::radioState = iohcRadio::RadioState::RX;
+            iohcRadio::getInstance()->setRadioState(iohcRadio::RadioState::RX);
         }
         // Notify the thread so it will wake up when the ISR is complete
         BaseType_t xHigherPriorityTaskWoken = pdFALSE;
@@ -178,7 +178,7 @@ namespace IOHC {
                 Radio::clearFlags();
                 if (radioState != iohcRadio::RadioState::TX) {
                     Radio::setRx();
-                    radioState = iohcRadio::RadioState::RX;
+                    radio->setRadioState(iohcRadio::RadioState::RX);
                 }
                 // radio->sent(radio->iohc); // Put after Workaround to permit MQTT sending. No more needed
                 return;
@@ -253,7 +253,7 @@ namespace IOHC {
         iohcTx.clear();
 
         txCounter = 0;
-        radioState = iohcRadio::RadioState::TX;
+        setRadioState(iohcRadio::RadioState::TX);
         Sender.attach_ms(packets2send[txCounter]->repeatTime, packetSender, this);
     }
 
@@ -268,7 +268,7 @@ namespace IOHC {
     void IRAM_ATTR iohcRadio::packetSender(iohcRadio *radio) {
         digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
         // Stop frequency hopping
-        radioState = iohcRadio::RadioState::TX;
+        radio->setRadioState(iohcRadio::RadioState::TX);
         // Using Delayed Packet radio->txCounter)
         if (radio->packets2send[radio->txCounter] == nullptr) {
             // Plus de Delayed Packet
@@ -304,7 +304,7 @@ namespace IOHC {
 
         Radio::setTx();
         // There is no need to maintain radio locked between packets transmission unless clearly asked
-        radioState = radio->iohc->lock ? iohcRadio::RadioState::TX : iohcRadio::RadioState::RX;
+        radio->setRadioState(radio->iohc->lock ? iohcRadio::RadioState::TX : iohcRadio::RadioState::RX);
 
         if (radio->iohc->repeat)
             radio->iohc->repeat -= 1;
@@ -324,7 +324,7 @@ namespace IOHC {
                 }
             } else {
                 // In any case, after last packet sent, unlock the radio
-                radioState = iohcRadio::RadioState::RX;
+                radio->setRadioState(iohcRadio::RadioState::RX);
                 radio->packets2send.clear();
             }
         }
@@ -456,7 +456,7 @@ namespace IOHC {
         }
 
         Radio::SPIsendCommand(CMD_RX);
-        radioState = iohcRadio::RadioState::RX;
+        setRadioState(iohcRadio::RadioState::RX);
 
 #endif
 
@@ -479,7 +479,8 @@ namespace IOHC {
         __g_preamble = true;
         bool preamble = __g_preamble;
 #endif
-        radioState = preamble ? iohcRadio::RadioState::PREAMBLE : iohcRadio::RadioState::RX;
+        iohcRadio::getInstance()->setRadioState(
+            preamble ? iohcRadio::RadioState::PREAMBLE : iohcRadio::RadioState::RX);
     }
 
 /**
@@ -489,11 +490,13 @@ namespace IOHC {
     void IRAM_ATTR iohcRadio::i_payload() {
 #if defined(RADIO_SX127X)
         bool payload = digitalRead(RADIO_PACKET_AVAIL);
-        radioState = payload ? iohcRadio::RadioState::PAYLOAD : iohcRadio::RadioState::RX;
+        iohcRadio::getInstance()->setRadioState(
+            payload ? iohcRadio::RadioState::PAYLOAD : iohcRadio::RadioState::RX);
 #endif
     }
 
     void IRAM_ATTR iohcRadio::setRadioState(RadioState newState) {
+        radioState = newState;
         currentState = newState;
         // Optional debug:
         printf("State changed to: %d\n", static_cast<int>(newState));

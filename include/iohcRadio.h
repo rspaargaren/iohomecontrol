@@ -51,9 +51,6 @@ namespace IOHC {
         public:
             static iohcRadio *getInstance();
             virtual ~iohcRadio() = default;
-            void start(uint8_t num_freqs, uint32_t *scan_freqs, uint32_t scanTimeUs, IohcPacketDelegate rxCallback, IohcPacketDelegate txCallback);
-            void send(std::vector<iohcPacket*>&iohcTx);
-            void setRadioState(RadioState newState);
             enum class RadioState : uint8_t {
                 IDLE,        ///< Default state: nothing happening
                 RX,          ///< Receiving mode
@@ -63,6 +60,9 @@ namespace IOHC {
                 LOCKED,      ///< Frequency locked
                 ERROR        ///< Error or unknown state
             };
+            void start(uint8_t num_freqs, uint32_t *scan_freqs, uint32_t scanTimeUs, IohcPacketDelegate rxCallback, IohcPacketDelegate txCallback);
+            void send(std::vector<iohcPacket*>&iohcTx);
+            void setRadioState(RadioState newState);
             volatile static RadioState radioState;
             static void tickerCounter(iohcRadio *radio);
 
