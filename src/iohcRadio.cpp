@@ -492,4 +492,10 @@ namespace IOHC {
         radioState = payload ? iohcRadio::RadioState::PAYLOAD : iohcRadio::RadioState::RX;
 #endif
     }
+
+    void IRAM_ATTR iohcRadio::setRadioState(RadioState newState) {
+        currentState = newState;
+        // Optional debug:
+        printf("State changed to: %d\n", static_cast<int>(newState));
+    }
 }
