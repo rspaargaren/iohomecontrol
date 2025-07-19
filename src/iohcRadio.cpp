@@ -19,6 +19,9 @@
 
 #include <iohcRadio.h>
 #include <utility>
+#define LONG_PREAMBLE_MS 2400
+#define SHORT_PREAMBLE_MS 40
+
 TaskHandle_t IOHC::iohcRadio::txTaskHandle = nullptr;
 
 namespace IOHC {
@@ -300,30 +303,55 @@ namespace IOHC {
     }
     */
 
- void iohcRadio::send(std::vector<iohcPacket *> &iohcTx) {
+void iohcRadio::send(std::vector<iohcPacket *> &iohcTx) {
     if (radioState == RadioState::TX) {
         ets_printf("TX: Already transmitting. Ignoring send()\n");
         return;
     }
+
     packets2send = std::move(iohcTx);
     txCounter = 0;
-    iohc = packets2send[txCounter];
+    ets_printf("TX: Preparing %d packet(s)\n", packets2send.size());
     setRadioState(RadioState::TX);
 
+    iohc = packets2send[txCounter];
 
-    ets_printf("TX: Starting TickerUsESP32 for interval=%dms\n", iohc->repeatTime);
-    Sender.attach_ms(iohc->repeatTime, &iohcRadio::onTxTicker, (void*)this);  
- }
+    // 🟢 Set long preamble for first packet
+    Radio::setPreambleLength(LONG_PREAMBLE_MS);
+    ets_printf("TX: Using LONG preamble (%d ms)\n", LONG_PREAMBLE_MS);
+
+    // Send first packet immediately
+    Radio::setStandby();
+    Radio::clearFlags();
+    Radio::writeBytes(REG_FIFO, iohc->payload.buffer, iohc->buffer_length);
+    Radio::setTx();
+
+    ets_printf("TX: Sent first packet at %llu us\n", esp_timer_get_time());
+
+    if (iohc->repeat > 0) iohc->repeat--;
+
+    // Start ticker for repeats (short preamble)
+    Sender.attach_ms(iohc->repeatTime, &iohcRadio::onTxTicker, (void*)this);
+}
+
+
  
- void IRAM_ATTR iohcRadio::onTxTicker(void *arg) {
-    iohcRadio *radio = static_cast<iohcRadio *>(arg);
-    if (!radio || radio->packets2send.empty()) {
-        ets_printf("TX: No packets to send. Stopping Ticker.\n");
+ void iohcRadio::onTxTicker(void *arg) {
+    iohcRadio *radio = (iohcRadio *)arg;
+
+    if (radio->txCounter >= radio->packets2send.size()) {
+        ets_printf("TX: All packets sent. Stopping Ticker.\n");
         radio->Sender.detach();
         Radio::setRx();
-        radio->setRadioState(iohcRadio::RadioState::RX);
+        radio->setRadioState(RadioState::RX);
         return;
     }
+
+    radio->iohc = radio->packets2send[radio->txCounter];
+
+    // 🟢 Set short preamble for repeats
+    Radio::setPreambleLength(SHORT_PREAMBLE_MS);
+    ets_printf("TX: Using SHORT preamble (%d ms)\n", SHORT_PREAMBLE_MS);
 
     Radio::setStandby();
     Radio::clearFlags();
@@ -333,19 +361,8 @@ namespace IOHC {
 
     if (radio->iohc->repeat > 0) {
         radio->iohc->repeat--;
-    }
-
-    if (radio->iohc->repeat == 0) {
+    } else {
         radio->txCounter++;
-        if (radio->txCounter >= radio->packets2send.size()) {
-            ets_printf("TX: All packets sent. Stopping Ticker.\n");
-            radio->packets2send.clear();
-            radio->Sender.detach();
-            Radio::setRx();
-            radio->setRadioState(iohcRadio::RadioState::RX);
-        } else {
-            radio->iohc = radio->packets2send[radio->txCounter];
-        }
     }
 }
 
