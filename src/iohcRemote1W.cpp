@@ -69,7 +69,7 @@ namespace IOHC {
         packet->payload.packet.header.target[2] = bcast & 0x00ff;
 
         packet->frequency = CHANNEL2;
-        packet->repeatTime = 40;
+        packet->repeatTime = 40; //40ms
         packet->repeat = 4;
         packet->lock = false;
         

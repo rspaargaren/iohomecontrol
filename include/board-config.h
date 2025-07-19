@@ -92,7 +92,7 @@
 #define BOARD_READY_AFTER_POR						10000
 
 #define PREAMBLE_MSB                                0x00
-#define PREAMBLE_LSB        64//                        52  // 0x34: 12ms to have receiver up and running (52 0x55 bytes - 13,54mS)
+#define PREAMBLE_LSB                                150  // 0x34: 12ms to have receiver up and running (52 0x55 bytes - 13,54mS)
 
 #define SYNC_BYTE_1                                 0xff
 #define SYNC_BYTE_2                                 0x33    // Sync word - Size must be set to 2; first byte 0xff then 0x33 size-1 times
