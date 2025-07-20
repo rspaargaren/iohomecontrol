@@ -62,14 +62,17 @@ namespace IOHC {
     void IRAM_ATTR handle_interrupt_fromisr() {
         bool preamble = digitalRead(RADIO_PREAMBLE_DETECTED);
         bool payload = digitalRead(RADIO_PACKET_AVAIL);
+        iohcRadio::txComplete = true;
+        ets_printf("TX: TX-RX DONE detected, flag set\n");
+
 
         if (payload) {
             // When in TX state DIO0 is mapped to PacketSent, otherwise it
             // signals PayloadReady. Use the current radio state to disambiguate
             // without touching SPI from the ISR.
             //if (iohcRadio::radioState == iohcRadio::RadioState::TX) {
-                iohcRadio::txComplete = true;
-                ets_printf("TX: TXDONE detected, flag set\n");
+            //    iohcRadio::txComplete = true;
+            //    ets_printf("TX: TXDONE detected, flag set\n");
             //    iohcRadio::setRadioState(iohcRadio::RadioState::RX);
             //} else {
                 iohcRadio::setRadioState(iohcRadio::RadioState::PAYLOAD);
