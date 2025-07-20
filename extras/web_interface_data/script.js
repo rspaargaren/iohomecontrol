@@ -95,11 +95,58 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error sending command:', error);
         }
     }
-
+  
     // Event Listeners
     if (sendCommandButton) {
         sendCommandButton.addEventListener('click', sendCommand);
     }
+    // suggestions for command input
+    const suggestions = ["add", "remove", "close", "open", "ls", "cat"];
+    const input = document.getElementById('command-input');
+    const suggestionBox = document.getElementById('suggestions');
+
+    // Toon alle suggesties als knoppen
+    suggestions.forEach(item => {
+      const div = document.createElement('option');
+      div.className = 'suggestion';
+      div.textContent = item;
+
+      // Voeg toe aan input bij klik
+      div.addEventListener('click', () => {
+        // Spatie toevoegen als laatste teken geen spatie is
+        if (input.value !== '' && !input.value.endsWith(' ')) {
+          input.value += ' ';
+        }
+        input.value += item + ' ';
+        input.focus();
+      });
+
+      suggestionBox.appendChild(div);
+    });
+    //dark mode toggle
+
+     const toggleBtn = document.getElementById('toggle-theme');
+    const body = document.body;
+
+    toggleBtn.addEventListener('click', () => {
+      body.classList.toggle('dark-mode');
+
+      // Optioneel: opslaan in localStorage
+      if (body.classList.contains('dark-mode')) {
+        localStorage.setItem('theme', 'dark');
+      } else {
+        localStorage.setItem('theme', 'light');
+      }
+    });
+
+    // Thema behouden bij herladen
+    window.addEventListener('DOMContentLoaded', () => {
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'dark') {
+        body.classList.add('dark-mode');
+      }
+    });
+
 
     // Initial fetch of devices
     fetchAndDisplayDevices();

@@ -3,45 +3,62 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IOHC Device Control</title>
+    <title>MiOpen.IO - Device Control</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <header>
-        <h1>IOHC Device Control</h1>
+        <img src="logo.png" alt="MiOpen.IO Logo" class="logo">
+        <h1>Device Control</h1>
+        <button id="toggle-theme">Schakel thema</button>
     </header>
 
     <main>
-        <section id="device-list-section">
-            <h2>Devices</h2>
-            <ul id="device-list">
-                <!-- Device items will be populated by JavaScript -->
-                <!-- Example: <li>Device Name <button>On</button> <button>Off</button></li> -->
-            </ul>
-        </section>
+        <div class="left">
+            <section id="device-list-section">
+                <h2>Devices</h2>
+                <div class="card">
+                    <ul id="device-list">
+                        <!-- Device items will be populated by JavaScript -->
+                        <!-- Example: <li>Device Name <button>On</button> <button>Off</button></li> -->
+                    </ul>
+                </div>
+            </section>
 
-        <section id="command-section">
-            <h2>Send Command</h2>
-            <label for="device-select">Select Device:</label>
-            <select id="device-select">
-                <!-- Options will be populated by JavaScript -->
-            </select>
-            <br><br>
-            <label for="command-input">Command:</label>
-            <input type="text" id="command-input" placeholder="e.g., setTemp 22.0">
-            <button id="send-command-button">Send</button>
-        </section>
-
-        <section id="status-section">
-            <h2>Status / Log</h2>
-            <div id="status-messages">
-                <!-- Status messages will be populated by JavaScript -->
-            </div>
-        </section>
+            <section id="command-section">
+                <h2>Send Command</h2>
+                <div class="card">
+                    <label for="device-select">Select Device:</label>
+                    <select id="device-select">
+                        <!-- Options will be populated by JavaScript -->
+                    </select>
+                    <br><br>
+                    <label for="command-input">Command:</label>
+                    <button id="send-command-button">Send</button>
+                </div>
+            </section>
+        </div>
+        <div class="right">
+            <section id="status-section">
+                <h2>Status / Log</h2>
+                <div class="card">
+                    <div id="status-messages">
+                        <!-- Status messages will be populated by JavaScript -->
+                    </div>
+                    <div class="send-messages">
+                        <input type="text" id="command-input" placeholder="Typ hier..." autocomplete="off">
+                        <select id="suggestions"></select>
+                        <button id="send-command-button">Send</button>
+                    </div>
+                    
+                </div>
+            </section>
+        </div>
+           
     </main>
 
     <footer>
-        <p>ESP32 IOHC Controller</p>
+        <p>ESP32 MiOpen.IO</p>
     </footer>
 
     <script src="script.js"></script>
