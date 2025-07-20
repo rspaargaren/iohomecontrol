@@ -20,9 +20,18 @@
 
 #include <iohcCryptoHelpers.h>
 #include <oled_display.h>
+#include <TickerUsESP32.h>
 
 namespace IOHC {
     iohcRemote1W* iohcRemote1W::_iohcRemote1W = nullptr;
+    static TimersUS::TickerUsESP32 positionTicker;
+
+    static void positionTickerCallback() {
+        iohcRemote1W *inst = iohcRemote1W::getInstance();
+        if (inst) {
+            inst->updatePositions();
+        }
+    }
 
     static const char *remoteButtonToString(RemoteButton cmd) {
         switch (cmd) {
@@ -48,6 +57,7 @@ namespace IOHC {
         if (!_iohcRemote1W) {
             _iohcRemote1W = new iohcRemote1W();
             _iohcRemote1W->load();
+            positionTicker.attach_ms(1000, positionTickerCallback);
         }
         return _iohcRemote1W;
     }
@@ -69,7 +79,7 @@ namespace IOHC {
         packet->payload.packet.header.target[2] = bcast & 0x00ff;
 
         packet->frequency = CHANNEL2;
-        packet->repeatTime = 40;
+        packet->repeatTime = 40; //40ms
         packet->repeat = 4;
         packet->lock = false;
         
@@ -93,6 +103,7 @@ namespace IOHC {
             found = false;
             // return;
         }
+        r.positionTracker.update();
 /*
         int value = 0;
         try {
@@ -167,6 +178,10 @@ namespace IOHC {
 //                }
                 _radioInstance->send(packets2send);
                 display1WAction(r.node, remoteButtonToString(cmd), "TX", r.name.c_str());
+                Serial.printf("%s position: %.0f%%\n", r.name.c_str(), r.positionTracker.getPosition());
+#if defined(SSD1306_DISPLAY)
+                display1WPosition(r.node, r.positionTracker.getPosition(), r.name.c_str());
+#endif
                 break;
             }
 
@@ -211,6 +226,10 @@ namespace IOHC {
                 _radioInstance->send(packets2send);
                 //printf("\n");
                 display1WAction(r.node, remoteButtonToString(cmd), "TX", r.name.c_str());
+                Serial.printf("%s position: %.0f%%\n", r.name.c_str(), r.positionTracker.getPosition());
+#if defined(SSD1306_DISPLAY)
+                display1WPosition(r.node, r.positionTracker.getPosition(), r.name.c_str());
+#endif
                 break;
             }
 
@@ -254,6 +273,10 @@ namespace IOHC {
 //                }
                 _radioInstance->send(packets2send);
                 display1WAction(r.node, remoteButtonToString(cmd), "TX", r.name.c_str());
+                Serial.printf("%s position: %.0f%%\n", r.name.c_str(), r.positionTracker.getPosition());
+#if defined(SSD1306_DISPLAY)
+                display1WPosition(r.node, r.positionTracker.getPosition(), r.name.c_str());
+#endif
                 break;
             }
            default: {
@@ -280,14 +303,17 @@ namespace IOHC {
                         case RemoteButton::Open:
                             packet->payload.packet.msg.p0x00_14.main[0] = 0x00;
                             packet->payload.packet.msg.p0x00_14.main[1] = 0x00;
+                            r.positionTracker.startOpening();
                             break;
                         case RemoteButton::Close:
                             packet->payload.packet.msg.p0x00_14.main[0] = 0xc8;
                             packet->payload.packet.msg.p0x00_14.main[1] = 0x00;
+                            r.positionTracker.startClosing();
                             break;
                         case RemoteButton::Stop:
                             packet->payload.packet.msg.p0x00_14.main[0] = 0xd2;
                             packet->payload.packet.msg.p0x00_14.main[1] = 0x00;
+                            r.positionTracker.stop();
                             break;
                         case RemoteButton::Vent:
                             packet->payload.packet.msg.p0x00_14.main[0] = 0xd8;
@@ -482,6 +508,10 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
                 }
                 _radioInstance->send(packets2send);
                 display1WAction(r.node, remoteButtonToString(cmd), "TX", r.name.c_str());
+                Serial.printf("%s position: %.0f%%\n", r.name.c_str(), r.positionTracker.getPosition());
+#if defined(SSD1306_DISPLAY)
+                display1WPosition(r.node, r.positionTracker.getPosition(), r.name.c_str());
+#endif
                 break;
 //            }
         }
@@ -545,6 +575,8 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
             r.manufacturer = jobj["manufacturer_id"].as<uint8_t>();
             r.description = jobj["description"].as<std::string>();
             r.name = jobj["name"].as<std::string>();
+            r.travelTime = jobj["travel_time"].as<uint32_t>();
+            r.positionTracker.setTravelTime(r.travelTime);
             remotes.push_back(r);
         }
 
@@ -581,6 +613,7 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
             jobj["manufacturer_id"] = r.manufacturer;
             jobj["description"] = r.description;
             jobj["name"] = r.name;
+            jobj["travel_time"] = r.travelTime;
         }
         serializeJson(doc, f);
         f.close();
@@ -590,5 +623,17 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
 
     const std::vector<iohcRemote1W::remote>& iohcRemote1W::getRemotes() const {
         return remotes;
+    }
+
+    void iohcRemote1W::updatePositions() {
+        for (auto &r : remotes) {
+            r.positionTracker.update();
+            if (r.positionTracker.isMoving()) {
+                Serial.printf("%s position: %.0f%%\n", r.name.c_str(), r.positionTracker.getPosition());
+#if defined(SSD1306_DISPLAY)
+                display1WPosition(r.node, r.positionTracker.getPosition(), r.name.c_str());
+#endif
+            }
+        }
     }
 }

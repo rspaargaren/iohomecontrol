@@ -73,6 +73,28 @@ void display1WAction(const uint8_t *remote, const char *action, const char *dir,
     display.display();
 }
 
+void display1WPosition(const uint8_t *remote, float position, const char *name) {
+    std::string id = bytesToHexString(remote, 3);
+    const auto *entry = IOHC::iohcRemoteMap::getInstance()->find(remote);
+
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(SSD1306_WHITE);
+    display.setCursor(0, 0);
+    if (name) {
+        display.println(name);
+    } else if (entry) {
+        display.println(entry->name.c_str());
+    } else {
+        display.print("ID: ");
+        display.println(id.c_str());
+    }
+    display.print("Pos: ");
+    display.print(static_cast<int>(position));
+    display.println("%");
+    display.display();
+}
+
 void updateDisplayStatus() {
     display.clearDisplay();
     display.setCursor(0, 0);
