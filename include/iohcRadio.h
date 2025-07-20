@@ -71,6 +71,7 @@ namespace IOHC {
             volatile static RadioState radioState;
             static void tickerCounter(iohcRadio *radio);
             static TaskHandle_t txTaskHandle; // TX Task handle
+            static volatile bool txComplete;
             //static void setPreambleLength(uint16_t preambleLen);
 
         private:

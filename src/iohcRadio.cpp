@@ -19,7 +19,7 @@
 
 #include <iohcRadio.h>
 #include <utility>
-#define LONG_PREAMBLE_MS 2400
+#define LONG_PREAMBLE_MS 1920
 #define SHORT_PREAMBLE_MS 40
 
 TaskHandle_t IOHC::iohcRadio::txTaskHandle = nullptr;
@@ -30,6 +30,7 @@ namespace IOHC {
     uint8_t iohcRadio::_flags[2] = {0, 0};
     volatile bool iohcRadio::send_lock = false;
     volatile iohcRadio::RadioState iohcRadio::radioState = iohcRadio::RadioState::IDLE;
+    volatile bool iohcRadio::txComplete = false;
 
 
     TaskHandle_t handle_interrupt;
@@ -74,6 +75,12 @@ namespace IOHC {
     } else if (preamble) {
         iohcRadio::setRadioState(iohcRadio::RadioState::PREAMBLE);
     } else {
+        iohcRadio::setRadioState(iohcRadio::RadioState::RX);
+    }
+
+    if (Radio::readByte(REG_IRQFLAGS2) & RF_IRQFLAGS2_PACKETSENT) {
+        iohcRadio::txComplete = true;
+        ets_printf("TX: TXDONE detected, flag set\n");
         iohcRadio::setRadioState(iohcRadio::RadioState::RX);
     }
 
@@ -339,6 +346,7 @@ void iohcRadio::send(std::vector<iohcPacket *> &iohcTx) {
  void iohcRadio::onTxTicker(void *arg) {
     iohcRadio *radio = (iohcRadio *)arg;
 
+    // All packets sent?
     if (radio->txCounter >= radio->packets2send.size()) {
         ets_printf("TX: All packets sent. Stopping Ticker.\n");
         radio->Sender.detach();
@@ -347,24 +355,51 @@ void iohcRadio::send(std::vector<iohcPacket *> &iohcTx) {
         return;
     }
 
-    radio->iohc = radio->packets2send[radio->txCounter];
+    // 🔥 Check TXDONE
+    if (radio->txComplete) {
+        radio->txComplete = false; // Consume flag
+        ets_printf("TX: TXDONE flag set, ready to send repeat or next packet.\n");
 
-    // 🟢 Set short preamble for repeats
-    Radio::setPreambleLength(SHORT_PREAMBLE_MS);
-    ets_printf("TX: Using SHORT preamble (%d ms)\n", SHORT_PREAMBLE_MS);
+        // Repeat logic
+        if (radio->iohc->repeat > 0) {
+            radio->iohc->repeat--;
+            ets_printf("TX: Repeating current packet (%d repeats left)\n", radio->iohc->repeat);
+        } else {
+            radio->txCounter++;
+            if (radio->txCounter < radio->packets2send.size()) {
+                radio->iohc = radio->packets2send[radio->txCounter];
+                ets_printf("TX: Moving to next packet %d/%d (repeat=%d)\n",
+                           radio->txCounter + 1,
+                           radio->packets2send.size(),
+                           radio->iohc->repeat);
+            } else {
+                ets_printf("TX: Batch complete. Stopping Ticker.\n");
+                radio->Sender.detach();
+                Radio::setRx();
+                radio->setRadioState(RadioState::RX);
+                return;
+            }
+        }
 
-    Radio::setStandby();
-    Radio::clearFlags();
-    Radio::writeBytes(REG_FIFO, radio->iohc->payload.buffer, radio->iohc->buffer_length);
-    Radio::setTx();
-    ets_printf("TX: onTxTicker sent packet at %llu us\n", esp_timer_get_time());
+        // Send packet
+        Radio::setPreambleLength(SHORT_PREAMBLE_MS);
+        Radio::setStandby();
+        Radio::clearFlags();
+        Radio::writeBytes(REG_FIFO,
+                          radio->iohc->payload.buffer,
+                          radio->iohc->buffer_length);
+        Radio::setTx();
 
-    if (radio->iohc->repeat > 0) {
-        radio->iohc->repeat--;
+        ets_printf("TX: Sent packet %d/%d at %llu us\n",
+                   radio->txCounter + 1,
+                   radio->packets2send.size(),
+                   esp_timer_get_time());
     } else {
-        radio->txCounter++;
+        ets_printf("TX: Skipping tick, radio still busy (state=%s)\n",
+                   radioStateToString(radio->radioState));
     }
 }
+
 
  void iohcRadio::lightTxTask(void *pvParameters) {
     iohcRadio *radio = static_cast<iohcRadio *>(pvParameters);
