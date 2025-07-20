@@ -68,7 +68,8 @@
         ],
         "manufacturer_id": 2,
         "description": "SNT1",
-        "name": "Screen T2"
+        "name": "Screen T2",
+        "travel_time": 10000
     },
     "e00004": {
         "key": "f3a1d67c4b8209eb5d7cf041ea9638b2",
@@ -79,6 +80,7 @@
         ],
         "manufacturer_id": 2,
         "description": "SNT2",
-        "name": "Screen T1"
+        "name": "Screen T1",
+        "travel_time": 10000
     }
 }
