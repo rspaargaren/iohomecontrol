@@ -27,8 +27,9 @@ namespace IOHC {
     static TimersUS::TickerUsESP32 positionTicker;
 
     static void positionTickerCallback() {
-        if (iohcRemote1W::_iohcRemote1W) {
-            iohcRemote1W::_iohcRemote1W->updatePositions();
+        iohcRemote1W *inst = iohcRemote1W::getInstance();
+        if (inst) {
+            inst->updatePositions();
         }
     }
 
