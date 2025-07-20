@@ -8,7 +8,8 @@
         ],
         "manufacturer_id": 2,
         "description": "IZY1",
-        "name": "IZY1"
+        "name": "IZY1",
+        "travel_time": 10000
     },
     "b60d1b": {
         "key": "b794883327810507c2a5419eeeae54b4",
@@ -19,7 +20,8 @@
         ],
         "manufacturer_id": 2,
         "description": "IZY2",
-        "name": "IZY2"
+        "name": "IZY2",
+        "travel_time": 10000
     },
     "e8e150": {
         "key": "77999e593262e207c8f992904ec4c4f2",
@@ -30,7 +32,8 @@
         ],
         "manufacturer_id": 2,
         "description": "DYNA",
-        "name": "DYNA"
+        "name": "DYNA",
+        "travel_time": 10000
     },
     "e00001": {
         "key": "7ab132c95f843da7116ed03b9cf20845",
@@ -41,7 +44,8 @@
         ],
         "manufacturer_id": 2,
         "description": "SUNS",
-        "name": "Luifel Tuin"
+        "name": "Luifel Tuin",
+        "travel_time": 10000
     },
     "e00002": {
         "key": "bba24bbb61508fc78c5ad0e57ff66210",
@@ -52,6 +56,7 @@
         ],
         "manufacturer_id": 2,
         "description": "SUNG",
-        "name": "Screen G"
+        "name": "Screen G",
+        "travel_time": 10000
     }
 }

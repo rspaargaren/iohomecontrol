@@ -93,6 +93,7 @@ namespace IOHC {
             found = false;
             // return;
         }
+        r.positionTracker.update();
 /*
         int value = 0;
         try {
@@ -280,14 +281,17 @@ namespace IOHC {
                         case RemoteButton::Open:
                             packet->payload.packet.msg.p0x00_14.main[0] = 0x00;
                             packet->payload.packet.msg.p0x00_14.main[1] = 0x00;
+                            r.positionTracker.startOpening();
                             break;
                         case RemoteButton::Close:
                             packet->payload.packet.msg.p0x00_14.main[0] = 0xc8;
                             packet->payload.packet.msg.p0x00_14.main[1] = 0x00;
+                            r.positionTracker.startClosing();
                             break;
                         case RemoteButton::Stop:
                             packet->payload.packet.msg.p0x00_14.main[0] = 0xd2;
                             packet->payload.packet.msg.p0x00_14.main[1] = 0x00;
+                            r.positionTracker.stop();
                             break;
                         case RemoteButton::Vent:
                             packet->payload.packet.msg.p0x00_14.main[0] = 0xd8;
@@ -545,6 +549,8 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
             r.manufacturer = jobj["manufacturer_id"].as<uint8_t>();
             r.description = jobj["description"].as<std::string>();
             r.name = jobj["name"].as<std::string>();
+            r.travelTime = jobj["travel_time"].as<uint32_t>();
+            r.positionTracker.setTravelTime(r.travelTime);
             remotes.push_back(r);
         }
 
@@ -581,6 +587,7 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
             jobj["manufacturer_id"] = r.manufacturer;
             jobj["description"] = r.description;
             jobj["name"] = r.name;
+            jobj["travel_time"] = r.travelTime;
         }
         serializeJson(doc, f);
         f.close();
