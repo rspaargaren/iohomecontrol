@@ -101,6 +101,26 @@ document.addEventListener('DOMContentLoaded', function() {
         sendCommandButton.addEventListener('click', sendCommand);
     }
 
+    async function fetchLogs() {
+        try {
+            const response = await fetch('/api/logs');
+            if (!response.ok) return;
+            const logs = await response.json();
+            statusMessagesDiv.innerHTML = '';
+            logs.forEach(line => {
+                const p = document.createElement('p');
+                p.textContent = line;
+                statusMessagesDiv.appendChild(p);
+            });
+            statusMessagesDiv.scrollTop = statusMessagesDiv.scrollHeight;
+        } catch (e) {
+            console.error('Error fetching logs', e);
+        }
+    }
+
+    setInterval(fetchLogs, 2000);
+    fetchLogs();
+
     // Initial fetch of devices
     fetchAndDisplayDevices();
 });

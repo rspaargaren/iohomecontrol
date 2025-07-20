@@ -19,6 +19,7 @@
 
 #include <iohcRadio.h>
 #include <utility>
+#include <log_buffer.h>
 #define LONG_PREAMBLE_MS 1920
 #define SHORT_PREAMBLE_MS 40
 
@@ -684,6 +685,7 @@ void IRAM_ATTR iohcRadio::packetSender(iohcRadio *radio) {
         // Radio::clearFlags();
         if (rxCB) rxCB(iohc);
         iohc->decode(true); //stats);
+        addLogMessage(String(iohc->decodeToString(true).c_str()));
         //free(iohc); // correct Bug memory
         delete iohc;
         digitalWrite(RX_LED, false);
