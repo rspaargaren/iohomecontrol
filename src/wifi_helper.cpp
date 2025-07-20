@@ -16,6 +16,7 @@
 
 #include <wifi_helper.h>
 #include <oled_display.h>
+#include <user_config.h>
 #if defined(MQTT)
 #include <mqtt_handler.h>
 #endif
