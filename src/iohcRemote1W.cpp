@@ -20,9 +20,17 @@
 
 #include <iohcCryptoHelpers.h>
 #include <oled_display.h>
+#include <TickerUsESP32.h>
 
 namespace IOHC {
     iohcRemote1W* iohcRemote1W::_iohcRemote1W = nullptr;
+    static TimersUS::TickerUsESP32 positionTicker;
+
+    static void positionTickerCallback() {
+        if (iohcRemote1W::_iohcRemote1W) {
+            iohcRemote1W::_iohcRemote1W->updatePositions();
+        }
+    }
 
     static const char *remoteButtonToString(RemoteButton cmd) {
         switch (cmd) {
@@ -48,6 +56,7 @@ namespace IOHC {
         if (!_iohcRemote1W) {
             _iohcRemote1W = new iohcRemote1W();
             _iohcRemote1W->load();
+            positionTicker.attach_ms(1000, positionTickerCallback);
         }
         return _iohcRemote1W;
     }
@@ -613,5 +622,17 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
 
     const std::vector<iohcRemote1W::remote>& iohcRemote1W::getRemotes() const {
         return remotes;
+    }
+
+    void iohcRemote1W::updatePositions() {
+        for (auto &r : remotes) {
+            r.positionTracker.update();
+            if (r.positionTracker.isMoving()) {
+                Serial.printf("%s position: %.0f%%\n", r.name.c_str(), r.positionTracker.getPosition());
+#if defined(SSD1306_DISPLAY)
+                display1WPosition(r.node, r.positionTracker.getPosition(), r.name.c_str());
+#endif
+            }
+        }
     }
 }
