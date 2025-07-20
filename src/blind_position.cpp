@@ -37,16 +37,17 @@ namespace IOHC {
         }
         uint64_t now = esp_timer_get_time();
         uint64_t elapsed = now - lastUpdateUs;
-        float ratio = static_cast<float>(elapsed) / (static_cast<float>(travelTime) * 1000.0f);
+        float delta = static_cast<float>(elapsed) * 100.0f / (static_cast<float>(travelTime) * 1000.0f);
+
         if (state == State::Opening) {
-            position += ratio * (100.0f - position);
-            if (position >= 100.0f || elapsed >= static_cast<uint64_t>(travelTime) * 1000ULL) {
+            position += delta;
+            if (position >= 100.0f) {
                 position = 100.0f;
                 state = State::Idle;
             }
         } else if (state == State::Closing) {
-            position -= ratio * position;
-            if (position <= 0.0f || elapsed >= static_cast<uint64_t>(travelTime) * 1000ULL) {
+            position -= delta;
+            if (position <= 0.0f) {
                 position = 0.0f;
                 state = State::Idle;
             }
