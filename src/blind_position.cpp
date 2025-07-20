@@ -56,4 +56,6 @@ namespace IOHC {
     }
 
     float BlindPosition::getPosition() const { return position; }
+
+    bool BlindPosition::isMoving() const { return state != State::Idle; }
 }
