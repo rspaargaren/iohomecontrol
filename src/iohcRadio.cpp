@@ -59,30 +59,35 @@ namespace IOHC {
      * The function `handle_interrupt_fromisr` reads digital inputs and notifies a thread to wake up when
      * the interrupt service routine is complete.
      */
-   void IRAM_ATTR handle_interrupt_fromisr() {
-    bool preamble = digitalRead(RADIO_PREAMBLE_DETECTED);
-    bool payload = digitalRead(RADIO_PACKET_AVAIL);
+    void IRAM_ATTR handle_interrupt_fromisr() {
+        bool preamble = digitalRead(RADIO_PREAMBLE_DETECTED);
+        bool payload = digitalRead(RADIO_PACKET_AVAIL);
 
-    if (payload) {
-        iohcRadio::setRadioState(iohcRadio::RadioState::PAYLOAD);
+        if (payload) {
+            // When in TX state DIO0 is mapped to PacketSent, otherwise it
+            // signals PayloadReady. Use the current radio state to disambiguate
+            // without touching SPI from the ISR.
+            if (iohcRadio::radioState == iohcRadio::RadioState::TX) {
+                iohcRadio::txComplete = true;
+                ets_printf("TX: TXDONE detected, flag set\n");
+                iohcRadio::setRadioState(iohcRadio::RadioState::RX);
+            } else {
+                iohcRadio::setRadioState(iohcRadio::RadioState::PAYLOAD);
+            }
 
-        // Notify TX task dat TXDONE
-        if (iohcRadio::txTaskHandle) {
-            BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-            vTaskNotifyGiveFromISR(iohcRadio::txTaskHandle, &xHigherPriorityTaskWoken);
-            portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+            // Notify TX task that TXDONE occurred so the next packet can be
+            // scheduled.
+            if (iohcRadio::txTaskHandle) {
+                BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+                vTaskNotifyGiveFromISR(iohcRadio::txTaskHandle,
+                                      &xHigherPriorityTaskWoken);
+                portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+            }
+        } else if (preamble) {
+            iohcRadio::setRadioState(iohcRadio::RadioState::PREAMBLE);
+        } else {
+            iohcRadio::setRadioState(iohcRadio::RadioState::RX);
         }
-    } else if (preamble) {
-        iohcRadio::setRadioState(iohcRadio::RadioState::PREAMBLE);
-    } else {
-        iohcRadio::setRadioState(iohcRadio::RadioState::RX);
-    }
-
-    if (Radio::readByte(REG_IRQFLAGS2) & RF_IRQFLAGS2_PACKETSENT) {
-        iohcRadio::txComplete = true;
-        ets_printf("TX: TXDONE detected, flag set\n");
-        iohcRadio::setRadioState(iohcRadio::RadioState::RX);
-    }
 
     // Notify de RX state machine
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
