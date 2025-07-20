@@ -1,5 +1,6 @@
 #include <blind_position.h>
 #include <esp_timer.h>
+#include <Arduino.h>
 
 namespace IOHC {
     BlindPosition::BlindPosition(uint32_t travelTimeMs)
@@ -11,18 +12,21 @@ namespace IOHC {
 
     void BlindPosition::startOpening() {
         update();
+        Serial.printf("[BlindPosition] start opening (pos=%.1f%%)\n", position);
         state = State::Opening;
         lastUpdateUs = esp_timer_get_time();
     }
 
     void BlindPosition::startClosing() {
         update();
+        Serial.printf("[BlindPosition] start closing (pos=%.1f%%)\n", position);
         state = State::Closing;
         lastUpdateUs = esp_timer_get_time();
     }
 
     void BlindPosition::stop() {
         update();
+        Serial.printf("[BlindPosition] stop (pos=%.1f%%)\n", position);
         state = State::Idle;
     }
 
@@ -48,6 +52,7 @@ namespace IOHC {
             }
         }
         lastUpdateUs = now;
+        Serial.printf("[BlindPosition] update (state=%d pos=%.1f%%)\n", static_cast<int>(state), position);
     }
 
     float BlindPosition::getPosition() const { return position; }
