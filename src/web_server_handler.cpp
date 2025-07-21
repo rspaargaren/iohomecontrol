@@ -110,6 +110,12 @@ void setupWebServer() {
         Serial.println("Warning: /web_interface_data/index.html not found");
     }
 
+
+    // API Endpoints
+    server.on("/api/devices", HTTP_GET, handleApiDevices);
+    server.on("/api/logs", HTTP_GET, handleApiLogs);
+    server.addHandler(new AsyncCallbackJsonWebHandler("/api/command", handleApiCommand)); // For POST with JSON
+
     server.serveStatic("/", LittleFS, "/web_interface_data/").setDefaultFile("index.html");
     // You might need to explicitly serve each file if serveStatic with directory isn't working as expected
     // or if files are not in a subdirectory of the data dir.
@@ -124,10 +130,8 @@ void setupWebServer() {
     // });
 
 
-    // API Endpoints
-    server.on("/api/devices", HTTP_GET, handleApiDevices);
-    server.addHandler(new AsyncCallbackJsonWebHandler("/api/command", handleApiCommand)); // For POST with JSON
-    server.on("/api/logs", HTTP_GET, handleApiLogs);
+    
+    
 
     server.onNotFound([](AsyncWebServerRequest *request){
         request->send(404, "text/plain", "Not found");
