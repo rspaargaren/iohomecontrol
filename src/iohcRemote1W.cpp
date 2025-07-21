@@ -592,14 +592,14 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
             r.manufacturer = jobj["manufacturer_id"].as<uint8_t>();
             r.description = jobj["description"].as<std::string>();
 
-            if (jobj.containsKey("name")) {
+            if (jobj["name"].is<std::string>()) {
                 r.name = jobj["name"].as<std::string>();
             } else {
                 r.name = r.description;
                 updateFile = true;
             }
 
-            if (jobj.containsKey("travel_time")) {
+            if (jobj["travel_time"].is<uint32_t>()) {
                 r.travelTime = jobj["travel_time"].as<uint32_t>();
             } else {
                 r.travelTime = DEFAULT_TRAVEL_TIME_MS;
@@ -661,7 +661,7 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
     void iohcRemote1W::updatePositions() {
         for (auto &r : remotes) {
             r.positionTracker.update();
-            
+
             if (r.positionTracker.isMoving()) {
                 Serial.printf("%s position: %.0f%%\n", r.name.c_str(), r.positionTracker.getPosition());
 #if defined(SSD1306_DISPLAY)
