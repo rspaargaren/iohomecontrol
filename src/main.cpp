@@ -33,6 +33,7 @@
 #include <mqtt_handler.h>
 #endif
 #include <wifi_helper.h>
+#include <nvs_helpers.h>
 
 #if defined(WEBSERVER)
 #include <web_server_handler.h>
@@ -101,6 +102,7 @@ void setup() {
     }
     Serial.println("LittleFS mounted successfully");
 #endif
+    nvs_init();
 
     // Initialize network services
     initWifi();
