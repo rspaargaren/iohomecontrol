@@ -26,6 +26,7 @@
 namespace IOHC {
     iohcRemote1W* iohcRemote1W::_iohcRemote1W = nullptr;
     static TimersUS::TickerUsESP32 positionTicker;
+    static constexpr uint32_t DEFAULT_TRAVEL_TIME_MS = 10000;
 
     static void positionTickerCallback() {
         iohcRemote1W *inst = iohcRemote1W::getInstance();
@@ -546,6 +547,7 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
         f.close();
 
         // Iterate through the JSON object
+        bool updateFile = false;
         for (JsonPair kv: doc.as<JsonObject>()) {
             remote r;
             // hexStringToBytes(kv.key().c_str(), _node);
@@ -565,6 +567,7 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
             if (nvs_read_sequence(r.node, &nvs_seq)) {
                 if (nvs_seq > r.sequence) {
                     r.sequence = nvs_seq;
+                    updateFile = true;
                 }
             }
             // Persist the highest value back to NVS
@@ -588,15 +591,29 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
             // _manufacturer = jobj["manufacturer_id"].as<uint8_t>();
             r.manufacturer = jobj["manufacturer_id"].as<uint8_t>();
             r.description = jobj["description"].as<std::string>();
-            r.name = jobj["name"].as<std::string>();
-            r.travelTime = jobj["travel_time"].as<uint32_t>();
+
+            if (jobj.containsKey("name")) {
+                r.name = jobj["name"].as<std::string>();
+            } else {
+                r.name = r.description;
+                updateFile = true;
+            }
+
+            if (jobj.containsKey("travel_time")) {
+                r.travelTime = jobj["travel_time"].as<uint32_t>();
+            } else {
+                r.travelTime = DEFAULT_TRAVEL_TIME_MS;
+                updateFile = true;
+            }
             r.positionTracker.setTravelTime(r.travelTime);
             remotes.push_back(r);
         }
 
         Serial.printf("Loaded %d x 1W remotes\n", remotes.size()); // _type.size());
-        // Ensure JSON reflects the latest sequence values
-        this->save();
+        // Ensure JSON reflects the latest sequence values and persist defaults
+        if (updateFile) {
+            this->save();
+        }
         // _sequence = 0x1402;    // DEBUG
         return true;
     }
