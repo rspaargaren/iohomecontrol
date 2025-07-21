@@ -21,6 +21,7 @@
 #include <iohcCryptoHelpers.h>
 #include <oled_display.h>
 #include <TickerUsESP32.h>
+#include <nvs_helpers.h>
 
 namespace IOHC {
     iohcRemote1W* iohcRemote1W::_iohcRemote1W = nullptr;
@@ -162,6 +163,7 @@ namespace IOHC {
                     packet->payload.packet.msg.p0x2e.sequence[0] = r.sequence >> 8;
                     packet->payload.packet.msg.p0x2e.sequence[1] = r.sequence & 0x00ff;
                     r.sequence += 1;
+                    nvs_write_sequence(r.node, r.sequence);
                     // hmac
                     frame = std::vector(&packet->payload.packet.header.cmd, &packet->payload.packet.header.cmd + 2);
                     uint8_t hmac[16];
@@ -211,6 +213,7 @@ namespace IOHC {
                     packet->payload.packet.msg.p0x2e.sequence[0] = r.sequence >> 8;
                     packet->payload.packet.msg.p0x2e.sequence[1] = r.sequence & 0x00ff;
                     r.sequence += 1;
+                    nvs_write_sequence(r.node, r.sequence);
                     // hmac
                     uint8_t hmac[16];
                     frame = std::vector(&packet->payload.packet.header.cmd, &packet->payload.packet.header.cmd + 2);
@@ -265,6 +268,7 @@ namespace IOHC {
                     packet->payload.packet.msg.p0x30.sequence[0] = r.sequence >> 8;
                     packet->payload.packet.msg.p0x30.sequence[1] = r.sequence & 0x00ff;
                     r.sequence += 1;
+                    nvs_write_sequence(r.node, r.sequence);
 
                     packet->buffer_length = packet->payload.packet.header.CtrlByte1.asStruct.MsgLen + 1;
 
@@ -493,6 +497,7 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
                                         }
                     */
                     r.sequence += 1;
+                    nvs_write_sequence(r.node, r.sequence);
                     // hmac
                     // uint8_t hmac[16];
                     // frame = std::vector(&packet->payload.packet.header.cmd, &packet->payload.packet.header.cmd + 7 + toAdd);
@@ -553,8 +558,17 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
 
             uint8_t btmp[2];
             hexStringToBytes(jobj["sequence"].as<const char *>(), btmp);
-            // _sequence = (btmp[0] << 8) + btmp[1];
-            r.sequence = (btmp[0] << 8) + btmp[1];
+            uint16_t file_seq = (btmp[0] << 8) + btmp[1];
+            r.sequence = file_seq;
+
+            uint16_t nvs_seq;
+            if (nvs_read_sequence(r.node, &nvs_seq)) {
+                if (nvs_seq > r.sequence) {
+                    r.sequence = nvs_seq;
+                }
+            }
+            // Persist the highest value back to NVS
+            nvs_write_sequence(r.node, r.sequence);
             JsonArray jarr = jobj["type"];
             // Réservez de l'espace dans le vecteur pour éviter les allocations inutiles
 
@@ -581,6 +595,8 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
         }
 
         Serial.printf("Loaded %d x 1W remotes\n", remotes.size()); // _type.size());
+        // Ensure JSON reflects the latest sequence values
+        this->save();
         // _sequence = 0x1402;    // DEBUG
         return true;
     }
