@@ -644,6 +644,7 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
     void iohcRemote1W::updatePositions() {
         for (auto &r : remotes) {
             r.positionTracker.update();
+            
             if (r.positionTracker.isMoving()) {
                 Serial.printf("%s position: %.0f%%\n", r.name.c_str(), r.positionTracker.getPosition());
 #if defined(SSD1306_DISPLAY)
