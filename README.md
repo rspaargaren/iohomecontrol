@@ -92,6 +92,7 @@ When MQTT is enabled (`#define MQTT` in `include/user_config.h`) the firmware pu
 Each blind configuration is sent to the topic `homeassistant/cover/<id>/config` where `<id>` is the hexadecimal address from `1W.json`.
 
 The `1W.json` file now accepts an optional `travel_time` field per device. This value represents the time in milliseconds a blind takes to move from fully closed to fully open. It allows the firmware to estimate the current position when no feedback is available. The estimated position is printed to the serial console and shown on the OLED display every second while the blind is moving. When a command is transmitted or received, this position feedback is appended below the action information on the display so that the original message remains visible.
+If these fields (`name` and `travel_time`) are missing, default values are applied using the device description and a 10 second travel time. These defaults are saved back to `1W.json` so subsequent boots load the updated values automatically.
 Sequence numbers for each remote are stored both in `extras/1W.json` and in NVS.
 On boot the value from the file is compared to the one in NVS and the highest
 value is kept so sequence numbers continue uninterrupted even after filesystem
