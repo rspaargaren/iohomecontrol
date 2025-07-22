@@ -18,6 +18,7 @@ TimerHandle_t heartbeatTimer;
 const char AVAILABILITY_TOPIC[] = "iown/status";
 
 void initMqtt() {
+    mqttClient.setWill(AVAILABILITY_TOPIC, 0, true, "offline");
     mqttClient.setClientId("iown");
     mqttClient.setCredentials(MQTT_USER, MQTT_PASSWD);
     mqttClient.setServer(MQTT_SERVER, 1883);
@@ -130,6 +131,7 @@ void onMqttConnect(bool sessionPresent) {
     mqttClient.subscribe("iown/midnight", 0);
     mqttClient.subscribe("iown/associate", 0);
     mqttClient.subscribe("iown/heatState", 0);
+    
 
     mqttClient.publish("iown/Frame", 0, false, R"({"cmd": "powerOn", "_data": "Gateway"})", 38);
     {
