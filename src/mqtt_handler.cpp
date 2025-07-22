@@ -39,6 +39,7 @@ void publishDiscovery(const std::string &id, const std::string &name) {
     doc["unique_id"] = id;
     doc["command_topic"] = "iown/" + id + "/set";
     doc["state_topic"] = "iown/" + id + "/state";
+    doc["position_topic"] = "iown/" + id + "/position";
     doc["availability_topic"] = AVAILABILITY_TOPIC;
     doc["payload_available"] = "online";
     doc["payload_not_available"] = "offline";
@@ -72,6 +73,18 @@ void publishDiscovery(const std::string &id, const std::string &name) {
 
 void publishHeartbeat(TimerHandle_t) {
     mqttClient.publish(AVAILABILITY_TOPIC, 0, true, "online");
+}
+
+void publishCoverState(const std::string &id, const char *state) {
+    std::string topic = "iown/" + id + "/state";
+    mqttClient.publish(topic.c_str(), 0, true, state);
+}
+
+void publishCoverPosition(const std::string &id, float position) {
+    char buf[8];
+    snprintf(buf, sizeof(buf), "%.0f", position);
+    std::string topic = "iown/" + id + "/position";
+    mqttClient.publish(topic.c_str(), 0, true, buf);
 }
 
 void handleMqttConnect() {
