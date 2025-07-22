@@ -6,24 +6,19 @@
 #include <LittleFS.h>
 #include <AsyncJson.h>
 #include <log_buffer.h>
+#include <iohcRemote1W.h>
+#include <iohcCryptoHelpers.h>
 // #include "main.h" // Or other relevant headers to access device data and command functions
 
 // Assume ESPAsyncWebServer for now.
 // If you use WebServer.h, the setup and request handling will be different.
 AsyncWebServer server(80); // Create AsyncWebServer object on port 80
 
-// Placeholder for actual device data.
-// In a real scenario, this would come from your device management logic.
+// Structure describing a device entry returned to the web UI
 struct Device {
     String id;
     String name;
 };
-Device devices[] = {
-    {"dev1", "Living Room Thermostat"},
-    {"dev2", "Bedroom Blind"},
-    {"cmd_if", "Command Interface"} // A way to send generic commands if no specific device
-};
-const int numDevices = sizeof(devices) / sizeof(Device);
 
 void handleApiDevices(AsyncWebServerRequest *request) {
     AsyncJsonResponse* response = new AsyncJsonResponse();
@@ -33,11 +28,17 @@ void handleApiDevices(AsyncWebServerRequest *request) {
     }
     JsonArray root = response->getRoot().to<JsonArray>();
 
-    for (int i = 0; i < numDevices; i++) {
+    const auto &remotes = IOHC::iohcRemote1W::getInstance()->getRemotes();
+    for (const auto &r : remotes) {
         JsonObject deviceObj = root.add<JsonObject>();
-        deviceObj["id"] = devices[i].id;
-        deviceObj["name"] = devices[i].name;
+        deviceObj["id"] = bytesToHexString(r.node, sizeof(r.node)).c_str();
+        deviceObj["name"] = r.name.c_str();
     }
+
+    // Provide a generic command interface as last entry
+    JsonObject cmdObj = root.add<JsonObject>();
+    cmdObj["id"] = "cmd_if";
+    cmdObj["name"] = "Command Interface";
     
     response->setLength();
     request->send(response);
