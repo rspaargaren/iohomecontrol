@@ -16,6 +16,7 @@
 
 #include <esp32-hal-gpio.h>
 #include <map>
+#include "esp_log.h"
 
 #include <iohcRadio.h>
 #include <utility>
@@ -382,6 +383,7 @@ void iohcRadio::onTxTicker(void *arg) {
     // ✅ TXDONE received
     radio->txComplete = false;
     ets_printf("TX: TXDONE flag set, ready to send repeat or next packet.\n");
+    ESP_LOGD("RADIO", "TX: TXDONE flag set, LOGD.\n");
 
     // 🔁 Repeat logic
     if (radio->iohc->repeat > 0) {

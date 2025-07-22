@@ -61,6 +61,7 @@ bool msgRcvd(IOHC::iohcPacket *iohc);
 bool msgArchive(IOHC::iohcPacket *iohc);
 
 
+
 uint8_t keyCap[16] = {};
 //uint8_t source_originator[3] = {0};
 
@@ -83,6 +84,7 @@ uint32_t frequencies[] = FREQS2SCAN;
 using namespace IOHC;
 
 void setup() {
+    esp_log_level_set("*", ESP_LOG_DEBUG);    // Or VERBOSE for ESP_LOGV
     Serial.begin(115200);       //Start serial connection for debug and manual input
 
 #if defined(SSD1306_DISPLAY)
