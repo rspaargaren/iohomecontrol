@@ -27,6 +27,8 @@ void publishDiscovery(const std::string &id, const std::string &name);
 void handleMqttConnect();
 void publishHeartbeat(TimerHandle_t timer);
 void mqttFuncHandler(const char *cmd);
+void publishCoverState(const std::string &id, const char *state);
+void publishCoverPosition(const std::string &id, float position);
 
 #endif // MQTT
 

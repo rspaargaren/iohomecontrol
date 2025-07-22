@@ -18,6 +18,7 @@ TimerHandle_t heartbeatTimer;
 const char AVAILABILITY_TOPIC[] = "iown/status";
 
 void initMqtt() {
+    mqttClient.setWill(AVAILABILITY_TOPIC, 0, true, "offline");
     mqttClient.setClientId("iown");
     mqttClient.setCredentials(MQTT_USER, MQTT_PASSWD);
     mqttClient.setServer(MQTT_SERVER, 1883);
@@ -39,6 +40,7 @@ void publishDiscovery(const std::string &id, const std::string &name) {
     doc["unique_id"] = id;
     doc["command_topic"] = "iown/" + id + "/set";
     doc["state_topic"] = "iown/" + id + "/state";
+    doc["position_topic"] = "iown/" + id + "/position";
     doc["availability_topic"] = AVAILABILITY_TOPIC;
     doc["payload_available"] = "online";
     doc["payload_not_available"] = "offline";
@@ -72,6 +74,18 @@ void publishDiscovery(const std::string &id, const std::string &name) {
 
 void publishHeartbeat(TimerHandle_t) {
     mqttClient.publish(AVAILABILITY_TOPIC, 0, true, "online");
+}
+
+void publishCoverState(const std::string &id, const char *state) {
+    std::string topic = "iown/" + id + "/state";
+    mqttClient.publish(topic.c_str(), 0, true, state);
+}
+
+void publishCoverPosition(const std::string &id, float position) {
+    char buf[8];
+    snprintf(buf, sizeof(buf), "%.0f", position);
+    std::string topic = "iown/" + id + "/position";
+    mqttClient.publish(topic.c_str(), 0, true, buf);
 }
 
 void handleMqttConnect() {
@@ -117,6 +131,7 @@ void onMqttConnect(bool sessionPresent) {
     mqttClient.subscribe("iown/midnight", 0);
     mqttClient.subscribe("iown/associate", 0);
     mqttClient.subscribe("iown/heatState", 0);
+    
 
     mqttClient.publish("iown/Frame", 0, false, R"({"cmd": "powerOn", "_data": "Gateway"})", 38);
     {

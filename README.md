@@ -101,7 +101,7 @@ uploads or resets.
 Example payload for `B60D1A`:
 
 ```json
-{"name":"IZY1","command_topic":"iown/B60D1A/set","state_topic":"iown/B60D1A/state","unique_id":"B60D1A","payload_open":"OPEN","payload_close":"CLOSE","payload_stop":"STOP","device_class":"blind","availability_topic":"iown/status"}
+{"name":"IZY1","command_topic":"iown/B60D1A/set","state_topic":"iown/B60D1A/state","position_topic":"iown/B60D1A/position","unique_id":"B60D1A","payload_open":"OPEN","payload_close":"CLOSE","payload_stop":"STOP","device_class":"blind","availability_topic":"iown/status"}
 ```
 
 Configure your MQTT broker settings in `include/user_config.h` (`MQTT_SERVER`, `MQTT_USER`, `MQTT_PASSWD`). After boot and connection, Home Assistant should automatically discover the covers.
@@ -114,6 +114,12 @@ corresponding command to the device.
 When an `OPEN` or `CLOSE` command is received, it immediately publishes the new
 state (`open` or `closed`) to `iown/<id>/state` so Home Assistant can update the
 cover status.
+
+While a blind is in motion the current position percentage is published every
+second to `iown/<id>/position`. The `state` topic is also updated with
+`OPENING`, `CLOSING` or `STOP` depending on the movement. When the blind stops
+moving, the state reverts to `OPEN`, `CLOSE` or `STOP` according to the final
+position.
 
 The gateway publishes `online` every minute to `iown/status` and has a Last Will
 configured to send `offline` on the same topic if it disconnects unexpectedly.
