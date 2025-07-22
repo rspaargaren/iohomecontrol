@@ -5,6 +5,7 @@
 #include "ArduinoJson.h"       // For creating JSON responses
 #include <LittleFS.h>
 #include <AsyncJson.h>
+#include <log_buffer.h>
 // #include "main.h" // Or other relevant headers to access device data and command functions
 
 // Assume ESPAsyncWebServer for now.
@@ -82,6 +83,21 @@ void handleApiCommand(AsyncWebServerRequest *request, JsonVariant &json) {
     request->send(response);
 }
 
+void handleApiLogs(AsyncWebServerRequest *request) {
+    AsyncJsonResponse* response = new AsyncJsonResponse();
+    if(!response){
+        request->send(500, "text/plain", "OOM");
+        return;
+    }
+    JsonArray root = response->getRoot().to<JsonArray>();
+    auto logs = getLogMessages();
+    for(const auto &msg : logs){
+        root.add(msg);
+    }
+    response->setLength();
+    request->send(response);
+}
+
 
 void setupWebServer() {
     Serial.println("Initializing HTTP server ...");
@@ -111,6 +127,7 @@ void setupWebServer() {
     // API Endpoints
     server.on("/api/devices", HTTP_GET, handleApiDevices);
     server.addHandler(new AsyncCallbackJsonWebHandler("/api/command", handleApiCommand)); // For POST with JSON
+    server.on("/api/logs", HTTP_GET, handleApiLogs);
 
     server.onNotFound([](AsyncWebServerRequest *request){
         request->send(404, "text/plain", "Not found");
