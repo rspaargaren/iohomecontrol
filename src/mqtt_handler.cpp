@@ -34,7 +34,7 @@ void initMqtt() {
 
 
 
-void publishDiscovery(const std::string &id, const std::string &name) {
+void publishDiscovery(const std::string &id, const std::string &name, const std::string &key) {
     JsonDocument doc;
     doc["name"] = name;
     doc["unique_id"] = id;
@@ -64,6 +64,7 @@ void publishDiscovery(const std::string &id, const std::string &name) {
     device["manufacturer"] = "Somfy";
     device["model"] = "IO Blind Bridge";
     device["sw_version"] = "1.0.0";
+    device["key"] = key;
 
     std::string payload;
     size_t len = serializeJson(doc, payload);
@@ -92,7 +93,8 @@ void handleMqttConnect() {
     const auto &remotes = IOHC::iohcRemote1W::getInstance()->getRemotes();
     for (const auto &r : remotes) {
         std::string id = bytesToHexString(r.node, sizeof(r.node));
-        publishDiscovery(id, r.name.empty() ? r.description : r.name);
+        std::string key = bytesToHexString(r.key, sizeof(r.key));
+        publishDiscovery(id, r.name.empty() ? r.description : r.name, key);
         std::string t = "iown/" + id + "/set";
         mqttClient.subscribe(t.c_str(), 0);
     }
