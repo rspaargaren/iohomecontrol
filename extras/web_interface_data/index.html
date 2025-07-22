@@ -8,15 +8,15 @@
 </head>
 <body>
     <header>
-        <img src="logo.png" alt="MiOpen.IO Logo" class="logo">
+        <img src="img/logo.png" alt="MiOpen.IO Logo" class="logo">
         <h1>Device Control</h1>
-        <button id="toggle-theme">Schakel thema</button>
+        <div id="toggle-theme"></div>
     </header>
 
     <main>
         <div class="left">
             <section id="device-list-section">
-                <h2>Devices</h2>
+                <div class="title"><h2>Devices</h2></div>
                 <div class="card">
                     <ul id="device-list">
                         <!-- Device items will be populated by JavaScript -->
@@ -26,29 +26,34 @@
             </section>
 
             <section id="command-section">
-                <h2>Send Command</h2>
+                <div class="title"><h2>new</h2></div>
                 <div class="card">
-                    <label for="device-select">Select Device:</label>
-                    <select id="device-select">
-                        <!-- Options will be populated by JavaScript -->
-                    </select>
-                    <br><br>
-                    <label for="command-input">Command:</label>
-                    <button id="send-command-button">Send</button>
                 </div>
             </section>
         </div>
         <div class="right">
             <section id="status-section">
-                <h2>Status / Log</h2>
+                <div class="title"><h2>Status / Log </h2>  
+                    <select id="select-log">
+                        <option value="all">All</option>
+                        <option value="info">Info</option>
+                        <option value="warning">Warning</option>
+                        <option value="error">Error</option>
+                    </select>
+                </div>
                 <div class="card">
+                    <label for="device-select">Select Device:</label>
+                    <select id="device-select">
+                        <!-- Options will be populated by JavaScript -->
+                    </select>
+
                     <div id="status-messages">
                         <!-- Status messages will be populated by JavaScript -->
                     </div>
                     <div class="send-messages">
                         <input type="text" id="command-input" placeholder="Typ hier..." autocomplete="off">
-                        <select id="suggestions"></select>
-                        <button id="send-command-button">Send</button>
+                        <select id="suggestions" style="width:112px"></select>
+                        <button id="send-command-button" style="width:61px">Send</button>
                     </div>
                     
                 </div>
