@@ -106,6 +106,17 @@ Example payload for `B60D1A`:
 {"name":"IZY1","command_topic":"iown/B60D1A/set","state_topic":"iown/B60D1A/state","position_topic":"iown/B60D1A/position","unique_id":"B60D1A","payload_open":"OPEN","payload_close":"CLOSE","payload_stop":"STOP","device_class":"blind","availability_topic":"iown/status"}
 ```
 
+For each blind the firmware also publishes MQTT button entities that allow
+executing pairing or controller management commands directly from Home Assistant.
+The discovery topics are:
+
+- `homeassistant/button/<id>_pair/config`
+- `homeassistant/button/<id>_add/config`
+- `homeassistant/button/<id>_remove/config`
+
+Sending `PRESS` to `iown/<id>/pair`, `iown/<id>/add` or `iown/<id>/remove`
+triggers the corresponding command on the blind.
+
 Configure your MQTT broker settings in `include/user_config.h` (`MQTT_SERVER`, `MQTT_USER`, `MQTT_PASSWD`). After boot and connection, Home Assistant should automatically discover the covers.
 
 If you don't have an OLED display connected, comment out the `DISPLAY` definition in `include/user_config.h` to disable all display related code.
