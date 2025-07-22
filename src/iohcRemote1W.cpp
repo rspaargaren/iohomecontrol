@@ -22,6 +22,10 @@
 #include <oled_display.h>
 #include <TickerUsESP32.h>
 #include <nvs_helpers.h>
+#include <cmath>
+#if defined(MQTT)
+#include <mqtt_handler.h>
+#endif
 
 namespace IOHC {
     iohcRemote1W* iohcRemote1W::_iohcRemote1W = nullptr;
@@ -309,16 +313,46 @@ namespace IOHC {
                             packet->payload.packet.msg.p0x00_14.main[0] = 0x00;
                             packet->payload.packet.msg.p0x00_14.main[1] = 0x00;
                             r.positionTracker.startOpening();
+                            r.movement = remote::Movement::Opening;
+#if defined(MQTT)
+                            {
+                                std::string id = bytesToHexString(r.node, sizeof(r.node));
+                                publishCoverState(id, "OPENING");
+                                publishCoverPosition(id, r.positionTracker.getPosition());
+                                r.lastPublishedState = "OPENING";
+                                r.lastPublishedPosition = r.positionTracker.getPosition();
+                            }
+#endif
                             break;
                         case RemoteButton::Close:
                             packet->payload.packet.msg.p0x00_14.main[0] = 0xc8;
                             packet->payload.packet.msg.p0x00_14.main[1] = 0x00;
                             r.positionTracker.startClosing();
+                            r.movement = remote::Movement::Closing;
+#if defined(MQTT)
+                            {
+                                std::string id = bytesToHexString(r.node, sizeof(r.node));
+                                publishCoverState(id, "CLOSING");
+                                publishCoverPosition(id, r.positionTracker.getPosition());
+                                r.lastPublishedState = "CLOSING";
+                                r.lastPublishedPosition = r.positionTracker.getPosition();
+                            }
+#endif
                             break;
                         case RemoteButton::Stop:
                             packet->payload.packet.msg.p0x00_14.main[0] = 0xd2;
                             packet->payload.packet.msg.p0x00_14.main[1] = 0x00;
                             r.positionTracker.stop();
+                            r.movement = remote::Movement::Idle;
+#if defined(MQTT)
+                            {
+                                std::string id = bytesToHexString(r.node, sizeof(r.node));
+                                publishCoverState(id, "STOP");
+                                publishCoverPosition(id, r.positionTracker.getPosition());
+                                r.lastPublishedState = "STOP";
+                                r.lastPublishedPosition = r.positionTracker.getPosition();
+                            }
+#endif
                             break;
                         case RemoteButton::Vent:
                             packet->payload.packet.msg.p0x00_14.main[0] = 0xd8;
@@ -662,10 +696,49 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
         for (auto &r : remotes) {
             r.positionTracker.update();
 
-            if (r.positionTracker.isMoving()) {
-                Serial.printf("%s position: %.0f%%\n", r.name.c_str(), r.positionTracker.getPosition());
+            float pos = r.positionTracker.getPosition();
+            bool moving = r.positionTracker.isMoving();
+
+            if (moving) {
+                Serial.printf("%s position: %.0f%%\n", r.name.c_str(), pos);
 #if defined(SSD1306_DISPLAY)
-                display1WPosition(r.node, r.positionTracker.getPosition(), r.name.c_str());
+                display1WPosition(r.node, pos, r.name.c_str());
+#endif
+#if defined(MQTT)
+                std::string id = bytesToHexString(r.node, sizeof(r.node));
+                const char *state = r.movement == remote::Movement::Opening ? "OPENING" : "CLOSING";
+                if (state != r.lastPublishedState) {
+                    publishCoverState(id, state);
+                    r.lastPublishedState = state;
+                }
+                if (fabs(pos - r.lastPublishedPosition) >= 1.0f) {
+                    publishCoverPosition(id, pos);
+                    r.lastPublishedPosition = pos;
+                }
+#endif
+            } else {
+#if defined(MQTT)
+                std::string id = bytesToHexString(r.node, sizeof(r.node));
+                const char *state = "STOP";
+                if (r.movement == remote::Movement::Opening) {
+                    state = pos >= 99.5f ? "OPEN" : "STOP";
+                } else if (r.movement == remote::Movement::Closing) {
+                    state = pos <= 0.5f ? "CLOSE" : "STOP";
+                }
+                if (state != r.lastPublishedState) {
+                    publishCoverState(id, state);
+                    r.lastPublishedState = state;
+                }
+                if (fabs(pos - r.lastPublishedPosition) >= 1.0f) {
+                    publishCoverPosition(id, pos);
+                    r.lastPublishedPosition = pos;
+                }
+#endif
+                r.movement = remote::Movement::Idle;
+#if defined(SSD1306_DISPLAY)
+                if (r.lastPublishedPosition != pos) {
+                    display1WPosition(r.node, pos, r.name.c_str());
+                }
 #endif
             }
         }

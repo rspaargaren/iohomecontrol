@@ -19,6 +19,7 @@
 
 #include <iohcDevice.h>
 #include <vector>
+#include <string>
 #include <tokens.h>
 #include <blind_position.h>
 
@@ -55,6 +56,9 @@ namespace IOHC {
             std::string name;
             uint32_t travelTime{}; // ms to fully open or close
             BlindPosition positionTracker{};
+            enum class Movement { Idle, Opening, Closing } movement{Movement::Idle};
+            float lastPublishedPosition{-1.0f};
+            std::string lastPublishedState{};
         };
 
         static iohcRemote1W* getInstance();
