@@ -40,7 +40,37 @@ document.addEventListener('DOMContentLoaded', function() {
             devices.forEach(device => {
                 // Populate the UL for display (simple version)
                 const listItem = document.createElement('li');
-                listItem.textContent = device.name; // Assuming device object has a 'name'
+                listItem.textContent = ' ';
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = device.name;
+
+                listItem.appendChild(nameSpan); // Append the name span to the list item
+
+                 // 🔘 up btn
+                const upButton = document.createElement('button');
+                upButton.textContent = 'up';
+                upButton.classList.add('btn', 'open');
+                upButton.onclick = () => {
+                    // TODO: hier kun je eventueel een fetch() zetten naar een 'aan' endpoint
+                };
+
+                 // 🔘 stop btn
+                const stopButton = document.createElement('button');
+                stopButton.textContent = 'stop';
+                stopButton.classList.add('btn', 'stop');
+                stopButton.onclick = () => {
+                    // TODO: hier kun je eventueel een fetch() zetten naar een 'stop' endpoint
+                };
+                // 🔘 down btn
+                const downButton = document.createElement('button');
+                downButton.textContent = 'down';
+                downButton.classList.add('btn', 'close');
+                downButton.onclick = () => {
+                    // TODO: hier kun je eventueel een fetch() zetten naar een 'uit' endpoint
+                };
+                listItem.appendChild(upButton);
+                listItem.appendChild(stopButton);
+                listItem.appendChild(downButton);
                 // TODO: Add buttons for simple actions if desired in future
                 deviceListUL.appendChild(listItem);
 
@@ -95,7 +125,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error sending command:', error);
         }
     }
-
+  
     // Event Listeners
     if (sendCommandButton) {
         sendCommandButton.addEventListener('click', sendCommand);
@@ -104,7 +134,8 @@ document.addEventListener('DOMContentLoaded', function() {
     async function fetchLogs() {
         try {
             const response = await fetch('/api/logs');
-            if (!response.ok) return;
+
+        if (!response.ok) return;
             const logs = await response.json();
             statusMessagesDiv.innerHTML = '';
             logs.forEach(line => {
@@ -112,15 +143,60 @@ document.addEventListener('DOMContentLoaded', function() {
                 p.textContent = line;
                 statusMessagesDiv.appendChild(p);
             });
-            statusMessagesDiv.scrollTop = statusMessagesDiv.scrollHeight;
+          statusMessagesDiv.scrollTop = statusMessagesDiv.scrollHeight;
         } catch (e) {
             console.error('Error fetching logs', e);
         }
     }
+    // suggestions for command input
+    const suggestions = ["add", "remove", "close", "open", "ls", "cat"];
+    const input = document.getElementById('command-input');
+    const suggestionBox = document.getElementById('suggestions');
+
+    // Toon alle suggesties als knoppen
+    suggestions.forEach(item => {
+      const div = document.createElement('option');
+      div.className = 'suggestion';
+      div.textContent = item;
+
+      // Voeg toe aan input bij klik
+      div.addEventListener('click', () => {
+        // Spatie toevoegen als laatste teken geen spatie is
+        if (input.value !== '' && !input.value.endsWith(' ')) {
+          input.value += ' ';
+        }
+        input.value += item + ' ';
+        input.focus();
+      });
+
+      suggestionBox.appendChild(div);
+    });
+    //dark mode toggle
+
+     const toggleBtn = document.getElementById('toggle-theme');
+    const body = document.body;
+
+    toggleBtn.addEventListener('click', () => {
+      body.classList.toggle('dark-mode');
+
+      // Optioneel: opslaan in localStorage
+      if (body.classList.contains('dark-mode')) {
+        localStorage.setItem('theme', 'dark');
+      } else {
+        localStorage.setItem('theme', 'light');
+      }
+    });
+
+    // Thema behouden bij herladen
+    window.addEventListener('DOMContentLoaded', () => {
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'dark') {
+        body.classList.add('dark-mode');
+      }
+    });
 
     setInterval(fetchLogs, 2000);
     fetchLogs();
-
     // Initial fetch of devices
     fetchAndDisplayDevices();
 });

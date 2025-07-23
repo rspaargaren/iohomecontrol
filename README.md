@@ -1,5 +1,6 @@
 Based on the wonderfull work of [Velocet/iown-homecontrol](https://github.com/Velocet/iown-homecontrol)
 
+![smlogo](https://github.com/user-attachments/assets/f6b606a1-0eca-4fd6-a509-d5d1136b2d31)
 
 ### **Disclaimer**  
 Tool designed for educational and testing purposes, provided "as is", without warranty of any kind. Creators and contributors are not responsible for any misuse or damage caused by this tool.
