@@ -19,6 +19,8 @@
 #include <cstring>
 #include <esp_attr.h>
 #include <utils.h>
+#include <sstream>
+#include <iomanip>
 
 namespace IOHC {
     void IRAM_ATTR iohcPacket::decode(bool verbosity) {
@@ -235,5 +237,37 @@ else _dir[0] = ' ';
         printf("\n");
 
         relStamp = packetStamp;
+    }
+
+    std::string iohcPacket::decodeToString(bool verbosity) {
+        std::ostringstream ss;
+        char dir = ' ';
+        if (!memcmp(source_originator, this->payload.packet.header.source, 3))
+            dir = '>';
+        else
+            dir = '<';
+        if(this->payload.packet.header.CtrlByte1.asStruct.Protocol) dir = '>';
+        else if (this->payload.packet.header.CtrlByte1.asStruct.StartFrame && !this->payload.packet.header.CtrlByte1.asStruct.EndFrame) dir = '>';
+        else if (!this->payload.packet.header.CtrlByte1.asStruct.StartFrame && this->payload.packet.header.CtrlByte1.asStruct.EndFrame) dir = '<';
+
+        ss << "(" << std::setw(2) << std::setfill('0') << std::dec
+           << (int)this->payload.packet.header.CtrlByte1.asStruct.MsgLen << ") ";
+        ss << (this->payload.packet.header.CtrlByte1.asStruct.Protocol ? "1W" : "2W") << " ";
+        ss << "FROM " << std::uppercase << std::hex << std::setw(2) << std::setfill('0')
+           << (int)this->payload.packet.header.source[0]
+           << (int)this->payload.packet.header.source[1]
+           << (int)this->payload.packet.header.source[2]
+           << " TO "
+           << (int)this->payload.packet.header.target[0]
+           << (int)this->payload.packet.header.target[1]
+           << (int)this->payload.packet.header.target[2]
+           << " CMD " << (int)this->payload.packet.header.cmd;
+
+        uint8_t dataLen = this->buffer_length - 9;
+        ss << " DATA(" << std::dec << (int)dataLen << ") ";
+        if (dataLen)
+            ss << bitrow_to_hex_string(this->payload.buffer + 9, dataLen);
+        ss << " " << dir;
+        return ss.str();
     }
 }

@@ -113,6 +113,12 @@ namespace Radio {
         printf("\nRadio Chip is ready\n");
     }
 
+void setPreambleLength(uint16_t preambleLen) {
+    writeByte(REG_PREAMBLEMSB, (preambleLen >> 8) & 0xFF);
+    writeByte(REG_PREAMBLELSB, preambleLen & 0xFF);
+    ets_printf("Radio: Preamble length set to %u symbols\n", preambleLen);
+}
+
 /**
  * The `initRegisters` function initializes various registers of a radio module for both transmission
  * and reception in a C++ program.

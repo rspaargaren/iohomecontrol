@@ -18,6 +18,7 @@
 #define IOHC_PACKET_H
 
 #include <vector>
+#include <string>
 
 #include <board-config.h>
 
@@ -230,6 +231,7 @@ namespace IOHC {
         uint8_t lna{}; // LNA attenuation in dB
 
         void decode(bool verbosity = false);
+        std::string decodeToString(bool verbosity = false);
 
     protected:
         uint8_t source_originator[3] = {0};

@@ -40,7 +40,7 @@ namespace TimersUS {
         // Use ISR dispatch method so callbacks run in the hardware timer context
         //_timerConfig.dispatch_method = ESP_TIMER_ISR;
         _timerConfig.dispatch_method = ESP_TIMER_TASK;
-        _timerConfig.skip_unhandled_events = false; //true;
+        _timerConfig.skip_unhandled_events = true;//false; //true;
         _timerConfig.name = "TickerMsESP32";
         if (_timer) {
             ESP_ERROR_CHECK(esp_timer_stop(_timer));

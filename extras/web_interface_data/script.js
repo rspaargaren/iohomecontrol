@@ -134,6 +134,7 @@ document.addEventListener('DOMContentLoaded', function() {
     async function fetchLogs() {
         try {
             const response = await fetch('/api/logs');
+
         if (!response.ok) return;
             const logs = await response.json();
             statusMessagesDiv.innerHTML = '';
@@ -142,18 +143,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 p.textContent = line;
                 statusMessagesDiv.appendChild(p);
             });
-
-
-            statusMessagesDiv.scrollTop = statusMessagesDiv.scrollHeight;
-
-
+          statusMessagesDiv.scrollTop = statusMessagesDiv.scrollHeight;
         } catch (e) {
             console.error('Error fetching logs', e);
         }
     }
-    setInterval(fetchLogs, 2000);
-    fetchLogs();
-
     // suggestions for command input
     const suggestions = ["add", "remove", "close", "open", "ls", "cat"];
     const input = document.getElementById('command-input');
@@ -201,7 +195,8 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
 
-
+    setInterval(fetchLogs, 2000);
+    fetchLogs();
     // Initial fetch of devices
     fetchAndDisplayDevices();
 });

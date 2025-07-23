@@ -1,57 +1,86 @@
 {
     "b60d1a": {
         "key": "2d36bd8b4d4fb1e1a1b3099b394d3a9e",
-        "sequence": "2410",
+        "sequence": "3410",
         "type": [
             0,
             0
         ],
         "manufacturer_id": 2,
         "description": "IZY1",
-        "name": "IZY1"
+        "name": "IZY1",
+        "travel_time": 10000
     },
     "b60d1b": {
         "key": "b794883327810507c2a5419eeeae54b4",
-        "sequence": "08d7",
+        "sequence": "09d8",
         "type": [
             0,
             0
         ],
         "manufacturer_id": 2,
         "description": "IZY2",
-        "name": "IZY2"
+        "name": "IZY2",
+        "travel_time": 10000
     },
     "e8e150": {
         "key": "77999e593262e207c8f992904ec4c4f2",
-        "sequence": "08d7",
+        "sequence": "09d7",
         "type": [
             0,
             0
         ],
         "manufacturer_id": 2,
         "description": "DYNA",
-        "name": "DYNA"
+        "name": "DYNA",
+        "travel_time": 10000
     },
     "e00001": {
         "key": "7ab132c95f843da7116ed03b9cf20845",
-        "sequence": "00be",
+        "sequence": "013e",
         "type": [
             0,
             0
         ],
         "manufacturer_id": 2,
         "description": "SUNS",
-        "name": "Luifel Tuin"
+        "name": "Luifel Tuin",
+        "travel_time": 10000
     },
     "e00002": {
         "key": "bba24bbb61508fc78c5ad0e57ff66210",
-        "sequence": "0297",
+        "sequence": "0380",
         "type": [
             0,
             0
         ],
         "manufacturer_id": 2,
         "description": "SUNG",
-        "name": "Screen G"
+        "name": "Screen G",
+        "travel_time": 10000
+    },
+    "e00003": {
+        "key": "6cd5b149de8a257bf03e0a22e61c0029",
+        "sequence": "0030",
+        "type": [
+            0,
+            0
+        ],
+        "manufacturer_id": 2,
+        "description": "SNT1",
+        "name": "Screen T2",
+        "travel_time": 10000
+    },
+    "e00004": {
+        "key": "f3a1d67c4b8209eb5d7cf041ea9638b2",
+        "sequence": "0030",
+        "type": [
+            0,
+            0
+        ],
+        "manufacturer_id": 2,
+        "description": "SNT2",
+        "name": "Screen T1",
+        "travel_time": 10000
     }
 }
