@@ -40,7 +40,37 @@ document.addEventListener('DOMContentLoaded', function() {
             devices.forEach(device => {
                 // Populate the UL for display (simple version)
                 const listItem = document.createElement('li');
-                listItem.textContent = device.name; // Assuming device object has a 'name'
+                listItem.textContent = ' ';
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = device.name;
+
+                listItem.appendChild(nameSpan); // Append the name span to the list item
+
+                 // 🔘 up btn
+                const upButton = document.createElement('button');
+                upButton.textContent = 'up';
+                upButton.classList.add('btn', 'open');
+                upButton.onclick = () => {
+                    // TODO: hier kun je eventueel een fetch() zetten naar een 'aan' endpoint
+                };
+
+                 // 🔘 stop btn
+                const stopButton = document.createElement('button');
+                stopButton.textContent = 'stop';
+                stopButton.classList.add('btn', 'stop');
+                stopButton.onclick = () => {
+                    // TODO: hier kun je eventueel een fetch() zetten naar een 'stop' endpoint
+                };
+                // 🔘 down btn
+                const downButton = document.createElement('button');
+                downButton.textContent = 'down';
+                downButton.classList.add('btn', 'close');
+                downButton.onclick = () => {
+                    // TODO: hier kun je eventueel een fetch() zetten naar een 'uit' endpoint
+                };
+                listItem.appendChild(upButton);
+                listItem.appendChild(stopButton);
+                listItem.appendChild(downButton);
                 // TODO: Add buttons for simple actions if desired in future
                 deviceListUL.appendChild(listItem);
 
