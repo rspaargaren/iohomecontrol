@@ -333,6 +333,7 @@ namespace IOHC {
                     memcpy(packets2send.back()->payload.packet.header.target, guessed[i], 3);
 
                     packets2send.back()->delayed = 250; // Give enough time for the answer
+                    packets2send.back()->repeatTime = 250; // Slow down discover loop
                 }
                 digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
                 _radioInstance->send(packets2send);
