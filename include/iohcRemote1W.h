@@ -50,6 +50,7 @@ namespace IOHC {
             uint8_t key[16]{};
             std::vector<uint8_t> type{};
             uint8_t manufacturer{};
+            bool paired{false};
             std::string description;
             std::string name;
         };
