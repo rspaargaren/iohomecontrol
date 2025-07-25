@@ -436,7 +436,9 @@ namespace IOHC {
                         memcpy(packets2send.back()->payload.packet.header.target, master_to, 3);
                         // }
 
-                        packets2send.back()->delayed = 245;
+                        //packets2send.back()->delayed = 245;
+                        packets2send.back()->repeatTime = 250; // Slow down discover loop
+                        packets2send.back()->delayed = 250;   // Give enough time for the answer
                     }
                     toSend.clear();
                 }
