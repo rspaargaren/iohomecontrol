@@ -55,6 +55,7 @@ namespace IOHC {
             std::string description;
             std::string name;
             uint32_t travelTime{}; // ms to fully open or close
+            bool paired{false};
             BlindPosition positionTracker{};
             enum class Movement { Idle, Opening, Closing } movement{Movement::Idle};
             float lastPublishedPosition{-1.0f};

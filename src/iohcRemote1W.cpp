@@ -189,6 +189,7 @@ namespace IOHC {
 #if defined(SSD1306_DISPLAY)
                 display1WPosition(r.node, r.positionTracker.getPosition(), r.name.c_str());
 #endif
+                r.paired = true;
                 break;
             }
 
@@ -238,6 +239,7 @@ namespace IOHC {
 #if defined(SSD1306_DISPLAY)
                 display1WPosition(r.node, r.positionTracker.getPosition(), r.name.c_str());
 #endif
+                r.paired = false;
                 break;
             }
 
@@ -639,6 +641,12 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
                 r.travelTime = DEFAULT_TRAVEL_TIME_MS;
                 updateFile = true;
             }
+            if (jobj["paired"].is<bool>()) {
+                r.paired = jobj["paired"].as<bool>();
+            } else {
+                r.paired = false;
+                updateFile = true;
+            }
             r.positionTracker.setTravelTime(r.travelTime);
             remotes.push_back(r);
         }
@@ -681,6 +689,7 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
             jobj["description"] = r.description;
             jobj["name"] = r.name;
             jobj["travel_time"] = r.travelTime;
+            jobj["paired"] = r.paired;
         }
         serializeJson(doc, f);
         f.close();
