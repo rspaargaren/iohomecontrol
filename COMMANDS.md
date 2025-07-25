@@ -21,6 +21,7 @@ VARIOUS 1W (Use the description name in 1W.json as argument)
 - **pair**      _1W put device in pair mode_
 - **add**       _1W add controller to device_
 - **remove**    _1W remove controller from device_
+- **pair** and **remove** update the `paired` status in `1W.json`.
 - **open**      _1W open device_
 - **close**     _1W close device_
 - **stop**      _1W stop device_
