@@ -181,7 +181,11 @@ void setupWebServer() {
     server.addHandler(new AsyncCallbackJsonWebHandler("/api/command", handleApiCommand)); // For POST with JSON
     server.addHandler(new AsyncCallbackJsonWebHandler("/api/action", handleApiAction));
 
-    server.serveStatic("/", LittleFS, "/web_interface_data/").setDefaultFile("index.html");
+    auto &staticHandler = server.serveStatic("/", LittleFS, "/web_interface_data/");
+    staticHandler.setDefaultFile("index.html");
+    staticHandler.setFilter([](AsyncWebServerRequest *request){
+        return !request->url().startsWith("/api");
+    });
     // You might need to explicitly serve each file if serveStatic with directory isn't working as expected
     // or if files are not in a subdirectory of the data dir.
     // server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
