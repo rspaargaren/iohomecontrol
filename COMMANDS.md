@@ -33,6 +33,7 @@ VARIOUS 1W (Use the description name in 1W.json as argument)
 - **mode2**     _1W Mode2_
 - **mode3**     _1W Mode3_
 - **mode4**     _1W Mode4_
+- **new1W**    _Add new 1W device_
 
 COMMON
 - **verbose**   _Toggle verbose output on packets list_
