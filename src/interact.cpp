@@ -18,14 +18,45 @@
 #include <iohcCozyDevice2W.h>
 #include <iohcOtherDevice2W.h>
 #include <interact.h>
+#include <wifi_helper.h>
+#include <oled_display.h>
+#include <iohcCryptoHelpers.h>
+#if defined(MQTT)
+#include <mqtt_handler.h>
+#endif
+
+ConnState mqttStatus = ConnState::Disconnected;
+
+_cmdEntry* _cmdHandler[MAXCMDS];
+uint8_t lastEntry = 0;
+
+
+void tokenize(std::string const &str, const char delim, Tokens &out) {
+  std::stringstream ss(str);
+  std::string s;
+  while (std::getline(ss, s, delim)) {
+    out.push_back(s);
+  }
+}
+
 
 namespace Cmd {
+bool verbosity = true;
+bool pairMode = false;
+bool scanMode = false;
+#if defined(ESP32)
+TimersUS::TickerUsESP32 kbd_tick;
+#endif
+TimerHandle_t consoleTimer;
+
+static char _rxbuffer[512];
+static uint8_t _len = 0;
+static uint8_t _avail = 0;
 /**
  * The function `createCommands()` initializes and adds various command handlers for controlling
  * different devices and functionalities.
  */
 void createCommands() {
-    Cmd::init(); // Initialize Serial commands reception and handlers
     // Atlantic 2W
     Cmd::addHandler((char *) "powerOn", (char *) "Permit to retrieve paired devices", [](Tokens *cmd)-> void {
         IOHC::iohcCozyDevice2W::getInstance()->cmd(IOHC::DeviceButton::powerOn, nullptr);
@@ -193,5 +224,92 @@ void createCommands() {
         //Register it like any other command
         console.registerCommand(setTemp);
     */
+}
+
+bool addHandler(char *cmd, char *description, void (*handler)(Tokens*)) {
+  for (uint8_t idx = 0; idx < MAXCMDS; ++idx) {
+    if (_cmdHandler[idx] != nullptr) {
+    } else {
+      void *alloc = malloc(sizeof(struct _cmdEntry));
+      if (!alloc)
+        return false;
+
+      _cmdHandler[idx] = static_cast<_cmdEntry *>(alloc);
+      memset(alloc, 0, sizeof(struct _cmdEntry));
+      strncpy(_cmdHandler[idx]->cmd, cmd,
+              strlen(cmd) < sizeof(_cmdHandler[idx]->cmd) ? strlen(cmd)
+                                                          : sizeof(_cmdHandler[idx]->cmd) - 1);
+      strncpy(_cmdHandler[idx]->description, description,
+              strlen(cmd) < sizeof(_cmdHandler[idx]->description)
+                  ? strlen(description)
+                  : sizeof(_cmdHandler[idx]->description) - 1);
+      _cmdHandler[idx]->handler = handler;
+
+      if (idx > lastEntry)
+        lastEntry = idx;
+      return true;
+    }
+  }
+  return false;
+}
+
+char *cmdReceived(bool echo) {
+  _avail = Serial.available();
+  if (_avail) {
+    _len += Serial.readBytes(&_rxbuffer[_len], _avail);
+    if (echo) {
+      _rxbuffer[_len] = '\0';
+      Serial.printf("%s", &_rxbuffer[_len - _avail]);
+    }
+  }
+  if (_rxbuffer[_len - 1] == 0x0a) {
+    _rxbuffer[_len - 2] = '\0';
+    _len = 0;
+    return _rxbuffer;
+  }
+  return nullptr;
+}
+
+void cmdFuncHandler() {
+  constexpr char delim = ' ';
+  Tokens segments;
+
+  char *cmd = cmdReceived(true);
+  if (!cmd)
+    return;
+  if (!strlen(cmd))
+    return;
+
+  tokenize(cmd, delim, segments);
+  if (strcmp((char *)"help", segments[0].c_str()) == 0) {
+    Serial.printf("\nRegistered commands:\n");
+    for (uint8_t idx = 0; idx <= lastEntry; ++idx) {
+      if (_cmdHandler[idx] == nullptr)
+        continue;
+      Serial.printf("- %s\t%s\n", _cmdHandler[idx]->cmd, _cmdHandler[idx]->description);
+    }
+    Serial.printf("- %s\t%s\n\n", (char *)"help", (char *)"This command");
+    Serial.printf("\n");
+    return;
+  }
+  for (uint8_t idx = 0; idx <= lastEntry; ++idx) {
+    if (_cmdHandler[idx] == nullptr)
+      continue;
+    if (strcmp(_cmdHandler[idx]->cmd, segments[0].c_str()) == 0) {
+      _cmdHandler[idx]->handler(&segments);
+      return;
+    }
+  }
+  Serial.printf("*> Unknown <*\n");
+}
+
+void init() {
+//#if defined(MQTT)
+//initMqtt();
+//#endif
+
+//  initWifi();
+
+  kbd_tick.attach_ms(500, cmdFuncHandler);
 }
 }

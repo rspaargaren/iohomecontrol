@@ -35,8 +35,10 @@ _At first time or when a JSON in data folder is modified:_
   1. build filesystem image
   2. upload filesystem image
      
-_After any other changes:_  
+_After any other changes:_
   - upload and monitor
+  - make sure `CONFIG_ESP_TIMER_SUPPORTS_ISR_DISPATCH_METHOD` remains enabled in
+    `sdkconfig` so ESP timers can run callbacks from ISR context
 
 [^1]: I use an SX1276. If CC1101/SX1262: Feel free to use the old code (Not checked/garanted)
 
@@ -51,9 +53,9 @@ This project now includes an experimental web interface to control IOHC devices.
 ### Setup & Access
 
 1.  **Configure WiFi:**
-    *   Open `src/main.cpp`.
-    *   Locate the `YOUR_SSID` and `YOUR_PASSWORD` placeholders.
-    *   Replace them with your actual WiFi network SSID and password.
+    *   On first boot the device starts an access point named `iohc-setup`.
+    *   Connect to this AP and follow the WiFiManager captive portal to enter
+        your WiFi credentials.
 
 2.  **Build and Upload Filesystem:**
     *   The web interface files (`index.html`, `style.css`, `script.js`) are located in `extras/web_interface_data/`.
@@ -82,5 +84,33 @@ The web interface allows you to:
 *   **Send commands:** Select a device, type a command string (e.g., `setTemp 21.0`), and click "Send". (Command processing is currently a placeholder and will acknowledge receipt).
 
 This feature is under development, and functionality will be expanded in the future.
+
+## Home Assistant Discovery
+
+When MQTT is enabled (`#define MQTT` in `include/user_config.h`) the firmware publishes Home Assistant discovery messages for every blind defined in `extras/1W.json` as soon as the MQTT connection is established. Comment out the `MQTT` definition if you do not wish to compile the firmware with MQTT support.
+
+Each blind configuration is sent to the topic `homeassistant/cover/<id>/config` where `<id>` is the hexadecimal address from `1W.json`.
+
+Example payload for `B60D1A`:
+
+```json
+{"name":"IZY1","command_topic":"iown/B60D1A/set","state_topic":"iown/B60D1A/state","unique_id":"B60D1A","payload_open":"OPEN","payload_close":"CLOSE","payload_stop":"STOP","device_class":"blind","availability_topic":"iown/status"}
+```
+
+Configure your MQTT broker settings in `include/user_config.h` (`MQTT_SERVER`, `MQTT_USER`, `MQTT_PASSWD`). After boot and connection, Home Assistant should automatically discover the covers.
+
+If you don't have an OLED display connected, comment out the `DISPLAY` definition in `include/user_config.h` to disable all display related code.
+
+Once discovery is complete you can control a blind by publishing `OPEN`, `CLOSE`
+or `STOP` to `iown/<id>/set`. The firmware listens on these topics and issues the
+corresponding command to the device.
+When an `OPEN` or `CLOSE` command is received, it immediately publishes the new
+state (`open` or `closed`) to `iown/<id>/state` so Home Assistant can update the
+cover status.
+
+The gateway publishes `online` every minute to `iown/status` and has a Last Will
+configured to send `offline` on the same topic if it disconnects unexpectedly.
+Home Assistant uses this message to mark all covers as unavailable when the
+gateway goes offline.
 
 #### **License**

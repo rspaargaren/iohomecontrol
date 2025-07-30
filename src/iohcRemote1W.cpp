@@ -19,9 +19,28 @@
 #include <ArduinoJson.h>
 
 #include <iohcCryptoHelpers.h>
+#include <oled_display.h>
 
 namespace IOHC {
     iohcRemote1W* iohcRemote1W::_iohcRemote1W = nullptr;
+
+    static const char *remoteButtonToString(RemoteButton cmd) {
+        switch (cmd) {
+            case RemoteButton::Open: return "OPEN";
+            case RemoteButton::Close: return "CLOSE";
+            case RemoteButton::Stop: return "STOP";
+            case RemoteButton::Vent: return "VENT";
+            case RemoteButton::ForceOpen: return "FORCE";
+            case RemoteButton::Pair: return "PAIR";
+            case RemoteButton::Add: return "ADD";
+            case RemoteButton::Remove: return "REMOVE";
+            case RemoteButton::Mode1: return "MODE1";
+            case RemoteButton::Mode2: return "MODE2";
+            case RemoteButton::Mode3: return "MODE3";
+            case RemoteButton::Mode4: return "MODE4";
+            default: return "UNKNOWN";
+        }
+    }
 
     iohcRemote1W::iohcRemote1W() = default;
 
@@ -147,6 +166,8 @@ namespace IOHC {
                     digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
 //                }
                 _radioInstance->send(packets2send);
+                display1WAction(r.node, remoteButtonToString(cmd), "TX", r.name.c_str());
+                r.paired = true;
                 break;
             }
 
@@ -190,6 +211,8 @@ namespace IOHC {
 //                }
                 _radioInstance->send(packets2send);
                 //printf("\n");
+                display1WAction(r.node, remoteButtonToString(cmd), "TX", r.name.c_str());
+                r.paired = false;
                 break;
             }
 
@@ -232,6 +255,7 @@ namespace IOHC {
                     digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
 //                }
                 _radioInstance->send(packets2send);
+                display1WAction(r.node, remoteButtonToString(cmd), "TX", r.name.c_str());
                 break;
             }
            default: {
@@ -459,6 +483,7 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
                     digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
                 }
                 _radioInstance->send(packets2send);
+                display1WAction(r.node, remoteButtonToString(cmd), "TX", r.name.c_str());
                 break;
 //            }
         }
@@ -521,6 +546,11 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
             // _manufacturer = jobj["manufacturer_id"].as<uint8_t>();
             r.manufacturer = jobj["manufacturer_id"].as<uint8_t>();
             r.description = jobj["description"].as<std::string>();
+            r.name = jobj["name"].as<std::string>();
+            if (jobj.containsKey("paired"))
+                r.paired = jobj["paired"].as<bool>();
+            else
+                r.paired = false;
             remotes.push_back(r);
         }
 
@@ -530,10 +560,9 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
     }
    bool iohcRemote1W::save() {
         fs::File f = LittleFS.open(IOHC_1W_REMOTE, "w+");
-        JsonDocument doc; 
+        JsonDocument doc;
         for (const auto&r: remotes) {
             // jobj["key"] = bytesToHexString(_key, sizeof(_key));
-//            JsonObject jobj = doc.createNestedObject(bytesToHexString(r.node, sizeof(r.node)));
             auto jobj = doc[bytesToHexString(r.node, sizeof(r.node))].to<JsonObject>();
             jobj["key"] = bytesToHexString(r.key, sizeof(r.key));
 
@@ -557,10 +586,16 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
             // jobj["manufacturer_id"] = _manufacturer;
             jobj["manufacturer_id"] = r.manufacturer;
             jobj["description"] = r.description;
+            jobj["name"] = r.name;
+            jobj["paired"] = r.paired;
         }
         serializeJson(doc, f);
         f.close();
 
         return true;
+    }
+
+    const std::vector<iohcRemote1W::remote>& iohcRemote1W::getRemotes() const {
+        return remotes;
     }
 }

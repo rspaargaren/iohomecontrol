@@ -17,6 +17,7 @@
 #ifndef CRYPTO2WUTILS_H
 #define CRYPTO2WUTILS_H
 #include <Aes.h>
+#include <vector>
 
 /* Crypto Part */
 // NEW from device connection with 0x38 transfert key 0x00*6

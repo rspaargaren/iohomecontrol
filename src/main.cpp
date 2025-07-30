@@ -17,7 +17,6 @@
 #include <board-config.h>
 #include <user_config.h>
 
-#include <interact.h>
 #include <crypto2Wutils.h>
 #include <iohcCryptoHelpers.h>
 #include <iohcRadio.h>
@@ -28,10 +27,25 @@
 #include <iohcRemote1W.h>
 #include <iohcCozyDevice2W.h>
 #include <iohcOtherDevice2W.h>
+#include <iohcRemoteMap.h>
+#include <interact.h>
+#if defined(MQTT)
+#include <mqtt_handler.h>
+#endif
+#include <wifi_helper.h>
 
-#include "include/web_server_handler.h"
+#if defined(WEBSERVER)
+#include <web_server_handler.h>
+#endif
 #include "LittleFS.h"
-#include <WiFi.h> // Assuming WiFi is used and initialized elsewhere or will be here.
+//#include <WiFi.h> // Assuming WiFi is used and initialized elsewhere or will be here.
+
+
+#include <user_config.h>
+#if defined(SSD1306_DISPLAY)
+#include <oled_display.h>
+#endif
+
 
 extern "C" {
 #include "freertos/FreeRTOS.h"
@@ -42,8 +56,9 @@ void txUserBuffer(Tokens *cmd);
 void testKey();
 void scanDump();
 bool publishMsg(IOHC::iohcPacket *iohc);
-bool IRAM_ATTR msgRcvd(IOHC::iohcPacket *iohc);
+bool msgRcvd(IOHC::iohcPacket *iohc);
 bool msgArchive(IOHC::iohcPacket *iohc);
+
 
 uint8_t keyCap[16] = {};
 //uint8_t source_originator[3] = {0};
@@ -60,13 +75,18 @@ IOHC::iohcSystemTable *sysTable;
 IOHC::iohcRemote1W *remote1W;
 IOHC::iohcCozyDevice2W *cozyDevice2W;
 IOHC::iohcOtherDevice2W *otherDevice2W;
+IOHC::iohcRemoteMap *remoteMap;
 
 uint32_t frequencies[] = FREQS2SCAN;
 
 using namespace IOHC;
 
 void setup() {
-    Serial.begin(115200);
+    Serial.begin(115200);       //Start serial connection for debug and manual input
+
+#if defined(SSD1306_DISPLAY)
+    initDisplay(); // Init OLED display
+#endif
 
     pinMode(RX_LED, OUTPUT); // Blink this LED
     digitalWrite(RX_LED, 1);
@@ -82,39 +102,25 @@ void setup() {
     Serial.println("LittleFS mounted successfully");
 #endif
 
-    // --- WiFi Setup (Example - replace with your actual WiFi setup) ---
-    const char* ssid = "YOUR_SSID"; // REPLACE with your WiFi SSID
-    const char* password = "YOUR_PASSWORD"; // REPLACE with your WiFi Password
-
-    WiFi.begin(ssid, password);
-    Serial.print("Connecting to WiFi...");
-    int retries = 0;
-    while (WiFi.status() != WL_CONNECTED && retries < 30) { // Retry for 15 seconds
-        delay(500);
-        Serial.print(".");
-        retries++;
-    }
-    Serial.println();
-
-    if (WiFi.status() == WL_CONNECTED) {
-        Serial.print("Connected to WiFi. IP Address: ");
-        Serial.println(WiFi.localIP());
-        // --- End WiFi Setup ---
-
-        // Call setupWebServer() only if WiFi connected
-        setupWebServer();
-    } else {
-        Serial.println("Failed to connect to WiFi. Web server not started.");
-    }
+    // Initialize network services
+    initWifi();
+#if defined(MQTT)
+    initMqtt();
+#endif
+#if defined(WEBSERVER)
+    setupWebServer();
+#endif
+    Cmd::kbd_tick.attach_ms(500, Cmd::cmdFuncHandler);
 
     radioInstance = IOHC::iohcRadio::getInstance();
-    radioInstance->start(MAX_FREQS, frequencies, 0, msgRcvd, nullptr); //publishMsg); //msgArchive); //, msgRcvd);
+    radioInstance->start(MAX_FREQS, frequencies, 0, msgRcvd, publishMsg); //msgArchive); //, msgRcvd);
 
     sysTable = IOHC::iohcSystemTable::getInstance();
 
     remote1W = IOHC::iohcRemote1W::getInstance();
     cozyDevice2W = IOHC::iohcCozyDevice2W::getInstance();
     otherDevice2W = IOHC::iohcOtherDevice2W::getInstance();
+    remoteMap = IOHC::iohcRemoteMap::getInstance();
 
     //   AES_init_ctx(&ctx, transfert_key); // PreInit AES for cozy (1W use original version) TODO
 
@@ -162,7 +168,7 @@ void IRAM_ATTR forgePacket(iohcPacket* packet, const std::vector<uint8_t> &toSen
     packet->lock = false;
 }
 
-bool IRAM_ATTR msgRcvd(IOHC::iohcPacket *iohc) {
+bool msgRcvd(IOHC::iohcPacket *iohc) {
     JsonDocument doc;
     doc["type"] = "Unk";
     switch (iohc->payload.packet.header.cmd) {
@@ -405,10 +411,42 @@ bool IRAM_ATTR msgRcvd(IOHC::iohcPacket *iohc) {
         case 0x01:
         case 0x03:
         case 0x19: {
-            //                memorizeSend.memorizedData = toSend;
-            doc["type"] = "Other";
-            otherDevice2W->memorizeOther2W.memorizedCmd = iohc->payload.packet.header.cmd;
-            cozyDevice2W->memorizeSend.memorizedCmd = iohc->payload.packet.header.cmd;
+            if (iohc->payload.packet.header.CtrlByte1.asStruct.Protocol == 1 && iohc->payload.packet.header.cmd == 0x00) {
+                doc["type"] = "1W";
+                uint16_t main = (iohc->payload.packet.msg.p0x00_14.main[0] << 8) | iohc->payload.packet.msg.p0x00_14.main[1];
+                const char *action = "unknown";
+                switch (main) {
+                    case 0x0000: action = "OPEN"; break;
+                    case 0xC800: action = "CLOSE"; break;
+                    case 0xD200: action = "STOP"; break;
+                    case 0xD803: action = "VENT"; break;
+                    case 0x6400: action = "FORCE"; break;
+                    default: break;
+                }
+                doc["action"] = action;
+                #if defined(SSD1306_DISPLAY)
+                display1WAction(iohc->payload.packet.header.source, action, "RX");
+                #endif
+                if (const auto *map = remoteMap->find(iohc->payload.packet.header.source)) {
+                    const auto &remotes = iohcRemote1W::getInstance()->getRemotes();
+                    for (const auto &desc : map->devices) {
+                        auto rit = std::find_if(remotes.begin(), remotes.end(), [&](const auto &r){
+                            return r.description == desc;
+                        });
+                        if (rit != remotes.end()) {
+                            std::string id = bytesToHexString(rit->node, sizeof(rit->node));
+#if defined(MQTT)
+                            std::string topic = "iown/" + id + "/state";
+                            mqttClient.publish(topic.c_str(), 0, false, action);
+#endif
+                        }
+                    }
+                }
+            } else {
+                doc["type"] = "Other";
+                otherDevice2W->memorizeOther2W.memorizedCmd = iohc->payload.packet.header.cmd;
+                cozyDevice2W->memorizeSend.memorizedCmd = iohc->payload.packet.header.cmd;
+            }
             break;
         }
         case iohcDevice::RECEIVED_GET_NAME_0x50: {
@@ -508,6 +546,7 @@ bool IRAM_ATTR msgRcvd(IOHC::iohcPacket *iohc) {
             break;
     }
 
+    publishMsg(iohc);
     return true;
 }
 
@@ -522,19 +561,43 @@ bool IRAM_ATTR msgRcvd(IOHC::iohcPacket *iohc) {
  * @return The function `publishMsg` is returning `false`.
  */
 bool publishMsg(IOHC::iohcPacket *iohc) {
-    //                if(iohc->payload.packet.header.cmd == 0x20 || iohc->payload.packet.header.cmd == 0x00) {
-    JsonDocument doc; 
+    JsonDocument doc;
+
     doc["type"] = "Cozy";
     doc["from"] = bytesToHexString(iohc->payload.packet.header.target, 3);
     doc["to"] = bytesToHexString(iohc->payload.packet.header.source, 3);
     doc["cmd"] = to_hex_str(iohc->payload.packet.header.cmd).c_str();
     doc["_data"] = bytesToHexString(iohc->payload.buffer + 9, iohc->buffer_length - 9);
+    if (remoteMap) {
+        if (const auto *map = remoteMap->find(iohc->payload.packet.header.source)) {
+            doc["remote"] = map->name;
+        }
+    }
+
+    if (iohc->payload.packet.header.CtrlByte1.asStruct.Protocol == 1 &&
+        iohc->payload.packet.header.cmd == 0x00) {
+        uint16_t main =
+                (iohc->payload.packet.msg.p0x00_14.main[0] << 8) |
+                iohc->payload.packet.msg.p0x00_14.main[1];
+        const char *action = "unknown";
+        switch (main) {
+            case 0x0000: action = "open"; break;
+            case 0xC800: action = "close"; break;
+            case 0xD200: action = "stop"; break;
+            case 0xD803: action = "vent"; break;
+            case 0x6400: action = "force"; break;
+            default: break;
+        }
+        doc["type"] = "1W";
+        doc["action"] = action;
+    }
+
     std::string message;
     size_t messageSize = serializeJson(doc, message);
 #if defined(MQTT)
     mqttClient.publish("iown/Frame", 1, false, message.c_str(), messageSize);
+    mqttClient.publish("homeassistant/sensor/iohc_frame/state", 0, false, message.c_str(), messageSize);
 #endif
-    // }
     return false;
 }
 
@@ -614,4 +677,5 @@ void txUserBuffer(Tokens *cmd) {
 
 void loop() {
     // loopWebServer(); // For ESPAsyncWebServer, this is typically not needed.
+    checkWifiConnection();
 }
