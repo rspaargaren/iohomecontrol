@@ -91,6 +91,36 @@ void display1WAction(const uint8_t *remote, const char *action, const char *dir,
     display.display();
 }
 
+void display1WPosition(const uint8_t *remote, float position, const char *name) {
+    std::string id = bytesToHexString(remote, 3);
+    const auto *entry = IOHC::iohcRemoteMap::getInstance()->find(remote);
+
+    display.setTextSize(1);
+    display.setTextColor(SSD1306_WHITE);
+
+    // Clear only the area used for the position line so existing text remains
+    int y = 30;  // Position feedback shown below action information
+    display.fillRect(0, y, SCREEN_WIDTH, 10, SSD1306_BLACK);
+    display.setCursor(0, y);
+
+    if (name) {
+        display.print(name);
+        display.print(" ");
+    } else if (entry) {
+        display.print(entry->name.c_str());
+        display.print(" ");
+    } else {
+        display.print("ID: ");
+        display.print(id.c_str());
+        display.print(" ");
+    }
+
+    display.print("Pos: ");
+    display.print(static_cast<int>(position));
+    display.println("%");
+    display.display();
+}
+
 void updateDisplayStatus() {
     display.clearDisplay();
     display.setCursor(0, 0);

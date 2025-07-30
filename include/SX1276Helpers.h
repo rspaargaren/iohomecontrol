@@ -79,6 +79,7 @@ namespace Radio {
     void setStandby();
     void setTx();
     void setRx();
+    void setPreambleLength(uint16_t preambleLen);
     void clearBuffer();
     void clearFlags();
     bool preambleDetected();
@@ -99,5 +100,6 @@ namespace Radio {
 
     uint16_t readWord(uint8_t regAddr);
     void writeWord(uint8_t regAddr, uint16_t value);
+
 }
 #endif // SX1276HELPERS_H

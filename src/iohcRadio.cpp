@@ -19,6 +19,11 @@
 
 #include <iohcRadio.h>
 #include <utility>
+#include <log_buffer.h>
+#define LONG_PREAMBLE_MS 1920
+#define SHORT_PREAMBLE_MS 40
+
+TaskHandle_t IOHC::iohcRadio::txTaskHandle = nullptr;
 
 namespace IOHC {
     iohcRadio *iohcRadio::_iohcRadio = nullptr;
@@ -29,6 +34,9 @@ namespace IOHC {
     volatile bool iohcRadio::f_lock = false;
     volatile bool iohcRadio::send_lock = false;
     volatile bool iohcRadio::txMode = false;
+    volatile iohcRadio::RadioState iohcRadio::radioState = iohcRadio::RadioState::IDLE;
+    volatile bool iohcRadio::txComplete = false;
+
 
     TaskHandle_t handle_interrupt;
     /**
@@ -474,6 +482,7 @@ namespace IOHC {
         __g_preamble = true;
 #endif
         f_lock = _g_preamble;
+        iohcRadio::setRadioState(_g_preamble ? iohcRadio::RadioState::PREAMBLE : iohcRadio::RadioState::RX);
     }
 
 /**
@@ -483,6 +492,28 @@ namespace IOHC {
     void IRAM_ATTR iohcRadio::i_payload() {
 #if defined(RADIO_SX127X)
         _g_payload = digitalRead(RADIO_PACKET_AVAIL);
+        iohcRadio::setRadioState(_g_payload ? iohcRadio::RadioState::PAYLOAD : iohcRadio::RadioState::RX);
 #endif
+    }
+
+    const char* iohcRadio::radioStateToString(RadioState state) {
+    switch (state) {
+        case RadioState::IDLE:     return "IDLE";
+        case RadioState::RX:       return "RX";
+        case RadioState::TX:       return "TX";
+        case RadioState::PREAMBLE: return "PREAMBLE";
+        case RadioState::PAYLOAD:  return "PAYLOAD";
+        case RadioState::LOCKED:   return "LOCKED";
+        case RadioState::ERROR:    return "ERROR";
+        default:                   return "UNKNOWN";
+    }
+    }
+
+
+    void IRAM_ATTR iohcRadio::setRadioState(RadioState newState) {
+        radioState = newState;
+        // Optional debug:
+        //printf("State changed to: %d\n", static_cast<int>(newState));
+        ets_printf("State: %s\n", radioStateToString(newState));
     }
 }

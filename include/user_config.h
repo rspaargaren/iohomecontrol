@@ -20,15 +20,15 @@
 #include <board-config.h>
 
 // WiFi credentials are handled via WiFiManager
-#define WIFI_SSID ""
-#define WIFI_PASSWD ""
-inline const char *wifi_ssid = "";
-inline const char *wifi_passwd = "";
+#define WIFI_SSID "Freebox-79FBE3"
+#define WIFI_PASSWD "confugerat.-aucupis%-favebo&-carpentes!"
+inline const char *wifi_ssid = "Freebox-79FBE3";
+inline const char *wifi_passwd = "confugerat.-aucupis%-favebo&-carpentes!";
 
-#define MQTT
-#define MQTT_SERVER "XX"
-#define MQTT_USER "mosquitto"
-#define MQTT_PASSWD "XX"
+//#define MQTT
+#define MQTT_SERVER "192.168.1.40"
+#define MQTT_USER "user"
+#define MQTT_PASSWD "passwd"
 //inline const char *mqtt_server = "192.168.1.40";
 //inline const char *mqtt_user = "user";
 //inline const char *mqtt_password = "passwd";

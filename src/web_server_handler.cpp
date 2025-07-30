@@ -5,6 +5,9 @@
 #include "ArduinoJson.h"       // For creating JSON responses
 #include <LittleFS.h>
 #include <AsyncJson.h>
+#include <log_buffer.h>
+#include <iohcRemote1W.h>
+#include <iohcCryptoHelpers.h>
 // #include "main.h" // Or other relevant headers to access device data and command functions
 
 // Assume ESPAsyncWebServer for now.
@@ -25,19 +28,25 @@ Device devices[] = {
 const int numDevices = sizeof(devices) / sizeof(Device);
 
 void handleApiDevices(AsyncWebServerRequest *request) {
-    AsyncJsonResponse* response = new AsyncJsonResponse();
+    auto response = new AsyncJsonResponse();
     if(!response){
         request->send(500, "text/plain", "Out of memory");
         return;
     }
-    JsonArray root = response->getRoot().to<JsonArray>();
+    auto root = response->getRoot().to<JsonArray>();
 
-    for (int i = 0; i < numDevices; i++) {
-        JsonObject deviceObj = root.add<JsonObject>();
-        deviceObj["id"] = devices[i].id;
-        deviceObj["name"] = devices[i].name;
+    const auto &remotes = IOHC::iohcRemote1W::getInstance()->getRemotes();
+    for (const auto &r : remotes) { //(int i = 0; i < numDevices; i++) {
+        auto deviceObj = root.add<JsonObject>();
+        deviceObj["id"] = bytesToHexString(r.node, sizeof(r.node)).c_str(); //devices[i].id;
+        deviceObj["name"] = r.name.c_str(); //devices[i].name;
     }
-    
+
+    // Provide a generic command interface as last entry
+    auto cmdObj = root.add<JsonObject>();
+    cmdObj["id"] = "cmd_if";
+    cmdObj["name"] = "Command Interface";
+
     response->setLength();
     request->send(response);
     // log_i("Sent device list"); // Requires a logging library
@@ -49,7 +58,7 @@ void handleApiCommand(AsyncWebServerRequest *request, JsonVariant &json) {
         return;
     }
 
-    JsonObject doc = json.as<JsonObject>();
+    auto doc = json.as<JsonObject>();
     if (doc.isNull()) {
         request->send(400, "application/json", "{\"success\":false, \"message\":\"Invalid JSON\"}");
         return;
@@ -69,15 +78,30 @@ void handleApiCommand(AsyncWebServerRequest *request, JsonVariant &json) {
     String message = "Command received for device " + deviceId + ": '" + command + "'. Processing not yet implemented.";
     bool success = true;
 
-    AsyncJsonResponse* response = new AsyncJsonResponse();
+    auto response = new AsyncJsonResponse();
     if(!response){
         request->send(500, "application/json", "{\"success\":false,\"message\":\"OOM\"}");
         return;
     }
-    JsonObject root = response->getRoot().to<JsonObject>();
+    auto root = response->getRoot().to<JsonObject>();
     root["success"] = success;
     root["message"] = message;
 
+    response->setLength();
+    request->send(response);
+}
+
+void handleApiLogs(AsyncWebServerRequest *request) {
+    auto response = new AsyncJsonResponse();
+    if(!response){
+        request->send(500, "text/plain", "OOM");
+        return;
+    }
+    auto root = response->getRoot().to<JsonArray>();
+    auto logs = getLogMessages();
+    for(const auto &msg : logs){
+        root.add(msg);
+    }
     response->setLength();
     request->send(response);
 }
@@ -109,8 +133,9 @@ void setupWebServer() {
 
 
     // API Endpoints
-    server.on("/api/devices", HTTP_GET, handleApiDevices);
-    server.addHandler(new AsyncCallbackJsonWebHandler("/api/command", handleApiCommand)); // For POST with JSON
+// server.on("/api/devices", HTTP_GET, handleApiDevices);
+// server.addHandler(new AsyncCallbackJsonWebHandler("/api/command", handleApiCommand)); // For POST with JSON
+// server.on("/api/logs", HTTP_GET, handleApiLogs);
 
     server.onNotFound([](AsyncWebServerRequest *request){
         request->send(404, "text/plain", "Not found");

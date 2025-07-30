@@ -20,6 +20,7 @@
 #include <iohcDevice.h>
 #include <vector>
 #include <tokens.h>
+#include <blind_position.h>
 
 #define IOHC_1W_REMOTE  "/1W.json"
 
@@ -53,6 +54,8 @@ namespace IOHC {
             bool paired{false};
             std::string description;
             std::string name;
+            uint32_t travelTime{}; // ms to fully open or close
+            BlindPosition positionTracker{};
         };
 
         static iohcRemote1W* getInstance();
@@ -66,6 +69,7 @@ namespace IOHC {
         static void forgePacket(iohcPacket* packet, uint16_t typn);
 
         const std::vector<remote>& getRemotes() const;
+        void updatePositions();
 
     private:
         iohcRemote1W();
