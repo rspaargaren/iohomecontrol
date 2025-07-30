@@ -188,7 +188,8 @@ namespace IOHC {
 
         if (_g_preamble) {
             radio->tickCounter = 0;
-            radio->preCounter += 1;
+            radio->preCounter = radio->preCounter + 1;
+            //radio->preCounter += 1;
 
             //            if (_flags[0] & RF_IRQFLAGS1_SYNCADDRESSMATCH) radio->preCounter = 0;
             // In case of Sync received resets the preamble duration
@@ -201,7 +202,9 @@ namespace IOHC {
 
         if (f_lock) return;
 
-        if (++radio->tickCounter * SM_GRANULARITY_US < radio->scanTimeUs) return;
+        //if (++radio->tickCounter * SM_GRANULARITY_US < radio->scanTimeUs) return;
+        radio->tickCounter = radio->tickCounter + 1;
+        if (radio->tickCounter * SM_GRANULARITY_US < radio->scanTimeUs) return;
 
         radio->tickCounter = 0;
 
@@ -302,7 +305,8 @@ namespace IOHC {
             radio->iohc->repeat -= 1;
         if (radio->iohc->repeat == 0) {
             radio->Sender.detach();
-            ++radio->txCounter;
+            //++radio->txCounter;
+            radio->txCounter = radio->txCounter + 1;
             if (radio->txCounter < radio->packets2send.size() && radio->packets2send[radio->txCounter] != nullptr) {
                 //if (radio->packets2send[++(radio->txCounter)]) {
                 if (radio->packets2send[radio->txCounter]->delayed != 0) {

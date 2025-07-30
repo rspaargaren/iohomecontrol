@@ -17,9 +17,9 @@
 #ifndef IOHC_1W_DEVICE_H
 #define IOHC_1W_DEVICE_H
 
-#include <interact.h>
 #include <iohcDevice.h>
 #include <vector>
+#include <tokens.h>
 
 #define IOHC_1W_REMOTE  "/1W.json"
 
@@ -44,6 +44,17 @@ namespace IOHC {
 
     class iohcRemote1W : public iohcDevice {
     public:
+        struct remote {
+            address node{};
+            uint16_t sequence{};
+            uint8_t key[16]{};
+            std::vector<uint8_t> type{};
+            uint8_t manufacturer{};
+            bool paired{false};
+            std::string description;
+            std::string name;
+        };
+
         static iohcRemote1W* getInstance();
         ~iohcRemote1W() override = default;
 
@@ -54,6 +65,8 @@ namespace IOHC {
 
         static void forgePacket(iohcPacket* packet, uint16_t typn);
 
+        const std::vector<remote>& getRemotes() const;
+
     private:
         iohcRemote1W();
 
@@ -61,14 +74,7 @@ namespace IOHC {
 
     protected:
         int8_t target[3];
-        struct remote {
-            address node{};
-            uint16_t sequence{};
-            uint8_t key[16]{};
-            std::vector<uint8_t> type{};
-            uint8_t manufacturer{};
-            std::string description;
-        };
+
 
         std::vector<remote> remotes;
 

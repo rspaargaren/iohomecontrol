@@ -1,6 +1,10 @@
-#include "include/web_server_handler.h"
+#include <web_server_handler.h>
+
+#if defined(WEBSERVER)
 #include "ESPAsyncWebServer.h" // Or WebServer.h if that's preferred for memory
 #include "ArduinoJson.h"       // For creating JSON responses
+#include <LittleFS.h>
+#include <AsyncJson.h>
 // #include "main.h" // Or other relevant headers to access device data and command functions
 
 // Assume ESPAsyncWebServer for now.
@@ -22,10 +26,14 @@ const int numDevices = sizeof(devices) / sizeof(Device);
 
 void handleApiDevices(AsyncWebServerRequest *request) {
     AsyncJsonResponse* response = new AsyncJsonResponse();
-    JsonArray& root = response->getRoot().to<JsonArray>();
+    if(!response){
+        request->send(500, "text/plain", "Out of memory");
+        return;
+    }
+    JsonArray root = response->getRoot().to<JsonArray>();
 
     for (int i = 0; i < numDevices; i++) {
-        JsonObject deviceObj = root.createNestedObject();
+        JsonObject deviceObj = root.add<JsonObject>();
         deviceObj["id"] = devices[i].id;
         deviceObj["name"] = devices[i].name;
     }
@@ -35,64 +43,57 @@ void handleApiDevices(AsyncWebServerRequest *request) {
     // log_i("Sent device list"); // Requires a logging library
 }
 
-void handleApiCommand(AsyncWebServerRequest *request) {
+void handleApiCommand(AsyncWebServerRequest *request, JsonVariant &json) {
     if (request->method() != HTTP_POST) {
         request->send(405, "text/plain", "Method Not Allowed");
         return;
     }
 
-    // Assuming data is sent as JSON. Max size 1024 bytes.
-    // Adjust size if necessary.
-    // The last argument (true) indicates that the data is JSON.
-    // This is specific to ESPAsyncWebServer's JSON body parsing.
-    // If not using ESPAsyncWebServer or its JSON plugin, parse manually.
-    if (request->hasParam("body", true)) {
-        JsonDocument doc; // Using ArduinoJson v6 syntax
-        DeserializationError error = deserializeJson(doc, (uint8_t*)request->getParam("body", true)->value().c_str(), request->getParam("body", true)->value().length());
-
-        if (error) {
-            request->send(400, "application/json", "{\"success\":false, \"message\":\"Invalid JSON\"}");
-            return;
-        }
-
-        String deviceId = doc["deviceId"];
-        String command = doc["command"];
-
-        if (deviceId.isEmpty() || command.isEmpty()) {
-            request->send(400, "application/json", "{\"success\":false, \"message\":\"Missing deviceId or command\"}");
-            return;
-        }
-
-        // TODO: Process the command here
-        // For example, call a function from your main logic:
-        // bool success = processDeviceCommand(deviceId, command);
-        // String message = success ? "Command processed." : "Command failed.";
-        
-        // Placeholder response:
-        String message = "Command received for device " + deviceId + ": '" + command + "'. Processing not yet implemented.";
-        bool success = true; 
-        // log_i("Received command: %s for device %s", command.c_str(), deviceId.c_str());
-
-
-        AsyncJsonResponse* response = new AsyncJsonResponse();
-        JsonObject& root = response->getRoot().to<JsonObject>();
-        root["success"] = success;
-        root["message"] = message;
-        
-        response->setLength();
-        request->send(response);
-
-    } else {
-        request->send(400, "application/json", "{\"success\":false, \"message\":\"No body\"}");
+    JsonObject doc = json.as<JsonObject>();
+    if (doc.isNull()) {
+        request->send(400, "application/json", "{\"success\":false, \"message\":\"Invalid JSON\"}");
+        return;
     }
+
+    String deviceId = doc["deviceId"] | "";
+    String command = doc["command"] | "";
+
+    if (deviceId.isEmpty() || command.isEmpty()) {
+        request->send(400, "application/json", "{\"success\":false, \"message\":\"Missing deviceId or command\"}");
+        return;
+    }
+
+    // TODO: Process the command here
+    // bool success = processDeviceCommand(deviceId, command);
+
+    String message = "Command received for device " + deviceId + ": '" + command + "'. Processing not yet implemented.";
+    bool success = true;
+
+    AsyncJsonResponse* response = new AsyncJsonResponse();
+    if(!response){
+        request->send(500, "application/json", "{\"success\":false,\"message\":\"OOM\"}");
+        return;
+    }
+    JsonObject root = response->getRoot().to<JsonObject>();
+    root["success"] = success;
+    root["message"] = message;
+
+    response->setLength();
+    request->send(response);
 }
 
 
 void setupWebServer() {
+    Serial.println("Initializing HTTP server ...");
+
     // Serve static files from /web_interface_data
     // Ensure this path matches where your platformio.ini places data files
     // or how you upload them (e.g., SPIFFS, LittleFS).
     // The path "/" serves index.html from the data directory.
+    if (!LittleFS.exists("/web_interface_data/index.html")) {
+        Serial.println("Warning: /web_interface_data/index.html not found");
+    }
+
     server.serveStatic("/", LittleFS, "/web_interface_data/").setDefaultFile("index.html");
     // You might need to explicitly serve each file if serveStatic with directory isn't working as expected
     // or if files are not in a subdirectory of the data dir.
@@ -116,10 +117,12 @@ void setupWebServer() {
     });
 
     server.begin();
-    // log_i("HTTP server started");
+    Serial.println("HTTP server started");
 }
 
 void loopWebServer() {
     // For ESPAsyncWebServer, most work is done asynchronously.
     // For the basic WebServer.h, you would need server.handleClient() here.
 }
+
+#endif // defined(WEBSERVER)

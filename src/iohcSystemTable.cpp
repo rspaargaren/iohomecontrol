@@ -107,7 +107,6 @@ namespace IOHC {
         /*Dynamic*/JsonDocument doc; //(2048);
 
         for (auto [fst, snd] : _objects) {
-            // JsonObject jobj = doc.createNestedObject(fst);
             auto jobj = doc[fst].to<JsonObject>();
 
             jobj["values"] = snd->serialize();

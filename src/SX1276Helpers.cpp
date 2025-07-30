@@ -69,7 +69,9 @@ namespace Radio {
     void initHardware() {
         printf("\nSPI Init");
 
-        gpio_pullup_en((gpio_num_t) RADIO_MISO);
+        //gpio_pullup_en((gpio_num_t) RADIO_MISO);
+
+        pinMode(RADIO_MISO, INPUT_PULLUP);
 
         // SPI pins configuration
 

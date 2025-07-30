@@ -557,13 +557,13 @@ namespace IOHC {
      * @return false
      */
     bool iohcOtherDevice2W::save() {
-        fs::File f = LittleFS.open(OTHER_2W_FILE, "a+");
-        /*Dynamic*/
-        JsonDocument doc; //(256);
-        // It's the gateway
-        // JsonObject jobj = doc.createNestedObject(bytesToHexString(_node, sizeof(_node)));
-        auto jobj = doc[bytesToHexString(_node, sizeof(_node))].to<JsonObject>();
-        //        jobj["key"] = bytesToHexString(_key, sizeof(_key));
+        fs::File f = LittleFS.open(OTHER_2W_FILE, "w");
+
+        //DynamicJsonDocument doc(256);
+        JsonDocument doc;
+
+        std::string key = bytesToHexString(_node, sizeof(_node));
+        JsonObject jobj = doc[key.c_str()].to<JsonObject>();
         jobj["dst"] = _dst;
         //        uint8_t btmp[2];
         //        btmp[1] = _sequence & 0x00ff;

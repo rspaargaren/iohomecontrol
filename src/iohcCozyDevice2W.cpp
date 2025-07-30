@@ -331,14 +331,15 @@ namespace IOHC {
      * @return false
      */
     bool iohcCozyDevice2W::save() {
-        fs::File f = LittleFS.open(COZY_2W_FILE, "a+");
-        JsonDocument doc;
-        for (const auto &d: devices) {
-            // JsonObject jobj = doc.createNestedObject(bytesToHexString(_node, sizeof(_node)));
-            auto jobj = doc[bytesToHexString(d._node, sizeof(d._node))].to<JsonObject>();
-            //        jobj["key"] = bytesToHexString(_key, sizeof(_key));
-            jobj["dst"] = bytesToHexString(d._dst, sizeof d._dst);
+        fs::File f = LittleFS.open(COZY_2W_FILE, "w");
 
+        //DynamicJsonDocument doc(1024);
+        JsonDocument doc;
+
+        for (const auto &d: devices) {
+            std::string key = bytesToHexString(d._node, sizeof(d._node));
+            JsonObject jobj = doc[key.c_str()].to<JsonObject>();
+            jobj["dst"] = bytesToHexString(d._dst, sizeof d._dst);
             jobj["type"] = d._type;
             jobj["description"] = d._description;
 
