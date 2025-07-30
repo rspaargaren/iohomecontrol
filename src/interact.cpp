@@ -57,6 +57,7 @@ static uint8_t _avail = 0;
  * different devices and functionalities.
  */
 void createCommands() {
+    // Cmd::init(); // Initialize Serial commands reception and handlers
     // Atlantic 2W
     Cmd::addHandler((char *) "powerOn", (char *) "Permit to retrieve paired devices", [](Tokens *cmd)-> void {
         IOHC::iohcCozyDevice2W::getInstance()->cmd(IOHC::DeviceButton::powerOn, nullptr);

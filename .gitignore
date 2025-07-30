@@ -18,4 +18,5 @@ src/CMakeLists.txt
 /build/
 /archives/
 *.org
-include/user_config.h
+/.trunk
+/.github

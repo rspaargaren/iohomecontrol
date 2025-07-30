@@ -561,6 +561,7 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
  * @return The function `publishMsg` is returning `false`.
  */
 bool publishMsg(IOHC::iohcPacket *iohc) {
+    //                if(iohc->payload.packet.header.cmd == 0x20 || iohc->payload.packet.header.cmd == 0x00) {
     JsonDocument doc;
 
     doc["type"] = "Cozy";
@@ -677,5 +678,5 @@ void txUserBuffer(Tokens *cmd) {
 
 void loop() {
     // loopWebServer(); // For ESPAsyncWebServer, this is typically not needed.
-    checkWifiConnection();
+    // checkWifiConnection();
 }
