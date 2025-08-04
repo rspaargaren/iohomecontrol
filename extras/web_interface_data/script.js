@@ -4,19 +4,25 @@ document.addEventListener('DOMContentLoaded', function() {
     const commandInput = document.getElementById('command-input');
     const sendCommandButton = document.getElementById('send-command-button');
     const statusMessagesDiv = document.getElementById('status-messages');
+    const MAX_LOGS = 20; // maximaal aantal logs
 
     // Function to add a message to the status/log
     function logStatus(message, isError = false) {
-        const p = document.createElement('p');
-        p.textContent = message;
+        const logEntry = document.createElement('p');
+        logEntry.textContent = message;
         if (isError) {
-            p.style.color = 'red';
+            logEntry.style.color = 'red';
         }
-        statusMessagesDiv.appendChild(p);
+        statusMessagesDiv.appendChild(logEntry);
         // Scroll to the bottom of the status messages
         statusMessagesDiv.scrollTop = statusMessagesDiv.scrollHeight;
+        while (statusMessagesDiv.children.length > MAX_LOGS) {
+            statusMessagesDiv.removeChild(statusMessagesDiv.firstChild);
+        }
+        
     }
-
+    logStatus('System started');
+    logStatus('Loading devices...');
     // Function to fetch devices and populate the lists
     async function fetchAndDisplayDevices() {
         try {
@@ -51,7 +57,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 upButton.textContent = 'up';
                 upButton.classList.add('btn', 'open');
                 upButton.onclick = () => {
-                    // TODO: hier kun je eventueel een fetch() zetten naar een 'aan' endpoint
+                    fetch('/api/action', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ deviceId: device.id, action: 'open' })
+                    }).then(r => r.json()).then(j => logStatus(j.message));
                 };
 
                  // 🔘 stop btn
@@ -59,18 +69,32 @@ document.addEventListener('DOMContentLoaded', function() {
                 stopButton.textContent = 'stop';
                 stopButton.classList.add('btn', 'stop');
                 stopButton.onclick = () => {
-                    // TODO: hier kun je eventueel een fetch() zetten naar een 'stop' endpoint
+                    fetch('/api/action', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ deviceId: device.id, action: 'stop' })
+                    }).then(r => r.json()).then(j => logStatus(j.message));
                 };
                 // 🔘 down btn
                 const downButton = document.createElement('button');
                 downButton.textContent = 'down';
-                downButton.classList.add('btn', 'close');
+                downButton.classList.add('btn', 'down');
                 downButton.onclick = () => {
-                    // TODO: hier kun je eventueel een fetch() zetten naar een 'uit' endpoint
+                    fetch('/api/action', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ deviceId: device.id, action: 'close' })
+                    }).then(r => r.json()).then(j => logStatus(j.message));
                 };
+                const editButton = document.createElement('button');
+                editButton.textContent = 'edit';
+                editButton.classList.add('btn', 'edit');
+                editButton.onclick = () =>
+                    openPopup('Edit Device', device.name, device.id);
                 listItem.appendChild(upButton);
                 listItem.appendChild(stopButton);
                 listItem.appendChild(downButton);
+                listItem.appendChild(editButton);
                 // TODO: Add buttons for simple actions if desired in future
                 deviceListUL.appendChild(listItem);
 
@@ -131,7 +155,7 @@ document.addEventListener('DOMContentLoaded', function() {
         sendCommandButton.addEventListener('click', sendCommand);
     }
 
-    async function fetchLogs() {
+   async function fetchLogs() {
         try {
             const response = await fetch('/api/logs');
 
@@ -147,21 +171,21 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (e) {
             console.error('Error fetching logs', e);
         }
+        while (statusMessagesDiv.children.length > MAX_LOGS) {
+            statusMessagesDiv.removeChild(statusMessagesDiv.firstChild);
+        }
     }
     // suggestions for command input
     const suggestions = ["add", "remove", "close", "open", "ls", "cat"];
     const input = document.getElementById('command-input');
     const suggestionBox = document.getElementById('suggestions');
 
-    // Toon alle suggesties als knoppen
     suggestions.forEach(item => {
       const div = document.createElement('option');
       div.className = 'suggestion';
       div.textContent = item;
 
-      // Voeg toe aan input bij klik
       div.addEventListener('click', () => {
-        // Spatie toevoegen als laatste teken geen spatie is
         if (input.value !== '' && !input.value.endsWith(' ')) {
           input.value += ' ';
         }
@@ -186,7 +210,24 @@ document.addEventListener('DOMContentLoaded', function() {
         localStorage.setItem('theme', 'light');
       }
     });
+    const addpopup = document.getElementById('add-popup');
+    addpopup.addEventListener('click', () => {
+        openPopup('Add Device', "new device", "");
+    });
 
+    // popup open
+    function openPopup(title, text, data) {
+        document.getElementById('popup-title').textContent = title;
+        document.getElementById('popup-text').textContent = text;
+        document.getElementById('popup').classList.add('open');
+    }
+
+    // popup close
+    function closePopup() {
+        document.getElementById('popup').classList.remove('open');
+    }
+    window.closePopup = closePopup; 
+    
     // Thema behouden bij herladen
     window.addEventListener('DOMContentLoaded', () => {
       const savedTheme = localStorage.getItem('theme');
