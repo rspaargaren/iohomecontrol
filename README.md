@@ -65,6 +65,8 @@ This project now includes an experimental web interface to control IOHC devices.
         *   First, build the filesystem image: `pio run --target buildfs` (or use the PlatformIO IDE option for building the filesystem image).
         *   Then, upload the filesystem image: `pio run --target uploadfs` (or use the PlatformIO IDE option for uploading).
     *   **Note:** You only need to rebuild and re-upload the filesystem image if you make changes to the files in `extras/web_interface_data/`.
+    *   **Device files:** Copy your device definition files (for example `extras/1W.json`) into the LittleFS root before building.
+        Without these files the `/api/devices` endpoint returns an empty list and the web interface will show no devices.
 
 3.  **Build and Upload Firmware:**
     *   Build and upload the main firmware to your ESP32 as usual using PlatformIO (`pio run --target upload` or via the IDE).
