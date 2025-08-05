@@ -210,11 +210,7 @@ document.addEventListener('DOMContentLoaded', function() {
         localStorage.setItem('theme', 'light');
       }
     });
-    const addpopup = document.getElementById('add-popup');
-    addpopup.addEventListener('click', () => {
-        openPopup('Add Device', "new device", "");
-    });
-
+    
     // popup open
     function openPopup(title, text, data) {
         document.getElementById('popup-title').textContent = title;
