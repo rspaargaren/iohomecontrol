@@ -210,10 +210,13 @@ document.addEventListener('DOMContentLoaded', function() {
         localStorage.setItem('theme', 'light');
       }
     });
-    const addpopup = document.getElementById('add-popup');
-    addpopup.addEventListener('click', () => {
-        openPopup('Add Device', "new device", "");
-    });
+    // Optional "add device" button
+    const addPopup = document.querySelector('.btn.add');
+    if (addPopup) {
+        addPopup.addEventListener('click', () => {
+            openPopup('Add Device', 'new device', '');
+        });
+    }
 
     // popup open
     function openPopup(title, text, data) {
