@@ -210,7 +210,7 @@ document.addEventListener('DOMContentLoaded', function() {
         localStorage.setItem('theme', 'light');
       }
     });
-    
+
     // popup open
     function openPopup(title, text, data) {
         document.getElementById('popup-title').textContent = title;
