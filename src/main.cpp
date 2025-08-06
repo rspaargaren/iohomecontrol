@@ -111,6 +111,9 @@ void setup() {
 #if defined(MQTT)
     initMqtt();
 #endif
+    // Load 1W device definitions before starting the web server so
+    // that /api/devices can immediately return the configured remotes.
+    remote1W = IOHC::iohcRemote1W::getInstance();
 #if defined(WEBSERVER)
     setupWebServer();
 #endif
@@ -121,7 +124,6 @@ void setup() {
 
     sysTable = IOHC::iohcSystemTable::getInstance();
 
-    remote1W = IOHC::iohcRemote1W::getInstance();
     cozyDevice2W = IOHC::iohcCozyDevice2W::getInstance();
     otherDevice2W = IOHC::iohcOtherDevice2W::getInstance();
     remoteMap = IOHC::iohcRemoteMap::getInstance();

@@ -19,6 +19,7 @@
 #include <ArduinoJson.h>
 
 #include <iohcCryptoHelpers.h>
+#include <esp_system.h>
 #include <oled_display.h>
 #include <TickerUsESP32.h>
 #include <nvs_helpers.h>
@@ -697,8 +698,51 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
         return true;
     }
 
-    const std::vector<iohcRemote1W::remote>& iohcRemote1W::getRemotes() const {
-        return remotes;
+const std::vector<iohcRemote1W::remote>& iohcRemote1W::getRemotes() const {
+    return remotes;
+}
+
+    bool iohcRemote1W::addRemote(const std::string &name) {
+        remote r{};
+
+        // Generate unique address
+        bool unique = false;
+        while (!unique) {
+            for (uint8_t i = 0; i < sizeof(r.node); i++)
+                r.node[i] = esp_random() & 0xff;
+            unique = std::none_of(remotes.begin(), remotes.end(), [&](const remote &e){
+                return memcmp(e.node, r.node, sizeof(r.node)) == 0;
+            });
+        }
+
+        // Generate random key
+        for (uint8_t &b : r.key)
+            b = esp_random() & 0xff;
+
+        r.sequence = 1;
+        r.type = {0, 0};
+        r.manufacturer = 2;
+        r.name = name;
+        r.travelTime = DEFAULT_TRAVEL_TIME_MS;
+        r.paired = false;
+
+        // Generate unique description
+        const char letters[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        std::string desc;
+        do {
+            desc.clear();
+            for (int i = 0; i < 4; ++i)
+                desc.push_back(letters[esp_random() % 26]);
+        } while (std::any_of(remotes.begin(), remotes.end(), [&](const remote &e){
+            return e.description == desc;
+        }));
+        r.description = desc;
+
+        r.positionTracker.setTravelTime(r.travelTime);
+        remotes.push_back(r);
+        nvs_write_sequence(r.node, r.sequence);
+        save();
+        return true;
     }
 
     void iohcRemote1W::updatePositions() {
