@@ -762,6 +762,19 @@ const std::vector<iohcRemote1W::remote>& iohcRemote1W::getRemotes() const {
         return true;
     }
 
+    bool iohcRemote1W::renameRemote(const std::string &description, const std::string &name) {
+        auto it = std::find_if(remotes.begin(), remotes.end(), [&](const remote &e) {
+            return e.description == description;
+        });
+        if (it == remotes.end()) {
+            Serial.printf("Device %s not found\n", description.c_str());
+            return false;
+        }
+        it->name = name;
+        save();
+        return true;
+    }
+
     void iohcRemote1W::updatePositions() {
         for (auto &r : remotes) {
             r.positionTracker.update();

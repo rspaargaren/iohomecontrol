@@ -35,6 +35,7 @@ VARIOUS 1W (Use the description name in 1W.json as argument)
 - **mode4**     _1W Mode4_
 - **new1W**    _Add new 1W device_
 - **del1W**    _Remove 1W device_
+- **edit1W**   _Edit 1W device name_
 - **list1W**   _List 1W devices_
 
 COMMON
