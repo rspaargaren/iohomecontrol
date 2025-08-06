@@ -41,3 +41,10 @@ VARIOUS 1W (Use the description name in 1W.json as argument)
 COMMON
 - **verbose**   _Toggle verbose output on packets list_
 - **help**      _This command_
+- **ls**        _List filesystem_
+- **cat**       _Print file content_
+- **rm**        _Remove file_
+- **mqttIp**    _Set MQTT server IP_
+- **mqttUser**  _Set MQTT username_
+- **mqttPass**  _Set MQTT password_
+- **mqttDiscovery** _Set MQTT discovery topic_

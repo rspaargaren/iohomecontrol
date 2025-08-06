@@ -20,8 +20,8 @@ const char AVAILABILITY_TOPIC[] = "iown/status";
 void initMqtt() {
     mqttClient.setWill(AVAILABILITY_TOPIC, 0, true, "offline");
     mqttClient.setClientId("iown");
-    mqttClient.setCredentials(MQTT_USER, MQTT_PASSWD);
-    mqttClient.setServer(MQTT_SERVER, 1883);
+    mqttClient.setCredentials(mqtt_user.c_str(), mqtt_password.c_str());
+    mqttClient.setServer(mqtt_server.c_str(), 1883);
     mqttClient.onConnect(onMqttConnect);
     mqttClient.onDisconnect(onMqttDisconnect);
     mqttClient.onMessage(onMqttMessage);
@@ -51,7 +51,7 @@ static void publishButtonDiscovery(const std::string &id, const std::string &nam
     std::string payload;
     size_t len = serializeJson(doc, payload);
 
-    std::string topic = "homeassistant/button/" + id + "_" + action + "/config";
+    std::string topic = mqtt_discovery_topic + "/button/" + id + "_" + action + "/config";
     mqttClient.publish(topic.c_str(), 0, true, payload.c_str(), len);
 }
 
@@ -90,7 +90,7 @@ void publishDiscovery(const std::string &id, const std::string &name, const std:
     std::string payload;
     size_t len = serializeJson(doc, payload);
 
-    std::string topic = "homeassistant/cover/" + id + "/config";
+    std::string topic = mqtt_discovery_topic + "/cover/" + id + "/config";
     mqttClient.publish(topic.c_str(), 0, true, payload.c_str(), len);
 
     publishButtonDiscovery(id, name, "pair");
@@ -138,11 +138,11 @@ void connectToMqtt() {
         xTimerStart(mqttReconnectTimer, pdMS_TO_TICKS(5000));
         return;
     }
-    if (strlen(MQTT_SERVER) == 0) {
+    if (mqtt_server.empty()) {
         Serial.println("MQTT server not configured");
         return;
     }
-    Serial.printf("Connecting to MQTT at %s...\n", MQTT_SERVER);
+    Serial.printf("Connecting to MQTT at %s...\n", mqtt_server.c_str());
     mqttStatus = ConnState::Connecting;
     updateDisplayStatus();
     mqttClient.connect();
@@ -167,9 +167,9 @@ void onMqttConnect(bool sessionPresent) {
     {
         JsonDocument configDoc;
         configDoc["name"] = "IOHC Frame";
-        configDoc["state_topic"] = "homeassistant/sensor/iohc_frame/state";
+        configDoc["state_topic"] = mqtt_discovery_topic + "/sensor/iohc_frame/state";
         configDoc["unique_id"] = "iohc_frame";
-        configDoc["json_attributes_topic"] = "homeassistant/sensor/iohc_frame/state";
+        configDoc["json_attributes_topic"] = mqtt_discovery_topic + "/sensor/iohc_frame/state";
         JsonObject device = configDoc["device"].to<JsonObject>();
         device["identifiers"] = "MyOpenIO";
         device["name"] = "My Open IO Gateway";
@@ -181,7 +181,7 @@ void onMqttConnect(bool sessionPresent) {
        
         std::string cfg;
         size_t cfgLen = serializeJson(configDoc, cfg);
-        mqttClient.publish("homeassistant/sensor/iohc_frame/config", 0, true, cfg.c_str(), cfgLen);
+        mqttClient.publish((mqtt_discovery_topic + "/sensor/iohc_frame/config").c_str(), 0, true, cfg.c_str(), cfgLen);
     }
     handleMqttConnect();
 }
