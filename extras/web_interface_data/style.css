@@ -52,7 +52,6 @@ header img.logo {
 main {
     padding: 0;
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
     color: var(--color-text);
 }
 main > div {
@@ -66,20 +65,16 @@ main > div {
   box-shadow: 0 0 10px rgba(0,0,0,0.1);
   margin-bottom: 1em;
 }
-section .title {
+.title {
   background-color: var(--color-accent);
   color: var(--color-header-text);
   padding: 8px 15px;
   border-radius: var(--radius) var(--radius) 0 0;
   margin: 0;
   position: relative;
+  border-bottom: 1px solid var(--color7);
 }
-.title {
-    color: var(--color5);
-    border-bottom: 1px solid var(--color7);
-    padding-bottom: 0.5em;
-}
-.title #select-log {
+.title #select-log, .title div {
   position: absolute;
   right: 10px;
   top: 0;
@@ -111,6 +106,7 @@ ul#device-list li {
   flex-direction: column;
   justify-content: center;
   border: 1px solid var(--color7);
+  position: relative;
 }
 ul#device-list li .btn {
   margin: 1px auto;
@@ -120,7 +116,7 @@ ul#device-list span {
   text-align: center;
   margin: auto;
 }
-.btn.open, .btn.stop, .btn.close {
+.btn {
   height: 40px;
   width: 40px;
   font-size: 0;
@@ -131,8 +127,22 @@ ul#device-list span {
 .btn.stop {
   background: url("img/stop.svg") no-repeat;
 }
-.btn.close {
+.btn.down {
   background: url("img/down.svg") no-repeat;
+}
+.btn.edit {
+  background: url("img/settings.svg") no-repeat;
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  height: 25px;
+  width: 25px;
+}
+.btn.add {
+  background: url("img/add.svg") no-repeat;
+}
+.btn.close {
+  background: url("img/close.svg") no-repeat;
 }
 button {
   background-color: var(--color-accent3);
@@ -161,7 +171,7 @@ input[type="text"], select {
     color:var(--color-text);
 }
 #status-messages {
-    min-height: 50px;
+    min-height: 200px;
     border: 1px solid var(--color7);
     padding: 10px;
     background-color: var(--color-input);
@@ -183,4 +193,40 @@ footer {
     bottom: 0;
     left: 0;
     width: 100%;
+}
+#popup {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+.popup-container{
+  min-width: 350px;
+  width: 50%;
+  color: var(--color-text);
+}
+.popup-container > .card-popup {
+  background: #939292c7;
+  padding: 16px;
+  border-radius: 0 0px var(--radius) var(--radius);
+}
+#popup-title {
+    font-size: 18px;
+    margin-bottom: 10px;
+}
+#popup-text {
+  height: 100px;
+  padding-bottom: 15px;
+}
+#popup.open {
+  display: flex;
+  flex-direction: column;
+}
+@media (min-width: 1280px) {
+    main {
+        grid-template-columns: repeat(2, 1fr);
+    }
 }
