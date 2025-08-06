@@ -745,6 +745,23 @@ const std::vector<iohcRemote1W::remote>& iohcRemote1W::getRemotes() const {
         return true;
     }
 
+    bool iohcRemote1W::removeRemote(const std::string &description) {
+        auto it = std::find_if(remotes.begin(), remotes.end(), [&](const remote &e) {
+            return e.description == description;
+        });
+        if (it == remotes.end()) {
+            Serial.printf("Device %s not found\n", description.c_str());
+            return false;
+        }
+        if (it->paired) {
+            Serial.println("WARNING: Device is paired. Unpair before removing.");
+            return false;
+        }
+        remotes.erase(it);
+        save();
+        return true;
+    }
+
     void iohcRemote1W::updatePositions() {
         for (auto &r : remotes) {
             r.positionTracker.update();

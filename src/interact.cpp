@@ -132,6 +132,13 @@ void createCommands() {
         }
         IOHC::iohcRemote1W::getInstance()->addRemote(cmd->at(1));
     });
+    Cmd::addHandler((char *) "del1W", (char *) "Remove 1W device", [](Tokens *cmd)-> void {
+        if (cmd->size() < 2) {
+            Serial.println("Usage: del1W <description>");
+            return;
+        }
+        IOHC::iohcRemote1W::getInstance()->removeRemote(cmd->at(1));
+    });
     // Other 2W
     Cmd::addHandler((char *) "discovery", (char *) "Send discovery on air", [](Tokens *cmd)-> void {
         IOHC::iohcOtherDevice2W::getInstance()->cmd(IOHC::Other2WButton::discovery, nullptr);
