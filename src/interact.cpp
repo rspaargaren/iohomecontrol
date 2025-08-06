@@ -139,6 +139,13 @@ void createCommands() {
         }
         IOHC::iohcRemote1W::getInstance()->removeRemote(cmd->at(1));
     });
+    Cmd::addHandler((char *) "edit1W", (char *) "Edit 1W device name", [](Tokens *cmd)-> void {
+        if (cmd->size() < 3) {
+            Serial.println("Usage: edit1W <description> <name>");
+            return;
+        }
+        IOHC::iohcRemote1W::getInstance()->renameRemote(cmd->at(1), cmd->at(2));
+    });
     Cmd::addHandler((char *) "list1W", (char *) "List 1W devices", [](Tokens *cmd)-> void {
         const auto &remotes = IOHC::iohcRemote1W::getInstance()->getRemotes();
         for (const auto &r : remotes) {
