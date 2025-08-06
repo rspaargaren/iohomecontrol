@@ -775,6 +775,20 @@ const std::vector<iohcRemote1W::remote>& iohcRemote1W::getRemotes() const {
         return true;
     }
 
+    bool iohcRemote1W::setTravelTime(const std::string &description, uint32_t travelTime) {
+        auto it = std::find_if(remotes.begin(), remotes.end(), [&](const remote &e) {
+            return e.description == description;
+        });
+        if (it == remotes.end()) {
+            Serial.printf("Device %s not found\n", description.c_str());
+            return false;
+        }
+        it->travelTime = travelTime;
+        it->positionTracker.setTravelTime(travelTime);
+        save();
+        return true;
+    }
+
     void iohcRemote1W::updatePositions() {
         for (auto &r : remotes) {
             r.positionTracker.update();
