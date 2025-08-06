@@ -73,6 +73,7 @@ namespace IOHC {
         static void forgePacket(iohcPacket* packet, uint16_t typn);
 
         const std::vector<remote>& getRemotes() const;
+        bool addRemote(const std::string &name);
         void updatePositions();
 
     private:
