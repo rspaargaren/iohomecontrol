@@ -21,6 +21,7 @@
 #include <wifi_helper.h>
 #include <oled_display.h>
 #include <iohcCryptoHelpers.h>
+#include <cstdlib>
 #if defined(MQTT)
 #include <mqtt_handler.h>
 #endif
@@ -145,6 +146,14 @@ void createCommands() {
             return;
         }
         IOHC::iohcRemote1W::getInstance()->renameRemote(cmd->at(1), cmd->at(2));
+    });
+    Cmd::addHandler((char *) "time1W", (char *) "Set 1W device travel time", [](Tokens *cmd)-> void {
+        if (cmd->size() < 3) {
+            Serial.println("Usage: time1W <description> <ms>");
+            return;
+        }
+        uint32_t t = strtoul(cmd->at(2).c_str(), nullptr, 10);
+        IOHC::iohcRemote1W::getInstance()->setTravelTime(cmd->at(1), t);
     });
     Cmd::addHandler((char *) "list1W", (char *) "List 1W devices", [](Tokens *cmd)-> void {
         const auto &remotes = IOHC::iohcRemote1W::getInstance()->getRemotes();

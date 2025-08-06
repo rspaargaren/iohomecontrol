@@ -76,6 +76,7 @@ namespace IOHC {
         bool addRemote(const std::string &name);
         bool removeRemote(const std::string &description);
         bool renameRemote(const std::string &description, const std::string &name);
+        bool setTravelTime(const std::string &description, uint32_t travelTime);
         void updatePositions();
 
     private:
