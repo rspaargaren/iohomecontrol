@@ -74,6 +74,7 @@ namespace IOHC {
 
         const std::vector<remote>& getRemotes() const;
         bool addRemote(const std::string &name);
+        bool removeRemote(const std::string &description);
         void updatePositions();
 
     private:
