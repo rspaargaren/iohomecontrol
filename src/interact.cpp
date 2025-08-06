@@ -139,6 +139,16 @@ void createCommands() {
         }
         IOHC::iohcRemote1W::getInstance()->removeRemote(cmd->at(1));
     });
+    Cmd::addHandler((char *) "list1W", (char *) "List 1W devices", [](Tokens *cmd)-> void {
+        const auto &remotes = IOHC::iohcRemote1W::getInstance()->getRemotes();
+        for (const auto &r : remotes) {
+            Serial.printf("%s: %s %u %s\n",
+                          r.description.c_str(),
+                          r.name.c_str(),
+                          r.travelTime,
+                          r.paired ? "paired" : "unpaired");
+        }
+    });
     // Other 2W
     Cmd::addHandler((char *) "discovery", (char *) "Send discovery on air", [](Tokens *cmd)-> void {
         IOHC::iohcOtherDevice2W::getInstance()->cmd(IOHC::Other2WButton::discovery, nullptr);
