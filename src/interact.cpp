@@ -200,6 +200,47 @@ void createCommands() {
     Cmd::addHandler((char *) "ls", (char *) "List filesystem", [](Tokens *cmd)-> void { listFS(); });
     Cmd::addHandler((char *) "cat", (char *) "Print file content", [](Tokens *cmd)-> void { cat(cmd->at(1).c_str()); });
     Cmd::addHandler((char *) "rm", (char *) "Remove file", [](Tokens *cmd)-> void { rm(cmd->at(1).c_str()); });
+#if defined(MQTT)
+    Cmd::addHandler((char *) "mqttIp", (char *) "Set MQTT server IP", [](Tokens *cmd)-> void {
+        if (cmd->size() < 2) {
+            Serial.println("Usage: mqttIp <ip>");
+            return;
+        }
+        mqtt_server = cmd->at(1);
+        mqttClient.disconnect();
+        mqttClient.setServer(mqtt_server.c_str(), 1883);
+        connectToMqtt();
+    });
+    Cmd::addHandler((char *) "mqttUser", (char *) "Set MQTT username", [](Tokens *cmd)-> void {
+        if (cmd->size() < 2) {
+            Serial.println("Usage: mqttUser <username>");
+            return;
+        }
+        mqtt_user = cmd->at(1);
+        mqttClient.disconnect();
+        mqttClient.setCredentials(mqtt_user.c_str(), mqtt_password.c_str());
+        connectToMqtt();
+    });
+    Cmd::addHandler((char *) "mqttPass", (char *) "Set MQTT password", [](Tokens *cmd)-> void {
+        if (cmd->size() < 2) {
+            Serial.println("Usage: mqttPass <password>");
+            return;
+        }
+        mqtt_password = cmd->at(1);
+        mqttClient.disconnect();
+        mqttClient.setCredentials(mqtt_user.c_str(), mqtt_password.c_str());
+        connectToMqtt();
+    });
+    Cmd::addHandler((char *) "mqttDiscovery", (char *) "Set MQTT discovery topic", [](Tokens *cmd)-> void {
+        if (cmd->size() < 2) {
+            Serial.println("Usage: mqttDiscovery <topic>");
+            return;
+        }
+        mqtt_discovery_topic = cmd->at(1);
+        if (mqttStatus == ConnState::Connected)
+            handleMqttConnect();
+    });
+#endif
 /*
     Cmd::addHandler((char *) "list2W", (char *) "List received packets", [](Tokens *cmd)-> void {
         for (uint8_t i = 0; i < nextPacket; i++) msgRcvd(radioPackets[i]);
