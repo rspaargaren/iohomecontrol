@@ -1,96 +1,232 @@
+*{
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+:root {
+    --radius: 12px;
+    --color-accent: #6a4e67;
+    --color-accent2: #5A6E8C;
+    --color-accent3: #6a0360;
+    --background: #f4f4f4; /* Light background */
+    --color5: #333;
+    --color-card: #fff; /* White for light mode */
+    --color7: #eee;
+    --color-input: #a2a2a2; /* Light gray for input fields */
+    --color-text: #000; /* Black text for light mode */
+    --color-header-text: #fff;  /* White text for header */
+}
+.dark-mode {
+    --color-accent: #6a4e67;
+    --color2: #5A6E8C;
+    --color3: #6a0360;
+    --background: #262626;  /* Dark background */
+    --color5: #333;
+    --color-card: #ffffff38; /* Semi-transparent white for dark mode*/
+    --color7: #eee;
+    --color-input: #757575d1; /* Semi-transparent gray for dark mode */
+    --color-text: #fff; /* White text for dark mode */
+    --color-header-text: #fff;  /* White text for header in dark mode */
+}
 body {
     font-family: Arial, sans-serif;
     margin: 0;
     padding: 0;
-    background-color: #f4f4f4;
-    color: #333;
+    background-color: var(--background);
 }
-
 header {
-    background-color: #333;
-    color: #fff;
-    padding: 1em 0;
-    text-align: center;
+  background-color: var(--color-accent2);
+  color: var(--color-header-text);
+  padding: 1em 10px;
+  text-align: center;
+  display: flex;
 }
-
 header h1 {
-    margin: 0;
+  margin: 0 auto;
+  width: max-content;
 }
-
+header img.logo {
+  max-width: 40px;
+  height: auto;
+}
 main {
-    padding: 1em;
-}
-
-section {
-    background-color: #fff;
-    margin-bottom: 1em;
-    padding: 1em;
-    border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
-}
-
-h2 {
-    color: #333;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 0.5em;
-}
-
-ul#device-list {
-    list-style-type: none;
     padding: 0;
+    display: grid;
+    color: var(--color-text);
+}
+main > div {
+    margin: 10px;
 }
 
+.card {
+  background-color: var(--color-card);
+  padding: 1em;
+  border-radius: 0 0 var(--radius) var(--radius);
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  margin-bottom: 1em;
+}
+.title {
+  background-color: var(--color-accent);
+  color: var(--color-header-text);
+  padding: 8px 15px;
+  border-radius: var(--radius) var(--radius) 0 0;
+  margin: 0;
+  position: relative;
+  border-bottom: 1px solid var(--color7);
+}
+.title #select-log, .title div {
+  position: absolute;
+  right: 10px;
+  top: 0;
+}
+#toggle-theme {
+  background: url("img/dark_mode.svg") no-repeat;
+  height: 40px;
+  width: 40px;
+}
+.dark-mode #toggle-theme {
+  background: url("img/light_mode.svg") no-repeat;
+}
+ul#device-list {
+  list-style-type: none;
+  display: flex;
+  font-size: 1em;
+  padding: 2px;
+  flex-wrap: wrap;
+  flex-direction: row;
+}
 ul#device-list li {
-    padding: 0.5em 0;
-    border-bottom: 1px solid #eee;
+  background: var(--color-input); /* #fefefe5e */
+  margin: 5px;
+  padding: 5px;
+  border-radius: var(--radius);
+  color: var(--color-text);
+  width: 118px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border: 1px solid var(--color7);
+  position: relative;
 }
-
-ul#device-list li:last-child {
-    border-bottom: none;
+ul#device-list li .btn {
+  margin: 1px auto;
 }
-
+ul#device-list span {
+  padding: 5px 10px;
+  text-align: center;
+  margin: auto;
+}
+.btn {
+  height: 40px;
+  width: 40px;
+  font-size: 0;
+}
+.btn.open {
+  background: url("img/up.svg") no-repeat;
+}
+.btn.stop {
+  background: url("img/stop.svg") no-repeat;
+}
+.btn.down {
+  background: url("img/down.svg") no-repeat;
+}
+.btn.edit {
+  background: url("img/settings.svg") no-repeat;
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  height: 25px;
+  width: 25px;
+}
+.btn.add {
+  background: url("img/add.svg") no-repeat;
+}
+.btn.close {
+  background: url("img/close.svg") no-repeat;
+}
 button {
-    background-color: #5cb85c;
-    color: white;
-    border: none;
-    padding: 10px 15px;
-    text-align: center;
-    text-decoration: none;
-    display: inline-block;
-    font-size: 14px;
-    border-radius: 4px;
-    cursor: pointer;
-    margin-left: 5px;
+  background-color: var(--color-accent3);
+  color: var(--color-header-text);
+  border: none;
+  padding: 10px 15px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 14px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  margin-left: 5px;
 }
-
 button:hover {
-    background-color: #4cae4c;
+    background-color: var(--color-accent2);
 }
-
 input[type="text"], select {
     padding: 8px;
     margin: 5px 0 10px 0;
     display: inline-block;
-    border: 1px solid #ccc;
-    border-radius: 4px;
+    border: 1px solid var(--color7);
+    border-radius: var(--radius);
     box-sizing: border-box;
+    background: var(--color-input);
+    color:var(--color-text);
 }
-
 #status-messages {
-    min-height: 50px;
-    border: 1px solid #eee;
+    min-height: 200px;
+    border: 1px solid var(--color7);
     padding: 10px;
-    background-color: #f9f9f9;
-    border-radius: 4px;
+    background-color: var(--color-input);
+    border-radius: var(--radius);
     white-space: pre-wrap; /* So that newlines in messages are respected */
 }
-
+#suggestions {
+  width: 6.75dvw;
+}
+#command-input {
+  width: calc(100% - 187px);
+}
 footer {
     text-align: center;
     padding: 1em 0;
-    background-color: #333;
-    color: #fff;
-    position: relative; /* Changed from fixed to relative for simplicity */
+    background-color: var(--color-accent2);
+    color: var(--color-header-text);
+    position: fixed;
     bottom: 0;
+    left: 0;
     width: 100%;
+}
+#popup {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+.popup-container{
+  min-width: 350px;
+  width: 50%;
+  color: var(--color-text);
+}
+.popup-container > .card-popup {
+  background: #939292c7;
+  padding: 16px;
+  border-radius: 0 0px var(--radius) var(--radius);
+}
+#popup-title {
+    font-size: 18px;
+    margin-bottom: 10px;
+}
+#popup-text {
+  /*height: 100px;*/
+  padding-bottom: 15px;
+}
+#popup.open {
+  display: flex;
+  flex-direction: column;
+}
+@media (min-width: 1280px) {
+    main {
+        grid-template-columns: repeat(2, 1fr);
+    }
 }

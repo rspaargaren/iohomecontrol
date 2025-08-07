@@ -1,62 +1,7 @@
 {
-    "b60d1a": {
-        "key": "2d36bd8b4d4fb1e1a1b3099b394d3a9e",
-        "sequence": "2410",
-        "type": [
-            0,
-            0
-        ],
-        "manufacturer_id": 2,
-        "description": "IZY1",
-        "name": "IZY1",
-        "paired": false
-    },
-    "b60d1b": {
-        "key": "b794883327810507c2a5419eeeae54b4",
-        "sequence": "08d7",
-        "type": [
-            0,
-            0
-        ],
-        "manufacturer_id": 2,
-        "description": "IZY2",
-        "name": "IZY2",
-        "paired": false
-    },
-    "e8e150": {
-        "key": "77999e593262e207c8f992904ec4c4f2",
-        "sequence": "08d7",
-        "type": [
-            0,
-            0
-        ],
-        "manufacturer_id": 2,
-        "description": "DYNA",
-        "name": "DYNA",
-        "paired": false
-    },
-    "e00001": {
-        "key": "7ab132c95f843da7116ed03b9cf20845",
-        "sequence": "00be",
-        "type": [
-            0,
-            0
-        ],
-        "manufacturer_id": 2,
-        "description": "SUNS",
-        "name": "Luifel Tuin",
-        "paired": false
-    },
-    "e00002": {
-        "key": "bba24bbb61508fc78c5ad0e57ff66210",
-        "sequence": "0297",
-        "type": [
-            0,
-            0
-        ],
-        "manufacturer_id": 2,
-        "description": "SUNG",
-        "name": "Screen G",
-        "paired": false
-    }
+    "b60d1a":{"key":"49563873417a63334e7a636b52644853","sequence":"2557","type":[0,0],"manufacturer_id":2,"description":"IZY1","name":"Zolder","travel_time":10000, "paired": true},
+    "35b455":{"key":"6ed922b098e900000000000000000000","sequence":"1022","type":[0,0],"manufacturer_id":2,"description":"IZY2","name":"keuken","travel_time":10000, "paired": true},
+    "00003f":{"key":"0161d40080c8000010484e5dab4475d4","sequence":"1068","type":[0,0],"manufacturer_id":2,"description":"DYNA","name":"DYNA","travel_time":10000, "paired": false},
+    "e00001":{"key":"7ab132c95f843da7116ed03b9cf20845","sequence":"00d8","type":[0,0],"manufacturer_id":2,"description":"SUNS","name":"keuken2","travel_time":10000, "paired": true},
+    "e00002":{"key":"bba24bbb61508fc78c5ad0e57ff66210","sequence":"02e6","type":[0,0],"manufacturer_id":2,"description":"SUNG","name":"SUNG","travel_time":10000, "paired": false}
 }
