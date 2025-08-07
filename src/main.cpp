@@ -14,6 +14,7 @@
    limitations under the License.
  */
 
+#include "esp_log.h"
 #include <board-config.h>
 #include <user_config.h>
 
@@ -34,6 +35,8 @@
 #endif
 #include <wifi_helper.h>
 #include <nvs_helpers.h>
+#include "log_buffer.h"
+#include <stdarg.h>
 
 #if defined(WEBSERVER)
 #include <web_server_handler.h>
@@ -83,9 +86,23 @@ uint32_t frequencies[] = FREQS2SCAN;
 
 using namespace IOHC;
 
+// Custom log vprintf that also stores to buffer
+int log_to_buffer_and_serial(const char *format, va_list args) {
+    char buf[256];
+    vsnprintf(buf, sizeof(buf), format, args); // Format naar buffer
+    addLogMessage(String(buf));                // In je logbuffer
+    return Serial.printf("%s", buf);           // Ook naar Serial
+}
+
 void setup() {
-    esp_log_level_set("*", ESP_LOG_DEBUG);    // Or VERBOSE for ESP_LOGV
+
     Serial.begin(115200);       //Start serial connection for debug and manual input
+    esp_log_set_vprintf(log_to_buffer_and_serial);
+    esp_log_level_set("*", ESP_LOG_DEBUG);    // Or VERBOSE for ESP_LOGV
+    ESP_LOGD("SETUP", "START OF SETUP, LOGD.\n");
+    ESP_LOGI("DEBUGTEST", "Informatie log zichtbaar");
+    ESP_LOGW("DEBUGTEST", "Waarschuwing zichtbaar");
+    ESP_LOGE("DEBUGTEST", "Fout zichtbaar");
 
 #if defined(SSD1306_DISPLAY)
     initDisplay(); // Init OLED display
