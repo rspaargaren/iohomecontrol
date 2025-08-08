@@ -30,6 +30,9 @@ void initMqtt() {
     mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(5000), pdFALSE,
                                       nullptr,
                                       reinterpret_cast<TimerCallbackFunction_t>(connectToMqtt));
+    if (WiFi.status() == WL_CONNECTED) {
+        connectToMqtt();
+    }
 }
 
 
