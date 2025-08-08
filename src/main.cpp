@@ -102,16 +102,6 @@ void setup() {
     Serial.println("LittleFS mounted successfully");
 #endif
 
-    // Initialize network services
-    initWifi();
-#if defined(MQTT)
-    initMqtt();
-#endif
-#if defined(WEBSERVER)
-    setupWebServer();
-#endif
-    Cmd::kbd_tick.attach_ms(500, Cmd::cmdFuncHandler);
-
     radioInstance = IOHC::iohcRadio::getInstance();
     radioInstance->start(MAX_FREQS, frequencies, 0, msgRcvd, publishMsg); //msgArchive); //, msgRcvd);
 
@@ -121,6 +111,16 @@ void setup() {
     cozyDevice2W = IOHC::iohcCozyDevice2W::getInstance();
     otherDevice2W = IOHC::iohcOtherDevice2W::getInstance();
     remoteMap = IOHC::iohcRemoteMap::getInstance();
+
+    // Initialize network services after devices are loaded
+    initWifi();
+#if defined(MQTT)
+    initMqtt();
+#endif
+#if defined(WEBSERVER)
+    setupWebServer();
+#endif
+    Cmd::kbd_tick.attach_ms(500, Cmd::cmdFuncHandler);
 
     //   AES_init_ctx(&ctx, transfert_key); // PreInit AES for cozy (1W use original version) TODO
 
