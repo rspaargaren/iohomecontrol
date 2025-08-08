@@ -29,6 +29,7 @@ void publishHeartbeat(TimerHandle_t timer);
 void mqttFuncHandler(const char *cmd);
 void publishCoverState(const std::string &id, const char *state);
 void publishCoverPosition(const std::string &id, float position);
+void removeDiscovery(const std::string &id);
 
 #endif // MQTT
 
