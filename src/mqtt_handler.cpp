@@ -88,7 +88,7 @@ void publishDiscovery(const std::string &id, const std::string &name, const std:
     device["manufacturer"] = "Somfy";
     device["model"] = "IO Blind Bridge";
     device["sw_version"] = "1.0.0";
-    device["key"] = key;
+    device["serial_number"] = key;
 
     std::string payload;
     size_t len = serializeJson(doc, payload);
