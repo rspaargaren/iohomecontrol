@@ -11,6 +11,8 @@
 #include <oled_display.h>
 #include <cstring>
 #include <WiFi.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
 
 AsyncMqttClient mqttClient;
 TimerHandle_t mqttReconnectTimer;
@@ -98,6 +100,20 @@ void publishDiscovery(const std::string &id, const std::string &name, const std:
     publishButtonDiscovery(id, name, "remove");
 }
 
+void removeDiscovery(const std::string &id) {
+    std::string topic = mqtt_discovery_topic + "/cover/" + id + "/config";
+    mqttClient.publish(topic.c_str(), 0, true, "", 0);
+
+    auto removeButton = [&](const std::string &action) {
+        std::string t = mqtt_discovery_topic + "/button/" + id + "_" + action + "/config";
+        mqttClient.publish(t.c_str(), 0, true, "", 0);
+    };
+
+    removeButton("pair");
+    removeButton("add");
+    removeButton("remove");
+}
+
 void publishHeartbeat(TimerHandle_t) {
     mqttClient.publish(AVAILABILITY_TOPIC, 0, true, "online");
 }
@@ -125,6 +141,7 @@ void handleMqttConnect() {
         mqttClient.subscribe(("iown/" + id + "/pair").c_str(), 0);
         mqttClient.subscribe(("iown/" + id + "/add").c_str(), 0);
         mqttClient.subscribe(("iown/" + id + "/remove").c_str(), 0);
+        vTaskDelay(pdMS_TO_TICKS(100));
     }
     if (!heartbeatTimer)
         heartbeatTimer = xTimerCreate("hb", pdMS_TO_TICKS(60000), pdTRUE, nullptr, publishHeartbeat);

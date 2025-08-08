@@ -742,6 +742,17 @@ const std::vector<iohcRemote1W::remote>& iohcRemote1W::getRemotes() const {
         remotes.push_back(r);
         nvs_write_sequence(r.node, r.sequence);
         save();
+#if defined(MQTT)
+        if (mqttClient.connected()) {
+            std::string id = bytesToHexString(r.node, sizeof(r.node));
+            std::string key = bytesToHexString(r.key, sizeof(r.key));
+            publishDiscovery(id, r.name, key);
+            mqttClient.subscribe(("iown/" + id + "/set").c_str(), 0);
+            mqttClient.subscribe(("iown/" + id + "/pair").c_str(), 0);
+            mqttClient.subscribe(("iown/" + id + "/add").c_str(), 0);
+            mqttClient.subscribe(("iown/" + id + "/remove").c_str(), 0);
+        }
+#endif
         return true;
     }
 
@@ -757,6 +768,16 @@ const std::vector<iohcRemote1W::remote>& iohcRemote1W::getRemotes() const {
             Serial.println("WARNING: Device is paired. Unpair before removing.");
             return false;
         }
+        std::string id = bytesToHexString(it->node, sizeof(it->node));
+#if defined(MQTT)
+        if (mqttClient.connected()) {
+            removeDiscovery(id);
+            mqttClient.unsubscribe(("iown/" + id + "/set").c_str());
+            mqttClient.unsubscribe(("iown/" + id + "/pair").c_str());
+            mqttClient.unsubscribe(("iown/" + id + "/add").c_str());
+            mqttClient.unsubscribe(("iown/" + id + "/remove").c_str());
+        }
+#endif
         remotes.erase(it);
         save();
         return true;
