@@ -65,9 +65,9 @@ void connectToWifi() {
         wifiStatus = ConnState::Connected;
         updateDisplayStatus();
 #if defined(MQTT)
-        // Kick off MQTT connection when WiFi becomes available
-        if (mqttReconnectTimer) {
-            xTimerStart(mqttReconnectTimer, 0);
+        // Establish MQTT connection if needed
+        if (!mqttClient.connected() && mqttStatus != ConnState::Connecting) {
+            connectToMqtt();
         }
 #endif
     }
