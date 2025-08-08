@@ -97,26 +97,16 @@ void setup() {
     if(!LittleFS.begin()){
         Serial.println("An Error has occurred while mounting LittleFS");
         // Handle error appropriately, maybe by halting or indicating failure
-        return; 
+        return;
     }
     Serial.println("LittleFS mounted successfully");
 #endif
 
-    // Initialize network services
-    initWifi();
-#if defined(MQTT)
-    initMqtt();
-#endif
-#if defined(WEBSERVER)
-    setupWebServer();
-#endif
-    Cmd::kbd_tick.attach_ms(500, Cmd::cmdFuncHandler);
-
+    // Setup radio and load devices before network services
     radioInstance = IOHC::iohcRadio::getInstance();
     radioInstance->start(MAX_FREQS, frequencies, 0, msgRcvd, publishMsg); //msgArchive); //, msgRcvd);
 
     sysTable = IOHC::iohcSystemTable::getInstance();
-
     remote1W = IOHC::iohcRemote1W::getInstance();
     cozyDevice2W = IOHC::iohcCozyDevice2W::getInstance();
     otherDevice2W = IOHC::iohcOtherDevice2W::getInstance();
@@ -125,6 +115,16 @@ void setup() {
     //   AES_init_ctx(&ctx, transfert_key); // PreInit AES for cozy (1W use original version) TODO
 
     Cmd::createCommands();
+
+    // Initialize network services after devices are ready
+    initWifi();
+#if defined(MQTT)
+    initMqtt();
+#endif
+#if defined(WEBSERVER)
+    setupWebServer();
+#endif
+    Cmd::kbd_tick.attach_ms(500, Cmd::cmdFuncHandler);
 
 //    esp_timer_dump(stdout);
 
