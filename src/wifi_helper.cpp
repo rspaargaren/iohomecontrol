@@ -32,15 +32,15 @@ void initWifi() {
         pdMS_TO_TICKS(10000),  // 10 seconds retry interval
         pdFALSE,
         nullptr,
-        reinterpret_cast<TimerCallbackFunction_t>(connectToWifi)
+        connectToWifi
     );
     if (!wifiReconnectTimer) {
         Serial.println("Failed to create WiFi reconnect timer");
     }
-    connectToWifi();
+    connectToWifi(nullptr);
 }
 
-void connectToWifi() {
+void connectToWifi(TimerHandle_t /*timer*/) {
     Serial.println("Connecting to Wi-Fi via WiFiManager...");
     wifiStatus = ConnState::Connecting;
     updateDisplayStatus();

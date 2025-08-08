@@ -25,7 +25,7 @@ extern TimerHandle_t wifiReconnectTimer;
 extern ConnState wifiStatus;
 
 void initWifi();
-void connectToWifi();
+void connectToWifi(TimerHandle_t timer = nullptr);
 void checkWifiConnection();
 
 #endif // WIFI_HELPER_H
