@@ -17,8 +17,8 @@
 #ifndef AES_H_
 #define AES_H_
 
-#include <cstdint>
 #include <cstddef>
+#include <cstdint>
 
 // helper type from RadioLib
 typedef uint8_t state_t[4][4];

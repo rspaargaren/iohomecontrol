@@ -91,13 +91,34 @@ When MQTT is enabled (`#define MQTT` in `include/user_config.h`) the firmware pu
 
 Each blind configuration is sent to the topic `homeassistant/cover/<id>/config` where `<id>` is the hexadecimal address from `1W.json`.
 
+The discovery payload's `device` section now also exposes the device's AES `key` as read from `1W.json`.
+
 The `1W.json` file now accepts an optional `travel_time` field per device. This value represents the time in milliseconds a blind takes to move from fully closed to fully open. It allows the firmware to estimate the current position when no feedback is available. The estimated position is printed to the serial console and shown on the OLED display every second while the blind is moving. When a command is transmitted or received, this position feedback is appended below the action information on the display so that the original message remains visible.
+If these fields (`name` and `travel_time`) are missing, default values are applied using the device description and a 10 second travel time. These defaults are saved back to `1W.json` so subsequent boots load the updated values automatically.
+
+Each entry can also contain a `paired` boolean that indicates if the blind is paired to a screen. If the field is missing, it is automatically added with a default value of `false` when the file is loaded. The flag is updated automatically when the `pair` or `remove` commands are used.
+
+Sequence numbers for each remote are stored both in `extras/1W.json` and in NVS.
+On boot the value from the file is compared to the one in NVS and the highest
+value is kept so sequence numbers continue uninterrupted even after filesystem
+uploads or resets.
 
 Example payload for `B60D1A`:
 
 ```json
 {"name":"IZY1","command_topic":"iown/B60D1A/set","state_topic":"iown/B60D1A/state","unique_id":"B60D1A","payload_open":"OPEN","payload_close":"CLOSE","payload_stop":"STOP","device_class":"blind","availability_topic":"iown/status"}
 ```
+
+For each blind the firmware also publishes MQTT button entities that allow
+executing pairing or controller management commands directly from Home Assistant.
+The discovery topics are:
+
+- `homeassistant/button/<id>_pair/config`
+- `homeassistant/button/<id>_add/config`
+- `homeassistant/button/<id>_remove/config`
+
+Sending `PRESS` to `iown/<id>/pair`, `iown/<id>/add` or `iown/<id>/remove`
+triggers the corresponding command on the blind.
 
 Configure your MQTT broker settings in `include/user_config.h` (`MQTT_SERVER`, `MQTT_USER`, `MQTT_PASSWD`). After boot and connection, Home Assistant should automatically discover the covers.
 
@@ -109,6 +130,12 @@ corresponding command to the device.
 When an `OPEN` or `CLOSE` command is received, it immediately publishes the new
 state (`open` or `closed`) to `iown/<id>/state` so Home Assistant can update the
 cover status.
+
+While a blind is in motion the current position percentage is published every
+second to `iown/<id>/position`. The `state` topic is also updated with
+`OPENING`, `CLOSING` or `STOP` depending on the movement. When the blind stops
+moving, the state reverts to `OPEN`, `CLOSE` or `STOP` according to the final
+position.
 
 The gateway publishes `online` every minute to `iown/status` and has a Last Will
 configured to send `offline` on the same topic if it disconnects unexpectedly.

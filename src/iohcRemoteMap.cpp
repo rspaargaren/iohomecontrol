@@ -34,15 +34,15 @@ namespace IOHC {
         for (JsonPair kv : doc.as<JsonObject>()) {
             entry e{};
             hexStringToBytes(kv.key().c_str(), e.node);
-            JsonObject obj = kv.value().as<JsonObject>();
+            auto obj = kv.value().as<JsonObject>();
             e.name = obj["name"].as<std::string>();
-            JsonArray jarr = obj["devices"].as<JsonArray>();
+            auto jarr = obj["devices"].as<JsonArray>();
             for (auto v : jarr) {
                 e.devices.push_back(v.as<std::string>());
             }
             _entries.push_back(e);
         }
-        Serial.printf("Loaded %d remotes map\n", _entries.size());
+        printf("Loaded %d remotes map\n", _entries.size());
         return true;
     }
 

@@ -19,8 +19,8 @@
 
 #include <board-config.h>
 #include <string>
-#include <vector>
 #include <tuple>
+#include <vector>
 
 #if defined(ESP8266)
     #include <Crypto.h>

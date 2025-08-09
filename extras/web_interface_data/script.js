@@ -51,7 +51,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 upButton.textContent = 'up';
                 upButton.classList.add('btn', 'open');
                 upButton.onclick = () => {
-                    // TODO: hier kun je eventueel een fetch() zetten naar een 'aan' endpoint
+                    fetch('/api/action', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ deviceId: device.id, action: 'open' })
+                    }).then(r => r.json()).then(j => logStatus(j.message));
                 };
 
                  // 🔘 stop btn
@@ -59,14 +63,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 stopButton.textContent = 'stop';
                 stopButton.classList.add('btn', 'stop');
                 stopButton.onclick = () => {
-                    // TODO: hier kun je eventueel een fetch() zetten naar een 'stop' endpoint
+                    fetch('/api/action', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ deviceId: device.id, action: 'stop' })
+                    }).then(r => r.json()).then(j => logStatus(j.message));
                 };
                 // 🔘 down btn
                 const downButton = document.createElement('button');
                 downButton.textContent = 'down';
                 downButton.classList.add('btn', 'close');
                 downButton.onclick = () => {
-                    // TODO: hier kun je eventueel een fetch() zetten naar een 'uit' endpoint
+                    fetch('/api/action', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ deviceId: device.id, action: 'close' })
+                    }).then(r => r.json()).then(j => logStatus(j.message));
                 };
                 listItem.appendChild(upButton);
                 listItem.appendChild(stopButton);
@@ -125,7 +137,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error sending command:', error);
         }
     }
-
+  
     // Event Listeners
     if (sendCommandButton) {
         sendCommandButton.addEventListener('click', sendCommand);

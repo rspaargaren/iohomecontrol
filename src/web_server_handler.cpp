@@ -5,9 +5,10 @@
 #include "ArduinoJson.h"       // For creating JSON responses
 #include <LittleFS.h>
 #include <AsyncJson.h>
-#include <log_buffer.h>
-#include <iohcRemote1W.h>
-#include <iohcCryptoHelpers.h>
+
+#include "iohcCryptoHelpers.h"
+#include "iohcRemote1W.h"
+#include "log_buffer.h"
 // #include "main.h" // Or other relevant headers to access device data and command functions
 
 // Assume ESPAsyncWebServer for now.
@@ -35,15 +36,20 @@ void handleApiDevices(AsyncWebServerRequest *request) {
     }
     auto root = response->getRoot().to<JsonArray>();
 
+    // for (int i = 0; i < numDevices; i++) {
+    //     JsonObject deviceObj = root.add<JsonObject>();
+    //     deviceObj["id"] = devices[i].id;
+    //     deviceObj["name"] = devices[i].name;
+    // }
     const auto &remotes = IOHC::iohcRemote1W::getInstance()->getRemotes();
-    for (const auto &r : remotes) { //(int i = 0; i < numDevices; i++) {
-        auto deviceObj = root.add<JsonObject>();
-        deviceObj["id"] = bytesToHexString(r.node, sizeof(r.node)).c_str(); //devices[i].id;
-        deviceObj["name"] = r.name.c_str(); //devices[i].name;
+    for (const auto &r : remotes) {
+        JsonObject deviceObj = root.add<JsonObject>();
+        deviceObj["id"] = bytesToHexString(r.node, sizeof(r.node)).c_str();
+        deviceObj["name"] = r.name.c_str();
     }
 
     // Provide a generic command interface as last entry
-    auto cmdObj = root.add<JsonObject>();
+    JsonObject cmdObj = root.add<JsonObject>();
     cmdObj["id"] = "cmd_if";
     cmdObj["name"] = "Command Interface";
 
@@ -91,13 +97,75 @@ void handleApiCommand(AsyncWebServerRequest *request, JsonVariant &json) {
     request->send(response);
 }
 
+void handleApiAction(AsyncWebServerRequest *request, JsonVariant &json) {
+    if (request->method() != HTTP_POST) {
+        request->send(405, "text/plain", "Method Not Allowed");
+        return;
+    }
+
+    JsonObject doc = json.as<JsonObject>();
+    if (doc.isNull()) {
+        request->send(400, "application/json", "{\"success\":false, \"message\":\"Invalid JSON\"}");
+        return;
+    }
+
+    String deviceId = doc["deviceId"] | "";
+    String action = doc["action"] | "";
+
+    deviceId.toLowerCase();
+    action.toLowerCase();
+
+    if (deviceId.isEmpty() || action.isEmpty()) {
+        request->send(400, "application/json", "{\"success\":false, \"message\":\"Missing deviceId or action\"}");
+        return;
+    }
+
+    const auto &remotes = IOHC::iohcRemote1W::getInstance()->getRemotes();
+    auto it = std::find_if(remotes.begin(), remotes.end(), [&](const auto &r) {
+        return bytesToHexString(r.node, sizeof(r.node)) == deviceId.c_str();
+    });
+    if (it == remotes.end()) {
+        request->send(400, "application/json", "{\"success\":false, \"message\":\"Unknown device\"}");
+        return;
+    }
+
+    IOHC::RemoteButton btn;
+    if (action == "open") btn = IOHC::RemoteButton::Open;
+    else if (action == "close") btn = IOHC::RemoteButton::Close;
+    else if (action == "stop") btn = IOHC::RemoteButton::Stop;
+    else {
+        request->send(400, "application/json", "{\"success\":false, \"message\":\"Invalid action\"}");
+        return;
+    }
+
+    Tokens t;
+    t.push_back(action.c_str());
+    t.push_back(it->description);
+    IOHC::iohcRemote1W::getInstance()->cmd(btn, &t);
+
+    String msg = "Action " + action + " sent to " + deviceId;
+    addLogMessage(msg);
+
+    AsyncJsonResponse *response = new AsyncJsonResponse();
+    if(!response){
+        request->send(500, "application/json", "{\"success\":false, \"message\":\"OOM\"}");
+        return;
+    }
+    JsonObject root = response->getRoot().to<JsonObject>();
+    root["success"] = true;
+    root["message"] = msg;
+
+    response->setLength();
+    request->send(response);
+}
+
 void handleApiLogs(AsyncWebServerRequest *request) {
     auto response = new AsyncJsonResponse();
     if(!response){
         request->send(500, "text/plain", "OOM");
         return;
     }
-    auto root = response->getRoot().to<JsonArray>();
+    JsonArray root = response->getRoot().to<JsonArray>();
     auto logs = getLogMessages();
     for(const auto &msg : logs){
         root.add(msg);
@@ -118,7 +186,18 @@ void setupWebServer() {
         Serial.println("Warning: /web_interface_data/index.html not found");
     }
 
-    server.serveStatic("/", LittleFS, "/web_interface_data/").setDefaultFile("index.html");
+
+    // API Endpoints
+    server.on("/api/devices", HTTP_GET, handleApiDevices);
+    server.on("/api/logs", HTTP_GET, handleApiLogs);
+    server.addHandler(new AsyncCallbackJsonWebHandler("/api/command", handleApiCommand)); // For POST with JSON
+    server.addHandler(new AsyncCallbackJsonWebHandler("/api/action", handleApiAction));
+
+    auto &staticHandler = server.serveStatic("/", LittleFS, "/web_interface_data/");
+    staticHandler.setDefaultFile("index.html");
+    staticHandler.setFilter([](AsyncWebServerRequest *request){
+        return !request->url().startsWith("/api");
+    });
     // You might need to explicitly serve each file if serveStatic with directory isn't working as expected
     // or if files are not in a subdirectory of the data dir.
     // server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
@@ -130,12 +209,6 @@ void setupWebServer() {
     // server.on("/script.js", HTTP_GET, [](AsyncWebServerRequest *request){
     //     request->send(LittleFS, "/web_interface_data/script.js", "application/javascript");
     // });
-
-
-    // API Endpoints
-// server.on("/api/devices", HTTP_GET, handleApiDevices);
-// server.addHandler(new AsyncCallbackJsonWebHandler("/api/command", handleApiCommand)); // For POST with JSON
-// server.on("/api/logs", HTTP_GET, handleApiLogs);
 
     server.onNotFound([](AsyncWebServerRequest *request){
         request->send(404, "text/plain", "Not found");

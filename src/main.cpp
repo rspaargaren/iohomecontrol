@@ -14,24 +14,23 @@
    limitations under the License.
  */
 
-#include <board-config.h>
-#include <user_config.h>
-
-#include <crypto2Wutils.h>
-#include <iohcCryptoHelpers.h>
-#include <iohcRadio.h>
-
-#include <iohcSystemTable.h>
-#include <fileSystemHelpers.h>
 #include <ArduinoJson.h>
-#include <iohcRemote1W.h>
-#include <iohcCozyDevice2W.h>
-#include <iohcOtherDevice2W.h>
-#include <iohcRemoteMap.h>
+#include <board-config.h>
+#include <crypto2Wutils.h>
+#include <fileSystemHelpers.h>
 #include <interact.h>
+#include <iohcCozyDevice2W.h>
+#include <iohcCryptoHelpers.h>
+#include <iohcOtherDevice2W.h>
+#include <iohcRadio.h>
+#include <iohcRemote1W.h>
+#include <iohcRemoteMap.h>
+#include <iohcSystemTable.h>
+#include <user_config.h>
 #if defined(MQTT)
 #include <mqtt_handler.h>
 #endif
+#include <nvs_helpers.h>
 #include <wifi_helper.h>
 
 #if defined(WEBSERVER)
@@ -82,6 +81,7 @@ uint32_t frequencies[] = FREQS2SCAN;
 using namespace IOHC;
 
 void setup() {
+    esp_log_level_set("*", ESP_LOG_DEBUG);    // Or VERBOSE for ESP_LOGV
     Serial.begin(115200);       //Start serial connection for debug and manual input
 
 #if defined(SSD1306_DISPLAY)
@@ -101,6 +101,7 @@ void setup() {
     }
     Serial.println("LittleFS mounted successfully");
 #endif
+    nvs_init();
 
     // Initialize network services
     initWifi();
@@ -110,6 +111,8 @@ void setup() {
 #if defined(WEBSERVER)
     setupWebServer();
 #endif
+
+
     Cmd::kbd_tick.attach_ms(500, Cmd::cmdFuncHandler);
 
     radioInstance = IOHC::iohcRadio::getInstance();

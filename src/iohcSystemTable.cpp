@@ -17,6 +17,7 @@
 #include <iohcSystemTable.h>
 #include <LittleFS.h>
 #include <ArduinoJson.h>
+#include <ranges>
 
 #include <utility>
 
@@ -120,14 +121,14 @@ namespace IOHC {
 
     void iohcSystemTable::dump1W()  {
         Serial.printf("********************** 1W sysTable objects ***********************\n");
-        for (auto entry : _objects)
-            entry.second->dump1W();
+        for (auto val: _objects | std::views::values)
+            val->dump1W();
         Serial.printf("\n");
     }
     void iohcSystemTable::dump2W()  {
         Serial.printf("********************** 2W sysTable objects ***********************\n");
-        for (auto entry : _objects)
-            entry.second->dump2W();
+        for (auto val: _objects | std::views::values)
+            val->dump2W();
         Serial.printf("\n");
     }
 }

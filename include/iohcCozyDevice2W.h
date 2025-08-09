@@ -17,12 +17,12 @@
 #ifndef COZY_2W_DEVICE_H
 #define COZY_2W_DEVICE_H
 
-#include <string>
-#include <iohcRadio.h>
 #include <iohcDevice.h>
+#include <iohcRadio.h>
 #include <map>
-#include <vector>
+#include <string>
 #include <tokens.h>
+#include <vector>
 
 #define COZY_2W_FILE  "/Cozy2W.json"
 

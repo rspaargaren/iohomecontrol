@@ -18,6 +18,7 @@ TimerHandle_t heartbeatTimer;
 const char AVAILABILITY_TOPIC[] = "iown/status";
 
 void initMqtt() {
+    mqttClient.setWill(AVAILABILITY_TOPIC, 0, true, "offline");
     mqttClient.setClientId("iown");
     mqttClient.setCredentials(MQTT_USER, MQTT_PASSWD);
     mqttClient.setServer(MQTT_SERVER, 1883);
@@ -33,12 +34,34 @@ void initMqtt() {
 
 
 
-void publishDiscovery(const std::string &id, const std::string &name) {
+static void publishButtonDiscovery(const std::string &id, const std::string &name,
+                                   const std::string &action) {
+    JsonDocument doc;
+    doc["name"] = name + " " + action;
+    doc["unique_id"] = id + "_" + action;
+    doc["command_topic"] = "iown/" + id + "/" + action;
+
+    JsonObject device = doc["device"].to<JsonObject>();
+    device["identifiers"] = "MyOpenIO";
+    device["name"] = "My Open IO Gateway";
+    device["manufacturer"] = "Somfy";
+    device["model"] = "IO Blind Bridge";
+    device["sw_version"] = "1.0.0";
+
+    std::string payload;
+    size_t len = serializeJson(doc, payload);
+
+    std::string topic = "homeassistant/button/" + id + "_" + action + "/config";
+    mqttClient.publish(topic.c_str(), 0, true, payload.c_str(), len);
+}
+
+void publishDiscovery(const std::string &id, const std::string &name, const std::string &key) {
     JsonDocument doc;
     doc["name"] = name;
     doc["unique_id"] = id;
     doc["command_topic"] = "iown/" + id + "/set";
     doc["state_topic"] = "iown/" + id + "/state";
+    doc["position_topic"] = "iown/" + id + "/position";
     doc["availability_topic"] = AVAILABILITY_TOPIC;
     doc["payload_available"] = "online";
     doc["payload_not_available"] = "offline";
@@ -62,25 +85,46 @@ void publishDiscovery(const std::string &id, const std::string &name) {
     device["manufacturer"] = "Somfy";
     device["model"] = "IO Blind Bridge";
     device["sw_version"] = "1.0.0";
+    device["key"] = key;
 
     std::string payload;
     size_t len = serializeJson(doc, payload);
 
     std::string topic = "homeassistant/cover/" + id + "/config";
     mqttClient.publish(topic.c_str(), 0, true, payload.c_str(), len);
+
+    publishButtonDiscovery(id, name, "pair");
+    publishButtonDiscovery(id, name, "add");
+    publishButtonDiscovery(id, name, "remove");
 }
 
 void publishHeartbeat(TimerHandle_t) {
     mqttClient.publish(AVAILABILITY_TOPIC, 0, true, "online");
 }
 
+void publishCoverState(const std::string &id, const char *state) {
+    std::string topic = "iown/" + id + "/state";
+    mqttClient.publish(topic.c_str(), 0, true, state);
+}
+
+void publishCoverPosition(const std::string &id, float position) {
+    char buf[8];
+    snprintf(buf, sizeof(buf), "%.0f", position);
+    std::string topic = "iown/" + id + "/position";
+    mqttClient.publish(topic.c_str(), 0, true, buf);
+}
+
 void handleMqttConnect() {
     const auto &remotes = IOHC::iohcRemote1W::getInstance()->getRemotes();
     for (const auto &r : remotes) {
         std::string id = bytesToHexString(r.node, sizeof(r.node));
-        publishDiscovery(id, r.name.empty() ? r.description : r.name);
+        std::string key = bytesToHexString(r.key, sizeof(r.key));
+        publishDiscovery(id, r.name.empty() ? r.description : r.name, key);
         std::string t = "iown/" + id + "/set";
         mqttClient.subscribe(t.c_str(), 0);
+        mqttClient.subscribe(("iown/" + id + "/pair").c_str(), 0);
+        mqttClient.subscribe(("iown/" + id + "/add").c_str(), 0);
+        mqttClient.subscribe(("iown/" + id + "/remove").c_str(), 0);
     }
     if (!heartbeatTimer)
         heartbeatTimer = xTimerCreate("hb", pdMS_TO_TICKS(60000), pdTRUE, nullptr, publishHeartbeat);
@@ -215,6 +259,57 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
             mqttClient.publish(topicStr.c_str(), 0, true, "", 0);
         } else {
             Serial.printf("*> MQTT Unknown device %s <*\n", id.c_str());
+        }
+        return;
+    }
+
+    if (topicStr.rfind("iown/", 0) == 0 && topicStr.find("/pair", 5) != std::string::npos) {
+        std::string id = topicStr.substr(5, topicStr.find("/pair", 5) - 5);
+        std::transform(id.begin(), id.end(), id.begin(), ::tolower);
+        const auto &remotes = IOHC::iohcRemote1W::getInstance()->getRemotes();
+        auto it = std::find_if(remotes.begin(), remotes.end(), [&](const auto &r) {
+            return bytesToHexString(r.node, sizeof(r.node)) == id;
+        });
+        if (it != remotes.end()) {
+            Tokens t;
+            t.push_back("pair");
+            t.push_back(it->description);
+            IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Pair, &t);
+            mqttClient.publish(topicStr.c_str(), 0, true, "", 0);
+        }
+        return;
+    }
+
+    if (topicStr.rfind("iown/", 0) == 0 && topicStr.find("/add", 5) != std::string::npos) {
+        std::string id = topicStr.substr(5, topicStr.find("/add", 5) - 5);
+        std::transform(id.begin(), id.end(), id.begin(), ::tolower);
+        const auto &remotes = IOHC::iohcRemote1W::getInstance()->getRemotes();
+        auto it = std::find_if(remotes.begin(), remotes.end(), [&](const auto &r) {
+            return bytesToHexString(r.node, sizeof(r.node)) == id;
+        });
+        if (it != remotes.end()) {
+            Tokens t;
+            t.push_back("add");
+            t.push_back(it->description);
+            IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Add, &t);
+            mqttClient.publish(topicStr.c_str(), 0, true, "", 0);
+        }
+        return;
+    }
+
+    if (topicStr.rfind("iown/", 0) == 0 && topicStr.find("/remove", 5) != std::string::npos) {
+        std::string id = topicStr.substr(5, topicStr.find("/remove", 5) - 5);
+        std::transform(id.begin(), id.end(), id.begin(), ::tolower);
+        const auto &remotes = IOHC::iohcRemote1W::getInstance()->getRemotes();
+        auto it = std::find_if(remotes.begin(), remotes.end(), [&](const auto &r) {
+            return bytesToHexString(r.node, sizeof(r.node)) == id;
+        });
+        if (it != remotes.end()) {
+            Tokens t;
+            t.push_back("remove");
+            t.push_back(it->description);
+            IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Remove, &t);
+            mqttClient.publish(topicStr.c_str(), 0, true, "", 0);
         }
         return;
     }

@@ -22,10 +22,10 @@
 #include <board-config.h>
 #include <user_config.h>
 
-#include <vector>
-#include <sstream>
-#include <cstring>
 #include <algorithm>
+#include <cstring>
+#include <sstream>
+#include <vector>
 
 extern "C" {
         #include "freertos/FreeRTOS.h"
@@ -48,8 +48,8 @@ extern "C" {
 #include "mqtt_handler.h"
 #endif
 
-#include <utils.h>
 #include <tokens.h>
+#include <utils.h>
 
 namespace IOHC {
   class iohcRemote1W;

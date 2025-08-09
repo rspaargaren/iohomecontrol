@@ -65,8 +65,9 @@ namespace IOHC {
             };
             void start(uint8_t num_freqs, uint32_t *scan_freqs, uint32_t scanTimeUs, IohcPacketDelegate rxCallback, IohcPacketDelegate txCallback);
             void send(std::vector<iohcPacket*>&iohcTx);
+            void send_2(std::vector<iohcPacket*>&iohcTx);
 
-        void sendAuto(std::vector<iohcPacket*>&iohcTx); // Nieuwe versie voor AutoTxRx
+        void sendAuto(std::vector<iohcPacket*>&iohcTx); // Nouvelle version pour AutoTxRx
         static void setRadioState(RadioState newState);
         static const char* radioStateToString(RadioState state);
         volatile static RadioState radioState;
