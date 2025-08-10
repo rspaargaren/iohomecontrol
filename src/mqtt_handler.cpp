@@ -98,10 +98,10 @@ void publishTravelTimeDiscovery(const std::string &id, const std::string &name,
     doc["unique_id"] = id + "_travel_time";
     doc["command_topic"] = "iown/" + id + "/travel_time/set";
     doc["state_topic"] = "iown/" + id + "/travel_time";
-    doc["unit_of_measurement"] = "ms";
+    doc["unit_of_measurement"] = "s";
     doc["min"] = 0;
-    doc["max"] = 60000;
-    doc["step"] = 100;
+    doc["max"] = 60;
+    doc["step"] = 1;
 
     JsonObject device = doc["device"].to<JsonObject>();
     device["identifiers"] = id;

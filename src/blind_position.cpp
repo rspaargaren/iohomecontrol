@@ -4,10 +4,10 @@
 #include <algorithm>
 
 namespace IOHC {
-    BlindPosition::BlindPosition(uint32_t travelTimeMs)
-            : state(State::Idle), travelTime(travelTimeMs), lastUpdateUs(0), position(0.0f) {}
+    BlindPosition::BlindPosition(uint32_t travelTimeSec)
+            : state(State::Idle), travelTime(travelTimeSec), lastUpdateUs(0), position(0.0f) {}
 
-    void BlindPosition::setTravelTime(uint32_t ms) { travelTime = ms; }
+    void BlindPosition::setTravelTime(uint32_t sec) { travelTime = sec; }
 
     uint32_t BlindPosition::getTravelTime() const { return travelTime; }
 
@@ -39,7 +39,8 @@ namespace IOHC {
 
     uint64_t now = esp_timer_get_time();
     uint64_t elapsed = now - lastUpdateUs;
-    float delta = static_cast<float>(elapsed) * 100.0f / (static_cast<float>(travelTime) * 1000.0f);
+    float delta = static_cast<float>(elapsed) * 100.0f /
+                  (static_cast<float>(travelTime) * 1000000.0f);
 
     if (state == State::Opening) {
         position += delta;
