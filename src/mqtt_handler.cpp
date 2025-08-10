@@ -9,6 +9,7 @@
 #include <interact.h>
 #include <oled_display.h>
 #include <cstring>
+#include <cstdlib>
 #include <WiFi.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -90,6 +91,39 @@ static void publishButtonDiscovery(const std::string &id, const std::string &nam
     mqttClient.publish(topic.c_str(), 0, true, payload.c_str(), len);
 }
 
+void publishTravelTimeDiscovery(const std::string &id, const std::string &name,
+                                const std::string &key, uint32_t travelTime) {
+    JsonDocument doc;
+    doc["name"] = name + " travel time";
+    doc["unique_id"] = id + "_travel_time";
+    doc["command_topic"] = "iown/" + id + "/travel_time/set";
+    doc["state_topic"] = "iown/" + id + "/travel_time";
+    doc["unit_of_measurement"] = "ms";
+    doc["min"] = 0;
+    doc["max"] = 60000;
+    doc["step"] = 100;
+
+    JsonObject device = doc["device"].to<JsonObject>();
+    device["identifiers"] = id;
+    device["name"] = name;
+    device["manufacturer"] = "Somfy";
+    device["model"] = "IO Blind Bridge";
+    device["sw_version"] = "1.0.0";
+    device["serial_number"] = key;
+    device["via_device"] = GATEWAY_ID;
+
+    std::string payload;
+    size_t len = serializeJson(doc, payload);
+
+    std::string topic = mqtt_discovery_topic + "/number/" + id + "_travel_time/config";
+    mqttClient.publish(topic.c_str(), 0, true, payload.c_str(), len);
+
+    // publish current value
+    std::string stateTopic = "iown/" + id + "/travel_time";
+    std::string value = std::to_string(travelTime);
+    mqttClient.publish(stateTopic.c_str(), 0, true, value.c_str());
+}
+
 void publishDiscovery(const std::string &id, const std::string &name, const std::string &key) {
     JsonDocument doc;
     doc["name"] = name;
@@ -146,6 +180,9 @@ void removeDiscovery(const std::string &id) {
     removeButton("pair");
     removeButton("add");
     removeButton("remove");
+
+    std::string t = mqtt_discovery_topic + "/number/" + id + "_travel_time/config";
+    mqttClient.publish(t.c_str(), 0, true, "", 0);
 }
 
 void publishHeartbeat(TimerHandle_t) {
@@ -192,12 +229,15 @@ static void handleMqttConnectImpl() {
     for (const auto &r : remotes) {
         std::string id = bytesToHexString(r.node, sizeof(r.node));
         std::string key = bytesToHexString(r.key, sizeof(r.key));
-        publishDiscovery(id, r.name.empty() ? r.description : r.name, key);
+        std::string name = r.name.empty() ? r.description : r.name;
+        publishDiscovery(id, name, key);
+        publishTravelTimeDiscovery(id, name, key, r.travelTime);
         std::string t = "iown/" + id + "/set";
         mqttClient.subscribe(t.c_str(), 0);
         mqttClient.subscribe(("iown/" + id + "/pair").c_str(), 0);
         mqttClient.subscribe(("iown/" + id + "/add").c_str(), 0);
         mqttClient.subscribe(("iown/" + id + "/remove").c_str(), 0);
+        mqttClient.subscribe(("iown/" + id + "/travel_time/set").c_str(), 0);
         vTaskDelay(pdMS_TO_TICKS(200)); // throttle per device
     }
     if (!heartbeatTimer)
@@ -313,6 +353,26 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
 
     std::string topicStr(topic);
     std::string payloadStr(buf);
+
+    if (topicStr.rfind("iown/", 0) == 0 && topicStr.find("/travel_time/set", 5) != std::string::npos) {
+        std::string id = topicStr.substr(5, topicStr.find("/travel_time/set", 5) - 5);
+        std::transform(id.begin(), id.end(), id.begin(), ::tolower);
+        const auto &remotes = IOHC::iohcRemote1W::getInstance()->getRemotes();
+        auto it = std::find_if(remotes.begin(), remotes.end(), [&](const auto &r) {
+            return bytesToHexString(r.node, sizeof(r.node)) == id;
+        });
+        if (it != remotes.end()) {
+            uint32_t tt = strtoul(payloadStr.c_str(), nullptr, 10);
+            if (tt > 0) {
+                IOHC::iohcRemote1W::getInstance()->setTravelTime(it->description, tt);
+                std::string stateTopic = "iown/" + id + "/travel_time";
+                std::string val = std::to_string(tt);
+                mqttClient.publish(stateTopic.c_str(), 0, true, val.c_str());
+            }
+            mqttClient.publish(topicStr.c_str(), 0, true, "", 0);
+        }
+        return;
+    }
 
     if (topicStr.rfind("iown/", 0) == 0 && topicStr.find("/set", 5) != std::string::npos) {
         std::string id = topicStr.substr(5, topicStr.find("/set", 5) - 5);
