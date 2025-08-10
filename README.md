@@ -111,7 +111,7 @@ uploads or resets.
 Example payload for `B60D1A`:
 
 ```json
-{"name":"IZY1","command_topic":"iown/B60D1A/set","state_topic":"iown/B60D1A/state","position_topic":"iown/B60D1A/position","unique_id":"B60D1A","payload_open":"OPEN","payload_close":"CLOSE","payload_stop":"STOP","device_class":"blind","availability_topic":"iown/status"}
+{"name":"IZY1","command_topic":"iown/B60D1A/set","state_topic":"iown/B60D1A/state","position_topic":"iown/B60D1A/position","set_position_topic":"iown/B60D1A/position/set","unique_id":"B60D1A","payload_open":"OPEN","payload_close":"CLOSE","payload_stop":"STOP","device_class":"blind","availability_topic":"iown/status"}
 ```
 
 For each blind the firmware also publishes MQTT button entities that allow
@@ -134,8 +134,9 @@ Configure your MQTT broker settings in `include/user_config.h` (`mqtt_server`, `
 If you don't have an OLED display connected, comment out the `DISPLAY` definition in `include/user_config.h` to disable all display related code.
 
 Once discovery is complete you can control a blind by publishing `OPEN`, `CLOSE`
-or `STOP` to `iown/<id>/set`. The firmware listens on these topics and issues the
-corresponding command to the device.
+or `STOP` to `iown/<id>/set`, or a number between `0` and `100` to
+`iown/<id>/position/set` to move the blind to a specific position. The firmware
+listens on these topics and issues the corresponding command to the device.
 When an `OPEN` or `CLOSE` command is received, it immediately publishes the new
 state (`open` or `closed`) to `iown/<id>/state` so Home Assistant can update the
 cover status.

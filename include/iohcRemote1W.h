@@ -41,6 +41,7 @@ namespace IOHC {
         Stop,
         Vent,
         ForceOpen,
+        Position,
         Mode1, Mode2, Mode3, Mode4
     };
 
@@ -60,6 +61,7 @@ namespace IOHC {
             enum class Movement { Idle, Opening, Closing } movement{Movement::Idle};
             float lastPublishedPosition{-1.0f};
             std::string lastPublishedState{};
+            float targetPosition{-1.0f};
         };
 
         static iohcRemote1W* getInstance();

@@ -18,6 +18,7 @@ namespace IOHC {
 
         float getPosition() const;
         bool isMoving() const;
+        void setPosition(float pos);
 
     private:
         enum class State { Idle, Opening, Closing };

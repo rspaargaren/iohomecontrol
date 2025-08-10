@@ -24,6 +24,7 @@
 #include <TickerUsESP32.h>
 #include <nvs_helpers.h>
 #include <cmath>
+#include <algorithm>
 #if defined(MQTT)
 #include <mqtt_handler.h>
 #endif
@@ -47,6 +48,7 @@ namespace IOHC {
             case RemoteButton::Stop: return "STOP";
             case RemoteButton::Vent: return "VENT";
             case RemoteButton::ForceOpen: return "FORCE";
+            case RemoteButton::Position: return "POSITION";
             case RemoteButton::Pair: return "PAIR";
             case RemoteButton::Add: return "ADD";
             case RemoteButton::Remove: return "REMOVE";
@@ -321,6 +323,7 @@ namespace IOHC {
                             packet->payload.packet.msg.p0x00_14.main[1] = 0x00;
                             r.positionTracker.startOpening();
                             r.movement = remote::Movement::Opening;
+                            r.targetPosition = 100.0f;
 #if defined(MQTT)
                             {
                                 std::string id = bytesToHexString(r.node, sizeof(r.node));
@@ -336,6 +339,7 @@ namespace IOHC {
                             packet->payload.packet.msg.p0x00_14.main[1] = 0x00;
                             r.positionTracker.startClosing();
                             r.movement = remote::Movement::Closing;
+                            r.targetPosition = 0.0f;
 #if defined(MQTT)
                             {
                                 std::string id = bytesToHexString(r.node, sizeof(r.node));
@@ -351,6 +355,7 @@ namespace IOHC {
                             packet->payload.packet.msg.p0x00_14.main[1] = 0x00;
                             r.positionTracker.stop();
                             r.movement = remote::Movement::Idle;
+                            r.targetPosition = r.positionTracker.getPosition();
 #if defined(MQTT)
                             {
                                 std::string id = bytesToHexString(r.node, sizeof(r.node));
@@ -369,6 +374,45 @@ namespace IOHC {
                             packet->payload.packet.msg.p0x00_14.main[0] = 0x64;
                             packet->payload.packet.msg.p0x00_14.main[1] = 0x00;
                             break;
+                        case RemoteButton::Position: {
+                            int index = (data->size() > 2) ? 2 : 0;
+                            int percent = atoi(data->at(index).c_str());
+                            percent = std::clamp(percent, 0, 100);
+                            uint8_t val = static_cast<uint8_t>((100 - percent) * 2);
+                            packet->payload.packet.msg.p0x00_14.main[0] = val;
+                            packet->payload.packet.msg.p0x00_14.main[1] = 0x00;
+                            float current = r.positionTracker.getPosition();
+                            if (percent > current + 0.5f) {
+                                r.positionTracker.startOpening();
+                                r.movement = remote::Movement::Opening;
+                                #if defined(MQTT)
+                                {
+                                    std::string id = bytesToHexString(r.node, sizeof(r.node));
+                                    publishCoverState(id, "OPENING");
+                                    publishCoverPosition(id, r.positionTracker.getPosition());
+                                    r.lastPublishedState = "OPENING";
+                                    r.lastPublishedPosition = r.positionTracker.getPosition();
+                                }
+                                #endif
+                            } else if (percent < current - 0.5f) {
+                                r.positionTracker.startClosing();
+                                r.movement = remote::Movement::Closing;
+                                #if defined(MQTT)
+                                {
+                                    std::string id = bytesToHexString(r.node, sizeof(r.node));
+                                    publishCoverState(id, "CLOSING");
+                                    publishCoverPosition(id, r.positionTracker.getPosition());
+                                    r.lastPublishedState = "CLOSING";
+                                    r.lastPublishedPosition = r.positionTracker.getPosition();
+                                }
+                                #endif
+                            } else {
+                                r.positionTracker.stop();
+                                r.movement = remote::Movement::Idle;
+                            }
+                            r.targetPosition = percent;
+                            break;
+                        }
                         case RemoteButton::Mode1:{
                             /* fast = 4x13 Increment fp2 - slow = 0x01 4x13 followed 0x00 4x14 Main 0xD2
                             Every 9 : 10:31:38.367 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  DATA(15)  02db000900000323e7ceefedf9ce81        SEQ 23e7 MAC ceefedf9ce81  Org 2 Acei DB Main 9 fp1 0 fp2 0  Acei 6 3 1 1  Type All
@@ -757,6 +801,7 @@ const std::vector<iohcRemote1W::remote>& iohcRemote1W::getRemotes() const {
             publishDiscovery(id, r.name, key);
             publishTravelTimeDiscovery(id, r.name, key, r.travelTime);
             mqttClient.subscribe(("iown/" + id + "/set").c_str(), 0);
+            mqttClient.subscribe(("iown/" + id + "/position/set").c_str(), 0);
             mqttClient.subscribe(("iown/" + id + "/pair").c_str(), 0);
             mqttClient.subscribe(("iown/" + id + "/add").c_str(), 0);
             mqttClient.subscribe(("iown/" + id + "/remove").c_str(), 0);
@@ -783,6 +828,7 @@ const std::vector<iohcRemote1W::remote>& iohcRemote1W::getRemotes() const {
         if (mqttClient.connected()) {
             removeDiscovery(id);
             mqttClient.unsubscribe(("iown/" + id + "/set").c_str());
+            mqttClient.unsubscribe(("iown/" + id + "/position/set").c_str());
             mqttClient.unsubscribe(("iown/" + id + "/pair").c_str());
             mqttClient.unsubscribe(("iown/" + id + "/add").c_str());
             mqttClient.unsubscribe(("iown/" + id + "/remove").c_str());
@@ -836,6 +882,23 @@ const std::vector<iohcRemote1W::remote>& iohcRemote1W::getRemotes() const {
 
             float pos = r.positionTracker.getPosition();
             bool moving = r.positionTracker.isMoving();
+
+            if (r.targetPosition >= 0.0f) {
+                if (r.movement == remote::Movement::Opening && pos >= r.targetPosition) {
+                    pos = r.targetPosition;
+                    r.positionTracker.setPosition(pos);
+                    r.positionTracker.stop();
+                    moving = false;
+                } else if (r.movement == remote::Movement::Closing && pos <= r.targetPosition) {
+                    pos = r.targetPosition;
+                    r.positionTracker.setPosition(pos);
+                    r.positionTracker.stop();
+                    moving = false;
+                }
+                if (!moving) {
+                    r.targetPosition = -1.0f;
+                }
+            }
 
             if (moving) {
                 Serial.printf("%s position: %.0f%%\n", r.name.c_str(), pos);

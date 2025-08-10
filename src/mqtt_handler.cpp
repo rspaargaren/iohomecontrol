@@ -131,6 +131,7 @@ void publishDiscovery(const std::string &id, const std::string &name, const std:
     doc["command_topic"] = "iown/" + id + "/set";
     doc["state_topic"] = "iown/" + id + "/state";
     doc["position_topic"] = "iown/" + id + "/position";
+    doc["set_position_topic"] = "iown/" + id + "/position/set";
     doc["availability_topic"] = AVAILABILITY_TOPIC;
     doc["payload_available"] = "online";
     doc["payload_not_available"] = "offline";
@@ -369,6 +370,29 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
                 std::string val = std::to_string(tt);
                 mqttClient.publish(stateTopic.c_str(), 0, true, val.c_str());
             }
+            mqttClient.publish(topicStr.c_str(), 0, true, "", 0);
+        }
+        return;
+    }
+
+    if (topicStr.rfind("iown/", 0) == 0 && topicStr.find("/position/set", 5) != std::string::npos) {
+        std::string id = topicStr.substr(5, topicStr.find("/position/set", 5) - 5);
+        std::transform(id.begin(), id.end(), id.begin(), ::tolower);
+        const auto &remotes = IOHC::iohcRemote1W::getInstance()->getRemotes();
+        auto it = std::find_if(remotes.begin(), remotes.end(), [&](const auto &r) {
+            return bytesToHexString(r.node, sizeof(r.node)) == id;
+        });
+        if (it != remotes.end()) {
+            Tokens t;
+            t.push_back(payloadStr);
+            t.push_back(it->description);
+            IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Position, &t);
+            std::string stateTopic = "iown/" + id + "/state";
+            int val = atoi(payloadStr.c_str());
+            const char *state = (val >= 99) ? "OPEN" : (val <= 1 ? "CLOSE" : "STOP");
+            mqttClient.publish(stateTopic.c_str(), 0, true, state);
+            std::string posTopic = "iown/" + id + "/position";
+            mqttClient.publish(posTopic.c_str(), 0, true, payloadStr.c_str());
             mqttClient.publish(topicStr.c_str(), 0, true, "", 0);
         }
         return;

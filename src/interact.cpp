@@ -109,6 +109,9 @@ void createCommands() {
     Cmd::addHandler((char *) "stop", (char *) "1W stop device", [](Tokens *cmd)-> void {
         IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Stop, cmd);
     });
+    Cmd::addHandler((char *) "position", (char *) "1W set position 0-100", [](Tokens *cmd)-> void {
+        IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Position, cmd);
+    });
     Cmd::addHandler((char *) "vent", (char *) "1W vent device", [](Tokens *cmd)-> void {
         IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Vent, cmd);
     });
