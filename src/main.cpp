@@ -14,6 +14,7 @@
    limitations under the License.
  */
 
+#include "esp_log.h"
 #include <board-config.h>
 #include <user_config.h>
 
@@ -33,6 +34,9 @@
 #include <mqtt_handler.h>
 #endif
 #include <wifi_helper.h>
+#include <nvs_helpers.h>
+#include "log_buffer.h"
+#include <stdarg.h>
 
 #if defined(WEBSERVER)
 #include <web_server_handler.h>
@@ -60,6 +64,7 @@ bool msgRcvd(IOHC::iohcPacket *iohc);
 bool msgArchive(IOHC::iohcPacket *iohc);
 
 
+
 uint8_t keyCap[16] = {};
 //uint8_t source_originator[3] = {0};
 
@@ -81,8 +86,23 @@ uint32_t frequencies[] = FREQS2SCAN;
 
 using namespace IOHC;
 
+// Custom log vprintf that also stores to buffer
+int log_to_buffer_and_serial(const char *format, va_list args) {
+    char buf[256];
+    vsnprintf(buf, sizeof(buf), format, args); // Format naar buffer
+    addLogMessage(String(buf));                // In je logbuffer
+    return Serial.printf("%s", buf);           // Ook naar Serial
+}
+
 void setup() {
+
     Serial.begin(115200);       //Start serial connection for debug and manual input
+    esp_log_set_vprintf(log_to_buffer_and_serial);
+    esp_log_level_set("*", ESP_LOG_DEBUG);    // Or VERBOSE for ESP_LOGV
+    ESP_LOGD("SETUP", "START OF SETUP, LOGD.\n");
+    ESP_LOGI("DEBUGTEST", "Informatie log zichtbaar");
+    ESP_LOGW("DEBUGTEST", "Waarschuwing zichtbaar");
+    ESP_LOGE("DEBUGTEST", "Fout zichtbaar");
 
 #if defined(SSD1306_DISPLAY)
     initDisplay(); // Init OLED display
@@ -101,12 +121,16 @@ void setup() {
     }
     Serial.println("LittleFS mounted successfully");
 #endif
+    nvs_init();
 
     // Initialize network services
     initWifi();
 #if defined(MQTT)
     initMqtt();
 #endif
+    // Load 1W device definitions before starting the web server so
+    // that /api/devices can immediately return the configured remotes.
+    remote1W = IOHC::iohcRemote1W::getInstance();
 #if defined(WEBSERVER)
     setupWebServer();
 #endif
@@ -117,7 +141,6 @@ void setup() {
 
     sysTable = IOHC::iohcSystemTable::getInstance();
 
-    remote1W = IOHC::iohcRemote1W::getInstance();
     cozyDevice2W = IOHC::iohcCozyDevice2W::getInstance();
     otherDevice2W = IOHC::iohcOtherDevice2W::getInstance();
     remoteMap = IOHC::iohcRemoteMap::getInstance();
@@ -596,7 +619,7 @@ bool publishMsg(IOHC::iohcPacket *iohc) {
     size_t messageSize = serializeJson(doc, message);
 #if defined(MQTT)
     mqttClient.publish("iown/Frame", 1, false, message.c_str(), messageSize);
-    mqttClient.publish("homeassistant/sensor/iohc_frame/state", 0, false, message.c_str(), messageSize);
+    mqttClient.publish((mqtt_discovery_topic + "/sensor/iohc_frame/state").c_str(), 0, false, message.c_str(), messageSize);
 #endif
     return false;
 }

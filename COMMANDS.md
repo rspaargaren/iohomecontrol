@@ -21,6 +21,9 @@ VARIOUS 1W (Use the description name in 1W.json as argument)
 - **pair**      _1W put device in pair mode_
 - **add**       _1W add controller to device_
 - **remove**    _1W remove controller from device_
+
+- **pair** and **remove** update the `paired` status in `1W.json`. The field is automatically created with value `false` if it is missing when the file is loaded.
+
 - **open**      _1W open device_
 - **close**     _1W close device_
 - **stop**      _1W stop device_
@@ -30,7 +33,19 @@ VARIOUS 1W (Use the description name in 1W.json as argument)
 - **mode2**     _1W Mode2_
 - **mode3**     _1W Mode3_
 - **mode4**     _1W Mode4_
+- **new1W**    _Add new 1W device_
+- **del1W**    _Remove 1W device_
+- **edit1W**   _Edit 1W device name_
+- **time1W**   _Set 1W device travel time_
+- **list1W**   _List 1W devices_
 
 COMMON
 - **verbose**   _Toggle verbose output on packets list_
 - **help**      _This command_
+- **ls**        _List filesystem_
+- **cat**       _Print file content_
+- **rm**        _Remove file_
+- **mqttIp**    _Set MQTT server IP_
+- **mqttUser**  _Set MQTT username_
+- **mqttPass**  _Set MQTT password_
+- **mqttDiscovery** _Set MQTT discovery topic_

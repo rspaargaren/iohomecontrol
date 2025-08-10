@@ -90,6 +90,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 editButton.textContent = 'edit';
                 editButton.classList.add('btn', 'edit');
                 editButton.onclick = () =>
+
                     openPopup('Edit Device', "Adjust the name:", device.id, {
                         showInput: true,
                         defaultValue: device.name,
@@ -101,6 +102,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             }
                         }
                     });
+
                 listItem.appendChild(upButton);
                 listItem.appendChild(stopButton);
                 listItem.appendChild(downButton);
@@ -207,7 +209,9 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     //dark mode toggle
 
+
     const toggleBtn = document.getElementById('toggle-theme');
+
     const body = document.body;
 
     toggleBtn.addEventListener('click', () => {
@@ -222,6 +226,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // popup open
+
     function openPopup(title, text, data, options = {}) {
         document.getElementById('popup-title').textContent = title;
         document.getElementById('popup-text').textContent = text;
@@ -245,18 +250,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
         };
 
+
     // popup close
     function closePopup() {
         document.getElementById('popup').classList.remove('open');
     }
+
     window.closePopup = closePopup;
 
     // Theme persistence on reload and open popup
+
     window.addEventListener('DOMContentLoaded', () => {
       const savedTheme = localStorage.getItem('theme');
       if (savedTheme === 'dark') {
         body.classList.add('dark-mode');
       }
+
       const addpopup = document.getElementById('add-popup');
       addpopup.addEventListener('click', () => {
          openPopup('Add Device', "new device", null, {
@@ -269,6 +278,7 @@ document.addEventListener('DOMContentLoaded', function() {
            }
          });
       });
+
     });
 
     setInterval(fetchLogs, 2000);

@@ -218,7 +218,9 @@ footer {
     margin-bottom: 10px;
 }
 #popup-text {
+
   /*height: 100px;*/
+
   padding-bottom: 15px;
 }
 #popup.open {

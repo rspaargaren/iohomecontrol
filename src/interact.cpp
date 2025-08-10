@@ -21,6 +21,7 @@
 #include <wifi_helper.h>
 #include <oled_display.h>
 #include <iohcCryptoHelpers.h>
+#include <cstdlib>
 #if defined(MQTT)
 #include <mqtt_handler.h>
 #endif
@@ -125,6 +126,45 @@ void createCommands() {
     Cmd::addHandler((char *) "mode4", (char *) "1W Mode4", [](Tokens *cmd)-> void {
         IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Mode4, cmd);
     });
+    Cmd::addHandler((char *) "new1W", (char *) "Add new 1W device", [](Tokens *cmd)-> void {
+        if (cmd->size() < 2) {
+            Serial.println("Usage: new1W <name>");
+            return;
+        }
+        IOHC::iohcRemote1W::getInstance()->addRemote(cmd->at(1));
+    });
+    Cmd::addHandler((char *) "del1W", (char *) "Remove 1W device", [](Tokens *cmd)-> void {
+        if (cmd->size() < 2) {
+            Serial.println("Usage: del1W <description>");
+            return;
+        }
+        IOHC::iohcRemote1W::getInstance()->removeRemote(cmd->at(1));
+    });
+    Cmd::addHandler((char *) "edit1W", (char *) "Edit 1W device name", [](Tokens *cmd)-> void {
+        if (cmd->size() < 3) {
+            Serial.println("Usage: edit1W <description> <name>");
+            return;
+        }
+        IOHC::iohcRemote1W::getInstance()->renameRemote(cmd->at(1), cmd->at(2));
+    });
+    Cmd::addHandler((char *) "time1W", (char *) "Set 1W device travel time", [](Tokens *cmd)-> void {
+        if (cmd->size() < 3) {
+            Serial.println("Usage: time1W <description> <ms>");
+            return;
+        }
+        uint32_t t = strtoul(cmd->at(2).c_str(), nullptr, 10);
+        IOHC::iohcRemote1W::getInstance()->setTravelTime(cmd->at(1), t);
+    });
+    Cmd::addHandler((char *) "list1W", (char *) "List 1W devices", [](Tokens *cmd)-> void {
+        const auto &remotes = IOHC::iohcRemote1W::getInstance()->getRemotes();
+        for (const auto &r : remotes) {
+            Serial.printf("%s: %s %u %s\n",
+                          r.description.c_str(),
+                          r.name.c_str(),
+                          r.travelTime,
+                          r.paired ? "paired" : "unpaired");
+        }
+    });
     // Other 2W
     Cmd::addHandler((char *) "discovery", (char *) "Send discovery on air", [](Tokens *cmd)-> void {
         IOHC::iohcOtherDevice2W::getInstance()->cmd(IOHC::Other2WButton::discovery, nullptr);
@@ -169,6 +209,47 @@ void createCommands() {
     Cmd::addHandler((char *) "ls", (char *) "List filesystem", [](Tokens *cmd)-> void { listFS(); });
     Cmd::addHandler((char *) "cat", (char *) "Print file content", [](Tokens *cmd)-> void { cat(cmd->at(1).c_str()); });
     Cmd::addHandler((char *) "rm", (char *) "Remove file", [](Tokens *cmd)-> void { rm(cmd->at(1).c_str()); });
+#if defined(MQTT)
+    Cmd::addHandler((char *) "mqttIp", (char *) "Set MQTT server IP", [](Tokens *cmd)-> void {
+        if (cmd->size() < 2) {
+            Serial.println("Usage: mqttIp <ip>");
+            return;
+        }
+        mqtt_server = cmd->at(1);
+        mqttClient.disconnect();
+        mqttClient.setServer(mqtt_server.c_str(), 1883);
+        connectToMqtt();
+    });
+    Cmd::addHandler((char *) "mqttUser", (char *) "Set MQTT username", [](Tokens *cmd)-> void {
+        if (cmd->size() < 2) {
+            Serial.println("Usage: mqttUser <username>");
+            return;
+        }
+        mqtt_user = cmd->at(1);
+        mqttClient.disconnect();
+        mqttClient.setCredentials(mqtt_user.c_str(), mqtt_password.c_str());
+        connectToMqtt();
+    });
+    Cmd::addHandler((char *) "mqttPass", (char *) "Set MQTT password", [](Tokens *cmd)-> void {
+        if (cmd->size() < 2) {
+            Serial.println("Usage: mqttPass <password>");
+            return;
+        }
+        mqtt_password = cmd->at(1);
+        mqttClient.disconnect();
+        mqttClient.setCredentials(mqtt_user.c_str(), mqtt_password.c_str());
+        connectToMqtt();
+    });
+    Cmd::addHandler((char *) "mqttDiscovery", (char *) "Set MQTT discovery topic", [](Tokens *cmd)-> void {
+        if (cmd->size() < 2) {
+            Serial.println("Usage: mqttDiscovery <topic>");
+            return;
+        }
+        mqtt_discovery_topic = cmd->at(1);
+        if (mqttStatus == ConnState::Connected)
+            handleMqttConnect();
+    });
+#endif
 /*
     Cmd::addHandler((char *) "list2W", (char *) "List received packets", [](Tokens *cmd)-> void {
         for (uint8_t i = 0; i < nextPacket; i++) msgRcvd(radioPackets[i]);
