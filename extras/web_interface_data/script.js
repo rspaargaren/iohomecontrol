@@ -270,10 +270,24 @@ document.addEventListener('DOMContentLoaded', function() {
       addpopup.addEventListener('click', () => {
          openPopup('Add Device', "new device", null, {
            showInput: true,
-           onConfirm: (newName) => {
+           onConfirm: async (newName) => {
              if (newName.trim()) {
-               console.log('New Device:', newName);
-               // Here you can make an API call or add the device to your list
+               try {
+                 const response = await fetch('/api/command', {
+                   method: 'POST',
+                   headers: { 'Content-Type': 'application/json' },
+                   body: JSON.stringify({ command: `new1W ${newName}` })
+                 });
+                 const result = await response.json();
+                 if (result.success) {
+                   logStatus(result.message || 'Device added.');
+                   fetchAndDisplayDevices();
+                 } else {
+                   logStatus(result.message || 'Failed to add device.', true);
+                 }
+               } catch (e) {
+                 logStatus(`Error adding device: ${e.message}`, true);
+               }
              }
            }
          });

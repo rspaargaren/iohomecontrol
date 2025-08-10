@@ -21,6 +21,7 @@ const char AVAILABILITY_TOPIC[] = "iown/status";
 
 void initMqtt() {
     if (mqtt_server.empty()) {
+
         if (!nvs_read_string(NVS_KEY_MQTT_SERVER, mqtt_server)) {
             Serial.println("MQTT server not set");
         }
@@ -47,6 +48,7 @@ void initMqtt() {
         }
     } else {
         nvs_write_string(NVS_KEY_MQTT_DISCOVERY, mqtt_discovery_topic);
+
     }
 
     mqttClient.setWill(AVAILABILITY_TOPIC, 0, true, "offline");

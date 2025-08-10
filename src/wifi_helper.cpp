@@ -66,10 +66,10 @@ void connectToWifi(TimerHandle_t /*timer*/) {
         wifiStatus = ConnState::Connected;
         updateDisplayStatus();
 
-        if (!MDNS.begin("mioopenio")) {
+        if (!MDNS.begin("miopenio")) {
             Serial.println("Error setting up MDNS responder!");
         } else {
-            Serial.println("MDNS responder started at http://mioopenio.local");
+            Serial.println("MDNS responder started at http://miopenio.local");
         }
 #if defined(MQTT)
         // Establish MQTT connection if needed and MQTT client is initialized
