@@ -5,6 +5,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const sendCommandButton = document.getElementById('send-command-button');
     const statusMessagesDiv = document.getElementById('status-messages');
     const MAX_LOGS = 20; // maximaal aantal logs
+    const mqttUserInput = document.getElementById('mqtt-user');
+    const mqttServerInput = document.getElementById('mqtt-server');
+    const mqttPasswordInput = document.getElementById('mqtt-password');
+    const mqttDiscoveryInput = document.getElementById('mqtt-discovery');
+    const mqttUpdateButton = document.getElementById('mqtt-update');
 
     // Function to add a message to the status/log
     function logStatus(message, isError = false) {
@@ -23,6 +28,42 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     logStatus('System started');
     logStatus('Loading devices...');
+
+    async function loadMqttConfig() {
+        try {
+            const resp = await fetch('/api/mqtt');
+            if (!resp.ok) return;
+            const cfg = await resp.json();
+            mqttUserInput.value = cfg.user || '';
+            mqttServerInput.value = cfg.server || '';
+            mqttPasswordInput.value = cfg.password || '';
+            mqttDiscoveryInput.value = cfg.discovery || '';
+        } catch (e) {
+            console.error('Error fetching MQTT config', e);
+        }
+    }
+
+    async function updateMqttConfig() {
+        const payload = {
+            user: mqttUserInput.value,
+            server: mqttServerInput.value,
+            password: mqttPasswordInput.value,
+            discovery: mqttDiscoveryInput.value
+        };
+        try {
+            const resp = await fetch('/api/mqtt', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await resp.json();
+            logStatus(result.message || 'MQTT settings updated.');
+        } catch (e) {
+            console.error('Error updating MQTT config', e);
+            logStatus('Error updating MQTT config', true);
+        }
+    }
+
     // Function to fetch devices and populate the lists
     async function fetchAndDisplayDevices() {
         try {
@@ -199,6 +240,9 @@ document.addEventListener('DOMContentLoaded', function() {
     if (sendCommandButton) {
         sendCommandButton.addEventListener('click', sendCommand);
     }
+    if (mqttUpdateButton) {
+        mqttUpdateButton.addEventListener('click', updateMqttConfig);
+    }
 
    async function fetchLogs() {
         try {
@@ -342,6 +386,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     setInterval(fetchLogs, 2000);
     fetchLogs();
+    loadMqttConfig();
     // Initial fetch of devices
     fetchAndDisplayDevices();
 });
