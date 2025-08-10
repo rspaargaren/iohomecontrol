@@ -18,6 +18,7 @@
 #define IOHC_USER_H
 
 #include <board-config.h>
+#include <string>
 
 // WiFi credentials are handled via WiFiManager
 #define WIFI_SSID ""
@@ -26,12 +27,13 @@ inline const char *wifi_ssid = "";
 inline const char *wifi_passwd = "";
 
 #define MQTT
-#define MQTT_SERVER "XX"
-#define MQTT_USER "mosquitto"
-#define MQTT_PASSWD "XX"
-//inline const char *mqtt_server = "192.168.1.40";
-//inline const char *mqtt_user = "user";
-//inline const char *mqtt_password = "passwd";
+
+// Default MQTT configuration. These values can be changed at runtime through
+// the interactive command interface. Leave empty to rely on stored values.
+inline std::string mqtt_server = "";
+inline std::string mqtt_user = "mosquitto";
+inline std::string mqtt_password = "";
+inline std::string mqtt_discovery_topic = "homeassistant";
 
 // Comment out the next line if no display is connected
 #define SSD1306_DISPLAY

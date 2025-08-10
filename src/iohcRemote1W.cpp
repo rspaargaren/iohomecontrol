@@ -19,10 +19,26 @@
 #include <ArduinoJson.h>
 
 #include <iohcCryptoHelpers.h>
+#include <esp_system.h>
 #include <oled_display.h>
+#include <TickerUsESP32.h>
+#include <nvs_helpers.h>
+#include <cmath>
+#if defined(MQTT)
+#include <mqtt_handler.h>
+#endif
 
 namespace IOHC {
     iohcRemote1W* iohcRemote1W::_iohcRemote1W = nullptr;
+    static TimersUS::TickerUsESP32 positionTicker;
+    static constexpr uint32_t DEFAULT_TRAVEL_TIME_MS = 10000;
+
+    static void positionTickerCallback() {
+        iohcRemote1W *inst = iohcRemote1W::getInstance();
+        if (inst) {
+            inst->updatePositions();
+        }
+    }
 
     static const char *remoteButtonToString(RemoteButton cmd) {
         switch (cmd) {
@@ -48,6 +64,7 @@ namespace IOHC {
         if (!_iohcRemote1W) {
             _iohcRemote1W = new iohcRemote1W();
             _iohcRemote1W->load();
+            positionTicker.attach_ms(1000, positionTickerCallback);
         }
         return _iohcRemote1W;
     }
@@ -69,7 +86,7 @@ namespace IOHC {
         packet->payload.packet.header.target[2] = bcast & 0x00ff;
 
         packet->frequency = CHANNEL2;
-        packet->repeatTime = 40;
+        packet->repeatTime = 40; //40ms
         packet->repeat = 4;
         packet->lock = false;
         
@@ -93,6 +110,7 @@ namespace IOHC {
             found = false;
             // return;
         }
+        r.positionTracker.update();
 /*
         int value = 0;
         try {
@@ -151,6 +169,7 @@ namespace IOHC {
                     packet->payload.packet.msg.p0x2e.sequence[0] = r.sequence >> 8;
                     packet->payload.packet.msg.p0x2e.sequence[1] = r.sequence & 0x00ff;
                     r.sequence += 1;
+                    nvs_write_sequence(r.node, r.sequence);
                     // hmac
                     frame = std::vector(&packet->payload.packet.header.cmd, &packet->payload.packet.header.cmd + 2);
                     uint8_t hmac[16];
@@ -167,6 +186,12 @@ namespace IOHC {
 //                }
                 _radioInstance->send(packets2send);
                 display1WAction(r.node, remoteButtonToString(cmd), "TX", r.name.c_str());
+
+                Serial.printf("%s position: %.0f%%\n", r.name.c_str(), r.positionTracker.getPosition());
+#if defined(SSD1306_DISPLAY)
+                display1WPosition(r.node, r.positionTracker.getPosition(), r.name.c_str());
+#endif
+
                 r.paired = true;
                 break;
             }
@@ -197,6 +222,7 @@ namespace IOHC {
                     packet->payload.packet.msg.p0x2e.sequence[0] = r.sequence >> 8;
                     packet->payload.packet.msg.p0x2e.sequence[1] = r.sequence & 0x00ff;
                     r.sequence += 1;
+                    nvs_write_sequence(r.node, r.sequence);
                     // hmac
                     uint8_t hmac[16];
                     frame = std::vector(&packet->payload.packet.header.cmd, &packet->payload.packet.header.cmd + 2);
@@ -212,6 +238,12 @@ namespace IOHC {
                 _radioInstance->send(packets2send);
                 //printf("\n");
                 display1WAction(r.node, remoteButtonToString(cmd), "TX", r.name.c_str());
+
+                Serial.printf("%s position: %.0f%%\n", r.name.c_str(), r.positionTracker.getPosition());
+#if defined(SSD1306_DISPLAY)
+                display1WPosition(r.node, r.positionTracker.getPosition(), r.name.c_str());
+#endif
+
                 r.paired = false;
                 break;
             }
@@ -248,6 +280,7 @@ namespace IOHC {
                     packet->payload.packet.msg.p0x30.sequence[0] = r.sequence >> 8;
                     packet->payload.packet.msg.p0x30.sequence[1] = r.sequence & 0x00ff;
                     r.sequence += 1;
+                    nvs_write_sequence(r.node, r.sequence);
 
                     packet->buffer_length = packet->payload.packet.header.CtrlByte1.asStruct.MsgLen + 1;
 
@@ -256,6 +289,10 @@ namespace IOHC {
 //                }
                 _radioInstance->send(packets2send);
                 display1WAction(r.node, remoteButtonToString(cmd), "TX", r.name.c_str());
+                Serial.printf("%s position: %.0f%%\n", r.name.c_str(), r.positionTracker.getPosition());
+#if defined(SSD1306_DISPLAY)
+                display1WPosition(r.node, r.positionTracker.getPosition(), r.name.c_str());
+#endif
                 break;
             }
            default: {
@@ -282,14 +319,47 @@ namespace IOHC {
                         case RemoteButton::Open:
                             packet->payload.packet.msg.p0x00_14.main[0] = 0x00;
                             packet->payload.packet.msg.p0x00_14.main[1] = 0x00;
+                            r.positionTracker.startOpening();
+                            r.movement = remote::Movement::Opening;
+#if defined(MQTT)
+                            {
+                                std::string id = bytesToHexString(r.node, sizeof(r.node));
+                                publishCoverState(id, "OPENING");
+                                publishCoverPosition(id, r.positionTracker.getPosition());
+                                r.lastPublishedState = "OPENING";
+                                r.lastPublishedPosition = r.positionTracker.getPosition();
+                            }
+#endif
                             break;
                         case RemoteButton::Close:
                             packet->payload.packet.msg.p0x00_14.main[0] = 0xc8;
                             packet->payload.packet.msg.p0x00_14.main[1] = 0x00;
+                            r.positionTracker.startClosing();
+                            r.movement = remote::Movement::Closing;
+#if defined(MQTT)
+                            {
+                                std::string id = bytesToHexString(r.node, sizeof(r.node));
+                                publishCoverState(id, "CLOSING");
+                                publishCoverPosition(id, r.positionTracker.getPosition());
+                                r.lastPublishedState = "CLOSING";
+                                r.lastPublishedPosition = r.positionTracker.getPosition();
+                            }
+#endif
                             break;
                         case RemoteButton::Stop:
                             packet->payload.packet.msg.p0x00_14.main[0] = 0xd2;
                             packet->payload.packet.msg.p0x00_14.main[1] = 0x00;
+                            r.positionTracker.stop();
+                            r.movement = remote::Movement::Idle;
+#if defined(MQTT)
+                            {
+                                std::string id = bytesToHexString(r.node, sizeof(r.node));
+                                publishCoverState(id, "STOP");
+                                publishCoverPosition(id, r.positionTracker.getPosition());
+                                r.lastPublishedState = "STOP";
+                                r.lastPublishedPosition = r.positionTracker.getPosition();
+                            }
+#endif
                             break;
                         case RemoteButton::Vent:
                             packet->payload.packet.msg.p0x00_14.main[0] = 0xd8;
@@ -469,6 +539,7 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
                                         }
                     */
                     r.sequence += 1;
+                    nvs_write_sequence(r.node, r.sequence);
                     // hmac
                     // uint8_t hmac[16];
                     // frame = std::vector(&packet->payload.packet.header.cmd, &packet->payload.packet.header.cmd + 7 + toAdd);
@@ -484,6 +555,10 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
                 }
                 _radioInstance->send(packets2send);
                 display1WAction(r.node, remoteButtonToString(cmd), "TX", r.name.c_str());
+                Serial.printf("%s position: %.0f%%\n", r.name.c_str(), r.positionTracker.getPosition());
+#if defined(SSD1306_DISPLAY)
+                display1WPosition(r.node, r.positionTracker.getPosition(), r.name.c_str());
+#endif
                 break;
 //            }
         }
@@ -513,6 +588,7 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
         f.close();
 
         // Iterate through the JSON object
+        bool updateFile = false;
         for (JsonPair kv: doc.as<JsonObject>()) {
             remote r;
             // hexStringToBytes(kv.key().c_str(), _node);
@@ -525,8 +601,18 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
 
             uint8_t btmp[2];
             hexStringToBytes(jobj["sequence"].as<const char *>(), btmp);
-            // _sequence = (btmp[0] << 8) + btmp[1];
-            r.sequence = (btmp[0] << 8) + btmp[1];
+            uint16_t file_seq = (btmp[0] << 8) + btmp[1];
+            r.sequence = file_seq;
+
+            uint16_t nvs_seq;
+            if (nvs_read_sequence(r.node, &nvs_seq)) {
+                if (nvs_seq > r.sequence) {
+                    r.sequence = nvs_seq;
+                    updateFile = true;
+                }
+            }
+            // Persist the highest value back to NVS
+            nvs_write_sequence(r.node, r.sequence);
             JsonArray jarr = jobj["type"];
             // Réservez de l'espace dans le vecteur pour éviter les allocations inutiles
 
@@ -546,15 +632,37 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
             // _manufacturer = jobj["manufacturer_id"].as<uint8_t>();
             r.manufacturer = jobj["manufacturer_id"].as<uint8_t>();
             r.description = jobj["description"].as<std::string>();
-            r.name = jobj["name"].as<std::string>();
-            if (jobj.containsKey("paired"))
+
+
+            if (jobj["name"].is<std::string>()) {
+                r.name = jobj["name"].as<std::string>();
+            } else {
+                r.name = r.description;
+                updateFile = true;
+            }
+
+            if (jobj["travel_time"].is<uint32_t>()) {
+                r.travelTime = jobj["travel_time"].as<uint32_t>();
+            } else {
+                r.travelTime = DEFAULT_TRAVEL_TIME_MS;
+                updateFile = true;
+            }
+            if (jobj["paired"].is<bool>()) {
                 r.paired = jobj["paired"].as<bool>();
-            else
+            } else {
                 r.paired = false;
+                updateFile = true;
+            }
+            r.positionTracker.setTravelTime(r.travelTime);
+
             remotes.push_back(r);
         }
 
         Serial.printf("Loaded %d x 1W remotes\n", remotes.size()); // _type.size());
+        // Ensure JSON reflects the latest sequence values and persist defaults
+        if (updateFile) {
+            this->save();
+        }
         // _sequence = 0x1402;    // DEBUG
         return true;
     }
@@ -587,6 +695,9 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
             jobj["manufacturer_id"] = r.manufacturer;
             jobj["description"] = r.description;
             jobj["name"] = r.name;
+
+            jobj["travel_time"] = r.travelTime;
+
             jobj["paired"] = r.paired;
         }
         serializeJson(doc, f);
@@ -595,7 +706,174 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
         return true;
     }
 
-    const std::vector<iohcRemote1W::remote>& iohcRemote1W::getRemotes() const {
-        return remotes;
+const std::vector<iohcRemote1W::remote>& iohcRemote1W::getRemotes() const {
+    return remotes;
+}
+
+    bool iohcRemote1W::addRemote(const std::string &name) {
+        remote r{};
+
+        // Generate unique address
+        bool unique = false;
+        while (!unique) {
+            for (uint8_t i = 0; i < sizeof(r.node); i++)
+                r.node[i] = esp_random() & 0xff;
+            unique = std::none_of(remotes.begin(), remotes.end(), [&](const remote &e){
+                return memcmp(e.node, r.node, sizeof(r.node)) == 0;
+            });
+        }
+
+        // Generate random key
+        for (uint8_t &b : r.key)
+            b = esp_random() & 0xff;
+
+        r.sequence = 1;
+        r.type = {0, 0};
+        r.manufacturer = 2;
+        r.name = name;
+        r.travelTime = DEFAULT_TRAVEL_TIME_MS;
+        r.paired = false;
+
+        // Generate unique description
+        const char letters[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        std::string desc;
+        do {
+            desc.clear();
+            for (int i = 0; i < 4; ++i)
+                desc.push_back(letters[esp_random() % 26]);
+        } while (std::any_of(remotes.begin(), remotes.end(), [&](const remote &e){
+            return e.description == desc;
+        }));
+        r.description = desc;
+
+        r.positionTracker.setTravelTime(r.travelTime);
+        remotes.push_back(r);
+        nvs_write_sequence(r.node, r.sequence);
+        save();
+#if defined(MQTT)
+        if (mqttClient.connected()) {
+            std::string id = bytesToHexString(r.node, sizeof(r.node));
+            std::string key = bytesToHexString(r.key, sizeof(r.key));
+            publishDiscovery(id, r.name, key);
+            mqttClient.subscribe(("iown/" + id + "/set").c_str(), 0);
+            mqttClient.subscribe(("iown/" + id + "/pair").c_str(), 0);
+            mqttClient.subscribe(("iown/" + id + "/add").c_str(), 0);
+            mqttClient.subscribe(("iown/" + id + "/remove").c_str(), 0);
+        }
+#endif
+        return true;
+    }
+
+    bool iohcRemote1W::removeRemote(const std::string &description) {
+        auto it = std::find_if(remotes.begin(), remotes.end(), [&](const remote &e) {
+            return e.description == description;
+        });
+        if (it == remotes.end()) {
+            Serial.printf("Device %s not found\n", description.c_str());
+            return false;
+        }
+        if (it->paired) {
+            Serial.println("WARNING: Device is paired. Unpair before removing.");
+            return false;
+        }
+        std::string id = bytesToHexString(it->node, sizeof(it->node));
+#if defined(MQTT)
+        if (mqttClient.connected()) {
+            removeDiscovery(id);
+            mqttClient.unsubscribe(("iown/" + id + "/set").c_str());
+            mqttClient.unsubscribe(("iown/" + id + "/pair").c_str());
+            mqttClient.unsubscribe(("iown/" + id + "/add").c_str());
+            mqttClient.unsubscribe(("iown/" + id + "/remove").c_str());
+        }
+#endif
+        remotes.erase(it);
+        save();
+        return true;
+    }
+
+    bool iohcRemote1W::renameRemote(const std::string &description, const std::string &name) {
+        auto it = std::find_if(remotes.begin(), remotes.end(), [&](const remote &e) {
+            return e.description == description;
+        });
+        if (it == remotes.end()) {
+            Serial.printf("Device %s not found\n", description.c_str());
+            return false;
+        }
+        it->name = name;
+        save();
+#if defined(MQTT)
+        if (mqttClient.connected()) {
+            std::string id = bytesToHexString(it->node, sizeof(it->node));
+            std::string key = bytesToHexString(it->key, sizeof(it->key));
+            publishDiscovery(id, it->name, key);
+        }
+#endif
+        return true;
+    }
+
+    bool iohcRemote1W::setTravelTime(const std::string &description, uint32_t travelTime) {
+        auto it = std::find_if(remotes.begin(), remotes.end(), [&](const remote &e) {
+            return e.description == description;
+        });
+        if (it == remotes.end()) {
+            Serial.printf("Device %s not found\n", description.c_str());
+            return false;
+        }
+        it->travelTime = travelTime;
+        it->positionTracker.setTravelTime(travelTime);
+        save();
+        return true;
+    }
+
+    void iohcRemote1W::updatePositions() {
+        for (auto &r : remotes) {
+            r.positionTracker.update();
+
+            float pos = r.positionTracker.getPosition();
+            bool moving = r.positionTracker.isMoving();
+
+            if (moving) {
+                Serial.printf("%s position: %.0f%%\n", r.name.c_str(), pos);
+#if defined(SSD1306_DISPLAY)
+                display1WPosition(r.node, pos, r.name.c_str());
+#endif
+#if defined(MQTT)
+                std::string id = bytesToHexString(r.node, sizeof(r.node));
+                const char *state = r.movement == remote::Movement::Opening ? "OPENING" : "CLOSING";
+                if (state != r.lastPublishedState) {
+                    publishCoverState(id, state);
+                    r.lastPublishedState = state;
+                }
+                if (fabs(pos - r.lastPublishedPosition) >= 1.0f) {
+                    publishCoverPosition(id, pos);
+                    r.lastPublishedPosition = pos;
+                }
+#endif
+            } else {
+#if defined(MQTT)
+                std::string id = bytesToHexString(r.node, sizeof(r.node));
+                const char *state = "STOP";
+                if (r.movement == remote::Movement::Opening) {
+                    state = pos >= 99.5f ? "OPEN" : "STOP";
+                } else if (r.movement == remote::Movement::Closing) {
+                    state = pos <= 0.5f ? "CLOSE" : "STOP";
+                }
+                if (state != r.lastPublishedState) {
+                    publishCoverState(id, state);
+                    r.lastPublishedState = state;
+                }
+                if (fabs(pos - r.lastPublishedPosition) >= 1.0f) {
+                    publishCoverPosition(id, pos);
+                    r.lastPublishedPosition = pos;
+                }
+#endif
+                r.movement = remote::Movement::Idle;
+#if defined(SSD1306_DISPLAY)
+                if (r.lastPublishedPosition != pos) {
+                    display1WPosition(r.node, pos, r.name.c_str());
+                }
+#endif
+            }
+        }
     }
 }

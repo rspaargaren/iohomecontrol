@@ -18,15 +18,22 @@ extern const char AVAILABILITY_TOPIC[];
 
 void initMqtt();
 void connectToMqtt();
+static void publishIohcFrameDiscovery();
 void onMqttConnect(bool sessionPresent);
 void onMqttDisconnect(AsyncMqttClientDisconnectReason reason);
 void onMqttMessage(char *topic, char *payload,
                    AsyncMqttClientMessageProperties properties,
                    size_t len, size_t index, size_t total);
-void publishDiscovery(const std::string &id, const std::string &name);
+void publishDiscovery(const std::string &id, const std::string &name, const std::string &key);
 void handleMqttConnect();
 void publishHeartbeat(TimerHandle_t timer);
 void mqttFuncHandler(const char *cmd);
+void publishCoverState(const std::string &id, const char *state);
+void publishCoverPosition(const std::string &id, float position);
+void removeDiscovery(const std::string &id);
+static TaskHandle_t s_mqttPostConnectTask = nullptr;
+static void mqttPostConnectTask(void*);
+static void handleMqttConnectImpl();
 
 #endif // MQTT
 
