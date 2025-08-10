@@ -153,7 +153,7 @@ void createCommands() {
     });
     Cmd::addHandler((char *) "time1W", (char *) "Set 1W device travel time", [](Tokens *cmd)-> void {
         if (cmd->size() < 3) {
-            Serial.println("Usage: time1W <description> <ms>");
+            Serial.println("Usage: time1W <description> <seconds>");
             return;
         }
         uint32_t t = strtoul(cmd->at(2).c_str(), nullptr, 10);

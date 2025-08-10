@@ -32,7 +32,7 @@
 namespace IOHC {
     iohcRemote1W* iohcRemote1W::_iohcRemote1W = nullptr;
     static TimersUS::TickerUsESP32 positionTicker;
-    static constexpr uint32_t DEFAULT_TRAVEL_TIME_MS = 10000;
+    static constexpr uint32_t DEFAULT_TRAVEL_TIME_SEC = 10;
 
     static void positionTickerCallback() {
         iohcRemote1W *inst = iohcRemote1W::getInstance();
@@ -688,7 +688,7 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
             if (jobj["travel_time"].is<uint32_t>()) {
                 r.travelTime = jobj["travel_time"].as<uint32_t>();
             } else {
-                r.travelTime = DEFAULT_TRAVEL_TIME_MS;
+                r.travelTime = DEFAULT_TRAVEL_TIME_SEC;
                 updateFile = true;
             }
             if (jobj["paired"].is<bool>()) {
@@ -775,7 +775,7 @@ const std::vector<iohcRemote1W::remote>& iohcRemote1W::getRemotes() const {
         r.type = {0, 0};
         r.manufacturer = 2;
         r.name = name;
-        r.travelTime = DEFAULT_TRAVEL_TIME_MS;
+        r.travelTime = DEFAULT_TRAVEL_TIME_SEC;
         r.paired = false;
 
         // Generate unique description
