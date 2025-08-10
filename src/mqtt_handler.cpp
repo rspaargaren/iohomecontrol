@@ -12,6 +12,7 @@
 #include <WiFi.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
+#include <nvs_helpers.h>
 
 AsyncMqttClient mqttClient;
 TimerHandle_t mqttReconnectTimer;
@@ -19,6 +20,35 @@ TimerHandle_t heartbeatTimer;
 const char AVAILABILITY_TOPIC[] = "iown/status";
 
 void initMqtt() {
+    if (mqtt_server.empty()) {
+        if (!nvs_read_string(NVS_KEY_MQTT_SERVER, mqtt_server)) {
+            Serial.println("MQTT server not set");
+        }
+    } else {
+        nvs_write_string(NVS_KEY_MQTT_SERVER, mqtt_server);
+    }
+    if (mqtt_user.empty()) {
+        if (!nvs_read_string(NVS_KEY_MQTT_USER, mqtt_user)) {
+            Serial.println("MQTT user not set");
+        }
+    } else {
+        nvs_write_string(NVS_KEY_MQTT_USER, mqtt_user);
+    }
+    if (mqtt_password.empty()) {
+        if (!nvs_read_string(NVS_KEY_MQTT_PASSWORD, mqtt_password)) {
+            Serial.println("MQTT password not set");
+        }
+    } else {
+        nvs_write_string(NVS_KEY_MQTT_PASSWORD, mqtt_password);
+    }
+    if (mqtt_discovery_topic.empty()) {
+        if (!nvs_read_string(NVS_KEY_MQTT_DISCOVERY, mqtt_discovery_topic)) {
+            Serial.println("MQTT discovery topic not set");
+        }
+    } else {
+        nvs_write_string(NVS_KEY_MQTT_DISCOVERY, mqtt_discovery_topic);
+    }
+
     mqttClient.setWill(AVAILABILITY_TOPIC, 0, true, "offline");
     mqttClient.setClientId("iown");
     mqttClient.setCredentials(mqtt_user.c_str(), mqtt_password.c_str());

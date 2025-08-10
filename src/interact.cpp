@@ -25,6 +25,7 @@
 #if defined(MQTT)
 #include <mqtt_handler.h>
 #endif
+#include <nvs_helpers.h>
 
 ConnState mqttStatus = ConnState::Disconnected;
 
@@ -216,6 +217,7 @@ void createCommands() {
             return;
         }
         mqtt_server = cmd->at(1);
+        nvs_write_string(NVS_KEY_MQTT_SERVER, mqtt_server);
         mqttClient.disconnect();
         mqttClient.setServer(mqtt_server.c_str(), 1883);
         connectToMqtt();
@@ -226,6 +228,7 @@ void createCommands() {
             return;
         }
         mqtt_user = cmd->at(1);
+        nvs_write_string(NVS_KEY_MQTT_USER, mqtt_user);
         mqttClient.disconnect();
         mqttClient.setCredentials(mqtt_user.c_str(), mqtt_password.c_str());
         connectToMqtt();
@@ -236,6 +239,7 @@ void createCommands() {
             return;
         }
         mqtt_password = cmd->at(1);
+        nvs_write_string(NVS_KEY_MQTT_PASSWORD, mqtt_password);
         mqttClient.disconnect();
         mqttClient.setCredentials(mqtt_user.c_str(), mqtt_password.c_str());
         connectToMqtt();
@@ -246,6 +250,7 @@ void createCommands() {
             return;
         }
         mqtt_discovery_topic = cmd->at(1);
+        nvs_write_string(NVS_KEY_MQTT_DISCOVERY, mqtt_discovery_topic);
         if (mqttStatus == ConnState::Connected)
             handleMqttConnect();
     });
