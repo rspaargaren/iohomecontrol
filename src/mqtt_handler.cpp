@@ -354,6 +354,26 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
     std::string topicStr(topic);
     std::string payloadStr(buf);
 
+    if (topicStr.rfind("iown/", 0) == 0 && topicStr.find("/travel_time/set", 5) != std::string::npos) {
+        std::string id = topicStr.substr(5, topicStr.find("/travel_time/set", 5) - 5);
+        std::transform(id.begin(), id.end(), id.begin(), ::tolower);
+        const auto &remotes = IOHC::iohcRemote1W::getInstance()->getRemotes();
+        auto it = std::find_if(remotes.begin(), remotes.end(), [&](const auto &r) {
+            return bytesToHexString(r.node, sizeof(r.node)) == id;
+        });
+        if (it != remotes.end()) {
+            uint32_t tt = strtoul(payloadStr.c_str(), nullptr, 10);
+            if (tt > 0) {
+                IOHC::iohcRemote1W::getInstance()->setTravelTime(it->description, tt);
+                std::string stateTopic = "iown/" + id + "/travel_time";
+                std::string val = std::to_string(tt);
+                mqttClient.publish(stateTopic.c_str(), 0, true, val.c_str());
+            }
+            mqttClient.publish(topicStr.c_str(), 0, true, "", 0);
+        }
+        return;
+    }
+
     if (topicStr.rfind("iown/", 0) == 0 && topicStr.find("/set", 5) != std::string::npos) {
         std::string id = topicStr.substr(5, topicStr.find("/set", 5) - 5);
         std::transform(id.begin(), id.end(), id.begin(), ::tolower);
