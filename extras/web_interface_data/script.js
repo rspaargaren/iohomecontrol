@@ -90,15 +90,48 @@ document.addEventListener('DOMContentLoaded', function() {
                 editButton.textContent = 'edit';
                 editButton.classList.add('btn', 'edit');
                 editButton.onclick = () =>
-
                     openPopup('Edit Device', "Adjust the name:", device.id, {
                         showInput: true,
                         defaultValue: device.name,
-                        onConfirm: (newName) => {
+                        onConfirm: async (newName) => {
                             if (newName.trim()) {
-                            device.name = newName;
-                            console.log('Nieuwe naam voor', device.id, ':', newName);
-                            // here you can also update your UI or API
+                                try {
+                                    const response = await fetch('/api/command', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ deviceId: device.id, command: `edit1W ${newName}` })
+                                    });
+                                    const result = await response.json();
+                                    if (result.success) {
+                                        logStatus(result.message || 'Device renamed.');
+                                        fetchAndDisplayDevices();
+                                    } else {
+                                        logStatus(result.message || 'Failed to rename device.', true);
+                                    }
+                                } catch (e) {
+                                    logStatus(`Error renaming device: ${e.message}`, true);
+                                }
+                            }
+                        },
+                        onDelete: async () => {
+                            try {
+                                const response = await fetch('/api/command', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ deviceId: device.id, command: 'del1W' })
+                                });
+                                const result = await response.json();
+                                const devicesResp = await fetch('/api/devices');
+                                const devices = await devicesResp.json();
+                                const exists = devices.some(d => d.id === device.id);
+                                if (result.success && !exists) {
+                                    logStatus(result.message || 'Device deleted.');
+                                } else {
+                                    logStatus(result.message || 'Failed to delete device. Ensure it is unpaired.', true);
+                                }
+                                fetchAndDisplayDevices();
+                            } catch (e) {
+                                logStatus(`Error deleting device: ${e.message}`, true);
                             }
                         }
                     });
@@ -233,6 +266,18 @@ document.addEventListener('DOMContentLoaded', function() {
         const input = document.getElementById('popup-input');
         input.style.display = (options && options.showInput) ? 'block' : 'none';
         input.value = options.defaultValue || '';
+
+        const removeBtn = document.getElementById('popup-remove');
+        if (options && options.onDelete) {
+            removeBtn.style.display = 'block';
+            removeBtn.onclick = () => {
+                closePopup();
+                options.onDelete();
+            };
+        } else {
+            removeBtn.style.display = 'none';
+            removeBtn.onclick = null;
+        }
 
         // OK button
         document.getElementById('popup-confirm').onclick = () => {
