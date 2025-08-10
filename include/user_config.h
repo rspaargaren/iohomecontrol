@@ -41,7 +41,10 @@ inline std::string mqtt_discovery_topic = "homeassistant";
 // Comment out the next line to disable the built-in web server
 #define WEBSERVER
 
-#define HTTP_LISTEN_PORT    80
+#define HTTPS_LISTEN_PORT   443
+#define HTTPS_CERT_PATH     "/miopenio.local.crt"
+#define HTTPS_KEY_PATH      "/miopenio.local.key"
+#define MDNS_HOSTNAME       "Miopenio"
 #define HTTP_USERNAME       "admin"
 #define HTTP_PASSWORD       "admin"
 #if defined(ESP8266)

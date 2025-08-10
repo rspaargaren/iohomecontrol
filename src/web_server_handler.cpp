@@ -9,11 +9,14 @@
 #include <iohcRemote1W.h>
 #include <iohcCryptoHelpers.h>
 #include <tokens.h>
+#include <memory>
 // #include "main.h" // Or other relevant headers to access device data and command functions
 
 // Assume ESPAsyncWebServer for now.
 // If you use WebServer.h, the setup and request handling will be different.
-AsyncWebServer server(80); // Create AsyncWebServer object on port 80
+AsyncWebServer server(HTTPS_LISTEN_PORT); // Create AsyncWebServer object on HTTPS port
+static String certPem;
+static String keyPem;
 
 // Structure describing a device entry returned to the web UI
 struct Device {
@@ -164,7 +167,18 @@ void handleApiLogs(AsyncWebServerRequest *request) {
 
 
 void setupWebServer() {
-    Serial.println("Initializing HTTP server ...");
+    Serial.println("Initializing HTTPS server ...");
+
+    File certFile = LittleFS.open(HTTPS_CERT_PATH, "r");
+    File keyFile = LittleFS.open(HTTPS_KEY_PATH, "r");
+    if (!certFile || !keyFile) {
+        Serial.println("Failed to load certificate or key");
+        return;
+    }
+    certPem = certFile.readString();
+    keyPem = keyFile.readString();
+    certFile.close();
+    keyFile.close();
 
     // Serve static files from /web_interface_data
     // Ensure this path matches where your platformio.ini places data files
@@ -206,8 +220,8 @@ void setupWebServer() {
         request->send(404, "text/plain", "Not found");
     });
 
-    server.begin();
-    Serial.println("HTTP server started");
+    server.beginSecure(certPem.c_str(), keyPem.c_str(), nullptr);
+    Serial.println("HTTPS server started");
 }
 
 void loopWebServer() {

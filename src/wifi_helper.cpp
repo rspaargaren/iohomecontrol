@@ -21,6 +21,7 @@
 #include <mqtt_handler.h>
 #endif
 #include <WiFiManager.h>
+#include <ESPmDNS.h>
 
 TimerHandle_t wifiReconnectTimer;
 
@@ -46,6 +47,7 @@ void connectToWifi(TimerHandle_t /*timer*/) {
     updateDisplayStatus();
 
     WiFi.mode(WIFI_STA);
+    WiFi.setHostname(MDNS_HOSTNAME);
     WiFiManager wm;
     wm.setConnectTimeout(30);        // 10 sec voor verbinding met AP
     wm.setConfigPortalTimeout(180);  // 3 min captive portal open
@@ -64,6 +66,11 @@ void connectToWifi(TimerHandle_t /*timer*/) {
         Serial.printf("Connected to WiFi. IP address: %s\n", WiFi.localIP().toString().c_str());
         wifiStatus = ConnState::Connected;
         updateDisplayStatus();
+        if (!MDNS.begin(MDNS_HOSTNAME)) {
+            Serial.println("Error starting mDNS");
+        } else {
+            MDNS.addService("https", "tcp", HTTPS_LISTEN_PORT);
+        }
 #if defined(MQTT)
         // Establish MQTT connection if needed and MQTT client is initialized
         if (mqttReconnectTimer && !mqttClient.connected() &&
