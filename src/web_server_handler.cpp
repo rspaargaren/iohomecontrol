@@ -63,14 +63,14 @@ void handleApiCommand(AsyncWebServerRequest *request, JsonVariant &json) {
     String command = doc["command"] | "";
 
     if (command.isEmpty()) {
-        request->send(400, "application/json", "{\\"success\\":false, \\"message\\":\\"Missing command\\"}");
+        request->send(400, "application/json", "{\"success\":false, \"message\":\"Missing command\"}");
         return;
     }
 
     Tokens segments;
     tokenize(command.c_str(), ' ', segments);
     if (segments.empty()) {
-        request->send(400, "application/json", "{\\"success\\":false, \\"message\\":\\"Invalid command\\"}");
+        request->send(400, "application/json", "{\"success\":false, \"message\":\"Invalid command\"}");
         return;
     }
 
@@ -81,7 +81,7 @@ void handleApiCommand(AsyncWebServerRequest *request, JsonVariant &json) {
             return bytesToHexString(r.node, sizeof(r.node)) == deviceId.c_str();
         });
         if (it == remotes.end()) {
-            request->send(400, "application/json", "{\\"success\\":false, \\"message\\":\\"Unknown device\\"}");
+            request->send(400, "application/json", "{\"success\":false, \"message\":\"Unknown device\"}");
             return;
         }
         segments.insert(segments.begin() + 1, it->description);
@@ -108,7 +108,7 @@ void handleApiCommand(AsyncWebServerRequest *request, JsonVariant &json) {
 
     AsyncJsonResponse* response = new AsyncJsonResponse();
     if(!response){
-        request->send(500, "application/json", "{\\"success\\":false,\\"message\\":\\"OOM\\"}");
+        request->send(500, "application/json", "{\"success\":false,\"message\":\"OOM\"}");
         return;
     }
     JsonObject root = response->getRoot().to<JsonObject>();
