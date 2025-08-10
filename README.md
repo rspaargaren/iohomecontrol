@@ -120,6 +120,10 @@ The discovery topics are:
 - `homeassistant/button/<id>_add/config`
 - `homeassistant/button/<id>_remove/config`
 
+Each blind along with its control buttons is exposed as an individual device in
+Home Assistant, so the gateway no longer groups all entities into a single
+device list.
+
 Sending `PRESS` to `iown/<id>/pair`, `iown/<id>/add` or `iown/<id>/remove`
 triggers the corresponding command on the blind.
 

@@ -18,6 +18,7 @@ AsyncMqttClient mqttClient;
 TimerHandle_t mqttReconnectTimer;
 TimerHandle_t heartbeatTimer;
 const char AVAILABILITY_TOPIC[] = "iown/status";
+static const char GATEWAY_ID[] = "MyOpenIO";
 
 void initMqtt() {
     if (mqtt_server.empty()) {
@@ -67,18 +68,20 @@ void initMqtt() {
 }
 
 static void publishButtonDiscovery(const std::string &id, const std::string &name,
-                                   const std::string &action) {
+                                   const std::string &action, const std::string &key) {
     JsonDocument doc;
     doc["name"] = name + " " + action;
     doc["unique_id"] = id + "_" + action;
     doc["command_topic"] = "iown/" + id + "/" + action;
 
     JsonObject device = doc["device"].to<JsonObject>();
-    device["identifiers"] = "MyOpenIO";
-    device["name"] = "My Open IO Gateway";
+    device["identifiers"] = id;
+    device["name"] = name;
     device["manufacturer"] = "Somfy";
     device["model"] = "IO Blind Bridge";
     device["sw_version"] = "1.0.0";
+    device["serial_number"] = key;
+    device["via_device"] = GATEWAY_ID;
 
     std::string payload;
     size_t len = serializeJson(doc, payload);
@@ -112,12 +115,13 @@ void publishDiscovery(const std::string &id, const std::string &name, const std:
     doc["qos"] = 0;
 
     JsonObject device = doc["device"].to<JsonObject>();
-    device["identifiers"] = "MyOpenIO";
-    device["name"] = "My Open IO Gateway";
+    device["identifiers"] = id;
+    device["name"] = name;
     device["manufacturer"] = "Somfy";
     device["model"] = "IO Blind Bridge";
     device["sw_version"] = "1.0.0";
     device["serial_number"] = key;
+    device["via_device"] = GATEWAY_ID;
 
     std::string payload;
     size_t len = serializeJson(doc, payload);
@@ -125,9 +129,9 @@ void publishDiscovery(const std::string &id, const std::string &name, const std:
     std::string topic = mqtt_discovery_topic + "/cover/" + id + "/config";
     mqttClient.publish(topic.c_str(), 0, true, payload.c_str(), len);
 
-    publishButtonDiscovery(id, name, "pair");
-    publishButtonDiscovery(id, name, "add");
-    publishButtonDiscovery(id, name, "remove");
+    publishButtonDiscovery(id, name, "pair", key);
+    publishButtonDiscovery(id, name, "add", key);
+    publishButtonDiscovery(id, name, "remove", key);
 }
 
 void removeDiscovery(const std::string &id) {
@@ -265,7 +269,7 @@ static void publishIohcFrameDiscovery() {
     configDoc["json_attributes_topic"] = mqtt_discovery_topic + "/sensor/iohc_frame/state";
 
     JsonObject device = configDoc["device"].to<JsonObject>();
-    device["identifiers"] = "MyOpenIO";
+    device["identifiers"] = GATEWAY_ID;
     device["name"] = "My Open IO Gateway";
     device["manufacturer"] = "Somfy";
     device["model"] = "IO Blind Bridge";
