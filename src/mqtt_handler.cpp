@@ -21,32 +21,34 @@ const char AVAILABILITY_TOPIC[] = "iown/status";
 
 void initMqtt() {
     if (mqtt_server.empty()) {
-        if (!nvs_read_string("mqtt_server", mqtt_server)) {
+
+        if (!nvs_read_string(NVS_KEY_MQTT_SERVER, mqtt_server)) {
             Serial.println("MQTT server not set");
         }
     } else {
-        nvs_write_string("mqtt_server", mqtt_server);
+        nvs_write_string(NVS_KEY_MQTT_SERVER, mqtt_server);
     }
     if (mqtt_user.empty()) {
-        if (!nvs_read_string("mqtt_user", mqtt_user)) {
+        if (!nvs_read_string(NVS_KEY_MQTT_USER, mqtt_user)) {
             Serial.println("MQTT user not set");
         }
     } else {
-        nvs_write_string("mqtt_user", mqtt_user);
+        nvs_write_string(NVS_KEY_MQTT_USER, mqtt_user);
     }
     if (mqtt_password.empty()) {
-        if (!nvs_read_string("mqtt_password", mqtt_password)) {
+        if (!nvs_read_string(NVS_KEY_MQTT_PASSWORD, mqtt_password)) {
             Serial.println("MQTT password not set");
         }
     } else {
-        nvs_write_string("mqtt_password", mqtt_password);
+        nvs_write_string(NVS_KEY_MQTT_PASSWORD, mqtt_password);
     }
     if (mqtt_discovery_topic.empty()) {
-        if (!nvs_read_string("mqtt_discovery_topic", mqtt_discovery_topic)) {
+        if (!nvs_read_string(NVS_KEY_MQTT_DISCOVERY, mqtt_discovery_topic)) {
             Serial.println("MQTT discovery topic not set");
         }
     } else {
-        nvs_write_string("mqtt_discovery_topic", mqtt_discovery_topic);
+        nvs_write_string(NVS_KEY_MQTT_DISCOVERY, mqtt_discovery_topic);
+
     }
 
     mqttClient.setWill(AVAILABILITY_TOPIC, 0, true, "offline");
