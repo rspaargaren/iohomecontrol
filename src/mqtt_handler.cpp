@@ -1,6 +1,5 @@
 #include <mqtt_handler.h>
 
-
 #if defined(MQTT)
 
 #include <iohcRemote1W.h>
@@ -34,8 +33,6 @@ void initMqtt() {
         connectToMqtt();
     }
 }
-
-
 
 static void publishButtonDiscovery(const std::string &id, const std::string &name,
                                    const std::string &action) {
@@ -131,7 +128,30 @@ void publishCoverPosition(const std::string &id, float position) {
     mqttClient.publish(topic.c_str(), 0, true, buf);
 }
 
+// ==== BELANGRIJK: scheduler die het zware werk in een eigen task zet ====
 void handleMqttConnect() {
+    if (mqttStatus != ConnState::Connected) return;
+    if (s_mqttPostConnectTask) return; // al bezig
+    xTaskCreatePinnedToCore(
+        mqttPostConnectTask,
+        "mqttPostConnect",
+        4096,      // stack
+        nullptr,
+        1,         // prioriteit laag
+        &s_mqttPostConnectTask,
+        tskNO_AFFINITY
+    );
+}
+
+static void mqttPostConnectTask(void* /*arg*/) {
+    handleMqttConnectImpl();     // oude body van handleMqttConnect()
+    s_mqttPostConnectTask = nullptr;
+    vTaskDelete(nullptr);
+}
+
+static void handleMqttConnectImpl() {
+    // Discovery van de ‘frame’ sensor eerst, zodat state pub direct een entity heeft
+    publishIohcFrameDiscovery();
     const auto &remotes = IOHC::iohcRemote1W::getInstance()->getRemotes();
     for (const auto &r : remotes) {
         std::string id = bytesToHexString(r.node, sizeof(r.node));
@@ -142,7 +162,7 @@ void handleMqttConnect() {
         mqttClient.subscribe(("iown/" + id + "/pair").c_str(), 0);
         mqttClient.subscribe(("iown/" + id + "/add").c_str(), 0);
         mqttClient.subscribe(("iown/" + id + "/remove").c_str(), 0);
-        vTaskDelay(pdMS_TO_TICKS(100));
+        vTaskDelay(pdMS_TO_TICKS(200)); // throttle per device
     }
     if (!heartbeatTimer)
         heartbeatTimer = xTimerCreate("hb", pdMS_TO_TICKS(60000), pdTRUE, nullptr, publishHeartbeat);
@@ -187,28 +207,11 @@ void onMqttConnect(bool sessionPresent) {
     mqttClient.subscribe("iown/midnight", 0);
     mqttClient.subscribe("iown/associate", 0);
     mqttClient.subscribe("iown/heatState", 0);
-    
+    // mqttClient.subscribe("iown/#", 0);  // DEBUG: later weer weghalen als alles werkt
 
     mqttClient.publish("iown/Frame", 0, false, R"({"cmd": "powerOn", "_data": "Gateway"})", 38);
-    {
-        JsonDocument configDoc;
-        configDoc["name"] = "IOHC Frame";
-        configDoc["state_topic"] = mqtt_discovery_topic + "/sensor/iohc_frame/state";
-        configDoc["unique_id"] = "iohc_frame";
-        configDoc["json_attributes_topic"] = mqtt_discovery_topic + "/sensor/iohc_frame/state";
-        JsonObject device = configDoc["device"].to<JsonObject>();
-        device["identifiers"] = "MyOpenIO";
-        device["name"] = "My Open IO Gateway";
-        device["manufacturer"] = "Somfy";
-        device["model"] = "IO Blind Bridge";
-        device["sw_version"] = "1.0.0";
-       
-       
-       
-        std::string cfg;
-        size_t cfgLen = serializeJson(configDoc, cfg);
-        mqttClient.publish((mqtt_discovery_topic + "/sensor/iohc_frame/config").c_str(), 0, true, cfg.c_str(), cfgLen);
-    }
+
+    // Belangrijk: discovery/subscribes/heartbeat NU via worker task
     handleMqttConnect();
 }
 
@@ -221,6 +224,27 @@ void onMqttDisconnect(AsyncMqttClientDisconnectReason reason) {
         xTimerStart(mqttReconnectTimer, 0);
     }
 }
+
+static void publishIohcFrameDiscovery() {
+    JsonDocument configDoc;
+    configDoc["name"] = "IOHC Frame";
+    configDoc["state_topic"] = mqtt_discovery_topic + "/sensor/iohc_frame/state";
+    configDoc["unique_id"] = "iohc_frame";
+    configDoc["json_attributes_topic"] = mqtt_discovery_topic + "/sensor/iohc_frame/state";
+
+    JsonObject device = configDoc["device"].to<JsonObject>();
+    device["identifiers"] = "MyOpenIO";
+    device["name"] = "My Open IO Gateway";
+    device["manufacturer"] = "Somfy";
+    device["model"] = "IO Blind Bridge";
+    device["sw_version"] = "1.0.0";
+
+    std::string cfg;
+    size_t cfgLen = serializeJson(configDoc, cfg);
+    mqttClient.publish((mqtt_discovery_topic + "/sensor/iohc_frame/config").c_str(),
+                       0, true, cfg.c_str(), cfgLen);
+}
+
 
 void mqttFuncHandler(const char *cmd) {
     constexpr char delim = ' ';
