@@ -801,6 +801,13 @@ const std::vector<iohcRemote1W::remote>& iohcRemote1W::getRemotes() const {
         }
         it->name = name;
         save();
+#if defined(MQTT)
+        if (mqttClient.connected()) {
+            std::string id = bytesToHexString(it->node, sizeof(it->node));
+            std::string key = bytesToHexString(it->key, sizeof(it->key));
+            publishDiscovery(id, it->name, key);
+        }
+#endif
         return true;
     }
 
