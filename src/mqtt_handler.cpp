@@ -233,12 +233,12 @@ static void handleMqttConnectImpl() {
         std::string name = r.name.empty() ? r.description : r.name;
         publishDiscovery(id, name, key);
         publishTravelTimeDiscovery(id, name, key, r.travelTime);
-        std::string t = "iown/" + id + "/set";
-        mqttClient.subscribe(t.c_str(), 0);
-        mqttClient.subscribe(("iown/" + id + "/pair").c_str(), 0);
-        mqttClient.subscribe(("iown/" + id + "/add").c_str(), 0);
-        mqttClient.subscribe(("iown/" + id + "/remove").c_str(), 0);
-        mqttClient.subscribe(("iown/" + id + "/travel_time/set").c_str(), 0);
+        //std::string t = "iown/" + id + "/set";
+        //mqttClient.subscribe(t.c_str(), 0);
+        //mqttClient.subscribe(("iown/" + id + "/pair").c_str(), 0);
+        //mqttClient.subscribe(("iown/" + id + "/add").c_str(), 0);
+        //mqttClient.subscribe(("iown/" + id + "/remove").c_str(), 0);
+        //mqttClient.subscribe(("iown/" + id + "/travel_time/set").c_str(), 0);
         vTaskDelay(pdMS_TO_TICKS(200)); // throttle per device
     }
     if (!heartbeatTimer)
@@ -276,17 +276,24 @@ void onMqttConnect(bool sessionPresent) {
     mqttStatus = ConnState::Connected;
     updateDisplayStatus();
 
-    mqttClient.subscribe("iown/powerOn", 0);
-    mqttClient.subscribe("iown/setPresence", 0);
-    mqttClient.subscribe("iown/setWindow", 0);
-    mqttClient.subscribe("iown/setTemp", 0);
-    mqttClient.subscribe("iown/setMode", 0);
-    mqttClient.subscribe("iown/midnight", 0);
-    mqttClient.subscribe("iown/associate", 0);
-    mqttClient.subscribe("iown/heatState", 0);
+    //mqttClient.subscribe("iown/powerOn", 0);
+    //mqttClient.subscribe("iown/setPresence", 0);
+    //mqttClient.subscribe("iown/setWindow", 0);
+    //mqttClient.subscribe("iown/setTemp", 0);
+    //mqttClient.subscribe("iown/setMode", 0);
+    //mqttClient.subscribe("iown/midnight", 0);
+    //mqttClient.subscribe("iown/associate", 0);
+    //mqttClient.subscribe("iown/heatState", 0);
     // mqttClient.subscribe("iown/#", 0);  // DEBUG: later weer weghalen als alles werkt
 
-    mqttClient.publish("iown/Frame", 0, false, R"({"cmd": "powerOn", "_data": "Gateway"})", 38);
+    mqttClient.subscribe("iown/+/set", 0);
+    mqttClient.subscribe("iown/+/position/set", 0);
+    mqttClient.subscribe("iown/+/pair", 0);
+    mqttClient.subscribe("iown/+/add", 0);
+    mqttClient.subscribe("iown/+/remove", 0);
+    mqttClient.subscribe("iown/+/travel_time/set", 0);
+
+    //mqttClient.publish("iown/Frame", 0, false, R"({"cmd": "powerOn", "_data": "Gateway"})", 38);
 
     // Belangrijk: discovery/subscribes/heartbeat NU via worker task
     handleMqttConnect();
