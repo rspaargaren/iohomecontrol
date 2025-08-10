@@ -29,10 +29,10 @@ inline const char *wifi_passwd = "";
 #define MQTT
 
 // Default MQTT configuration. These values can be changed at runtime through
-// the interactive command interface.
-inline std::string mqtt_server = "XX";
+// the interactive command interface. Leave empty to rely on stored values.
+inline std::string mqtt_server = "";
 inline std::string mqtt_user = "mosquitto";
-inline std::string mqtt_password = "XX";
+inline std::string mqtt_password = "";
 inline std::string mqtt_discovery_topic = "homeassistant";
 
 // Comment out the next line if no display is connected
