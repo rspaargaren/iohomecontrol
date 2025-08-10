@@ -21,6 +21,7 @@
 #include <mqtt_handler.h>
 #endif
 #include <WiFiManager.h>
+#include <ESPmDNS.h>
 
 TimerHandle_t wifiReconnectTimer;
 
@@ -64,6 +65,12 @@ void connectToWifi(TimerHandle_t /*timer*/) {
         Serial.printf("Connected to WiFi. IP address: %s\n", WiFi.localIP().toString().c_str());
         wifiStatus = ConnState::Connected;
         updateDisplayStatus();
+
+        if (!MDNS.begin("mioopenio")) {
+            Serial.println("Error setting up MDNS responder!");
+        } else {
+            Serial.println("MDNS responder started at http://mioopenio.local");
+        }
 #if defined(MQTT)
         // Establish MQTT connection if needed and MQTT client is initialized
         if (mqttReconnectTimer && !mqttClient.connected() &&

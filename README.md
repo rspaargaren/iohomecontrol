@@ -77,7 +77,7 @@ This project now includes an experimental web interface to control IOHC devices.
 
 5.  **Access the Interface:**
     *   Open a web browser on a device connected to the same WiFi network as your ESP32.
-    *   Navigate to the IP address you found in the Serial Monitor (e.g., `http://XXX.XXX.X.XXX`).
+    *   Navigate to the IP address you found in the Serial Monitor (e.g., `http://XXX.XXX.X.XXX`) or use `http://mioopenio.local` if your network supports mDNS.
 
 ### Usage
 
