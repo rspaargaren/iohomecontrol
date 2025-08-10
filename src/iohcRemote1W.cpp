@@ -186,10 +186,12 @@ namespace IOHC {
 //                }
                 _radioInstance->send(packets2send);
                 display1WAction(r.node, remoteButtonToString(cmd), "TX", r.name.c_str());
+
                 Serial.printf("%s position: %.0f%%\n", r.name.c_str(), r.positionTracker.getPosition());
 #if defined(SSD1306_DISPLAY)
                 display1WPosition(r.node, r.positionTracker.getPosition(), r.name.c_str());
 #endif
+
                 r.paired = true;
                 break;
             }
@@ -236,10 +238,12 @@ namespace IOHC {
                 _radioInstance->send(packets2send);
                 //printf("\n");
                 display1WAction(r.node, remoteButtonToString(cmd), "TX", r.name.c_str());
+
                 Serial.printf("%s position: %.0f%%\n", r.name.c_str(), r.positionTracker.getPosition());
 #if defined(SSD1306_DISPLAY)
                 display1WPosition(r.node, r.positionTracker.getPosition(), r.name.c_str());
 #endif
+
                 r.paired = false;
                 break;
             }
@@ -629,6 +633,7 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
             r.manufacturer = jobj["manufacturer_id"].as<uint8_t>();
             r.description = jobj["description"].as<std::string>();
 
+
             if (jobj["name"].is<std::string>()) {
                 r.name = jobj["name"].as<std::string>();
             } else {
@@ -649,6 +654,7 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
                 updateFile = true;
             }
             r.positionTracker.setTravelTime(r.travelTime);
+
             remotes.push_back(r);
         }
 
@@ -689,7 +695,9 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
             jobj["manufacturer_id"] = r.manufacturer;
             jobj["description"] = r.description;
             jobj["name"] = r.name;
+
             jobj["travel_time"] = r.travelTime;
+
             jobj["paired"] = r.paired;
         }
         serializeJson(doc, f);

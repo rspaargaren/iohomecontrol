@@ -16,7 +16,9 @@
     <main>
         <div class="left">
             <section id="device-list-section">
-                <div class="title"><h2>Devices</h2><div class="btn add"></div></div>
+
+                <div class="title"><h2>Devices</h2><div class="btn add" id="add-popup"></div></div>
+
                 <div class="card">
                     <ul id="device-list">
                         <!-- Device items will be populated by JavaScript -->
@@ -71,7 +73,14 @@
             <div class="title"><h2 id="popup-title">Popup Title</h2><div class="btn close" onclick="closePopup()">Sluiten</div></div>
             <div class="card-popup">
                 <p id="popup-text">Tekst komt hier.</p>
-               
+
+                <input type="text" id="popup-input" placeholder="Typ hier..." autocomplete="off">
+                <div class="popup-buttons">
+                    <button id="popup-confirm" class="confirm">Confirm</button>
+                    <button id="popup-cancel" class="cancel">Cancel</button>
+                </div>
+                <button id="popup-remove" class="remove-device">delete</button>
+
             </div>
         </div>
     </div>

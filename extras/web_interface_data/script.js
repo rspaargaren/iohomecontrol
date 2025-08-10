@@ -90,7 +90,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 editButton.textContent = 'edit';
                 editButton.classList.add('btn', 'edit');
                 editButton.onclick = () =>
-                    openPopup('Edit Device', device.name, device.id);
+
+                    openPopup('Edit Device', "Adjust the name:", device.id, {
+                        showInput: true,
+                        defaultValue: device.name,
+                        onConfirm: (newName) => {
+                            if (newName.trim()) {
+                            device.name = newName;
+                            console.log('Nieuwe naam voor', device.id, ':', newName);
+                            // here you can also update your UI or API
+                            }
+                        }
+                    });
+
                 listItem.appendChild(upButton);
                 listItem.appendChild(stopButton);
                 listItem.appendChild(downButton);
@@ -197,7 +209,9 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     //dark mode toggle
 
-     const toggleBtn = document.getElementById('toggle-theme');
+
+    const toggleBtn = document.getElementById('toggle-theme');
+
     const body = document.body;
 
     toggleBtn.addEventListener('click', () => {
@@ -212,24 +226,59 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // popup open
-    function openPopup(title, text, data) {
+
+    function openPopup(title, text, data, options = {}) {
         document.getElementById('popup-title').textContent = title;
         document.getElementById('popup-text').textContent = text;
+        const input = document.getElementById('popup-input');
+        input.style.display = (options && options.showInput) ? 'block' : 'none';
+        input.value = options.defaultValue || '';
+
+        // OK button
+        document.getElementById('popup-confirm').onclick = () => {
+            const value = (options && options.showInput) ? input.value : true;
+            closePopup();
+            if (options.onConfirm) options.onConfirm(value);
+        };
+
+        // Cancel button
+        document.getElementById('popup-cancel').onclick = () => {
+            closePopup();
+            if (options.onCancel) options.onCancel();
+        };
         document.getElementById('popup').classList.add('open');
-    }
+
+        };
+
 
     // popup close
     function closePopup() {
         document.getElementById('popup').classList.remove('open');
     }
-    window.closePopup = closePopup; 
-    
-    // Thema behouden bij herladen
+
+    window.closePopup = closePopup;
+
+    // Theme persistence on reload and open popup
+
     window.addEventListener('DOMContentLoaded', () => {
       const savedTheme = localStorage.getItem('theme');
       if (savedTheme === 'dark') {
         body.classList.add('dark-mode');
       }
+
+      const addpopup = document.getElementById('add-popup');
+      addpopup.addEventListener('click', () => {
+         openPopup('Add Device', "new device", null, {
+           showInput: true,
+           onConfirm: (newName) => {
+             if (newName.trim()) {
+               console.log('New Device:', newName);
+               // Here you can make an API call or add the device to your list
+             }
+           }
+         });
+      });
+
     });
 
     setInterval(fetchLogs, 2000);
