@@ -755,10 +755,12 @@ const std::vector<iohcRemote1W::remote>& iohcRemote1W::getRemotes() const {
             std::string id = bytesToHexString(r.node, sizeof(r.node));
             std::string key = bytesToHexString(r.key, sizeof(r.key));
             publishDiscovery(id, r.name, key);
+            publishTravelTimeDiscovery(id, r.name, key, r.travelTime);
             mqttClient.subscribe(("iown/" + id + "/set").c_str(), 0);
             mqttClient.subscribe(("iown/" + id + "/pair").c_str(), 0);
             mqttClient.subscribe(("iown/" + id + "/add").c_str(), 0);
             mqttClient.subscribe(("iown/" + id + "/remove").c_str(), 0);
+            mqttClient.subscribe(("iown/" + id + "/travel_time/set").c_str(), 0);
         }
 #endif
         return true;
@@ -784,6 +786,8 @@ const std::vector<iohcRemote1W::remote>& iohcRemote1W::getRemotes() const {
             mqttClient.unsubscribe(("iown/" + id + "/pair").c_str());
             mqttClient.unsubscribe(("iown/" + id + "/add").c_str());
             mqttClient.unsubscribe(("iown/" + id + "/remove").c_str());
+            mqttClient.unsubscribe(("iown/" + id + "/travel_time/set").c_str());
+            mqttClient.publish(("iown/" + id + "/travel_time").c_str(), 0, true, "", 0);
         }
 #endif
         remotes.erase(it);
@@ -806,6 +810,7 @@ const std::vector<iohcRemote1W::remote>& iohcRemote1W::getRemotes() const {
             std::string id = bytesToHexString(it->node, sizeof(it->node));
             std::string key = bytesToHexString(it->key, sizeof(it->key));
             publishDiscovery(id, it->name, key);
+            publishTravelTimeDiscovery(id, it->name, key, it->travelTime);
         }
 #endif
         return true;
