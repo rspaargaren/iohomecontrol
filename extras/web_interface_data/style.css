@@ -160,7 +160,7 @@ button {
 button:hover {
     background-color: var(--color-accent2);
 }
-input[type="text"], select {
+input, select {
     padding: 8px;
     margin: 5px 0 10px 0;
     display: inline-block;

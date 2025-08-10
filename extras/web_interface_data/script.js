@@ -5,6 +5,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const sendCommandButton = document.getElementById('send-command-button');
     const statusMessagesDiv = document.getElementById('status-messages');
     const MAX_LOGS = 20; // maximaal aantal logs
+    const mqttUserInput = document.getElementById('mqtt-user');
+    const mqttServerInput = document.getElementById('mqtt-server');
+    const mqttPasswordInput = document.getElementById('mqtt-password');
+    const mqttDiscoveryInput = document.getElementById('mqtt-discovery');
+    const mqttUpdateButton = document.getElementById('mqtt-update');
 
     // Function to add a message to the status/log
     function logStatus(message, isError = false) {
@@ -23,6 +28,42 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     logStatus('System started');
     logStatus('Loading devices...');
+
+    async function loadMqttConfig() {
+        try {
+            const resp = await fetch('/api/mqtt');
+            if (!resp.ok) return;
+            const cfg = await resp.json();
+            mqttUserInput.value = cfg.user || '';
+            mqttServerInput.value = cfg.server || '';
+            mqttPasswordInput.value = cfg.password || '';
+            mqttDiscoveryInput.value = cfg.discovery || '';
+        } catch (e) {
+            console.error('Error fetching MQTT config', e);
+        }
+    }
+
+    async function updateMqttConfig() {
+        const payload = {
+            user: mqttUserInput.value,
+            server: mqttServerInput.value,
+            password: mqttPasswordInput.value,
+            discovery: mqttDiscoveryInput.value
+        };
+        try {
+            const resp = await fetch('/api/mqtt', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await resp.json();
+            logStatus(result.message || 'MQTT settings updated.');
+        } catch (e) {
+            console.error('Error updating MQTT config', e);
+            logStatus('Error updating MQTT config', true);
+        }
+    }
+
     // Function to fetch devices and populate the lists
     async function fetchAndDisplayDevices() {
         try {
@@ -90,15 +131,48 @@ document.addEventListener('DOMContentLoaded', function() {
                 editButton.textContent = 'edit';
                 editButton.classList.add('btn', 'edit');
                 editButton.onclick = () =>
-
-                    openPopup('Edit Device', "Adjust the name:", device.id, {
+                    openPopup('Edit Device', "here edit your device", "Adjust the name:", device.id, {
                         showInput: true,
                         defaultValue: device.name,
-                        onConfirm: (newName) => {
+                        onConfirm: async (newName) => {
                             if (newName.trim()) {
-                            device.name = newName;
-                            console.log('Nieuwe naam voor', device.id, ':', newName);
-                            // here you can also update your UI or API
+                                try {
+                                    const response = await fetch('/api/command', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ deviceId: device.id, command: `edit1W ${newName}` })
+                                    });
+                                    const result = await response.json();
+                                    if (result.success) {
+                                        logStatus(result.message || 'Device renamed.');
+                                        fetchAndDisplayDevices();
+                                    } else {
+                                        logStatus(result.message || 'Failed to rename device.', true);
+                                    }
+                                } catch (e) {
+                                    logStatus(`Error renaming device: ${e.message}`, true);
+                                }
+                            }
+                        },
+                        onDelete: async () => {
+                            try {
+                                const response = await fetch('/api/command', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ deviceId: device.id, command: 'del1W' })
+                                });
+                                const result = await response.json();
+                                const devicesResp = await fetch('/api/devices');
+                                const devices = await devicesResp.json();
+                                const exists = devices.some(d => d.id === device.id);
+                                if (result.success && !exists) {
+                                    logStatus(result.message || 'Device deleted.');
+                                } else {
+                                    logStatus(result.message || 'Failed to delete device. Ensure it is unpaired.', true);
+                                }
+                                fetchAndDisplayDevices();
+                            } catch (e) {
+                                logStatus(`Error deleting device: ${e.message}`, true);
                             }
                         }
                     });
@@ -166,6 +240,9 @@ document.addEventListener('DOMContentLoaded', function() {
     if (sendCommandButton) {
         sendCommandButton.addEventListener('click', sendCommand);
     }
+    if (mqttUpdateButton) {
+        mqttUpdateButton.addEventListener('click', updateMqttConfig);
+    }
 
    async function fetchLogs() {
         try {
@@ -227,12 +304,32 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // popup open
 
-    function openPopup(title, text, data, options = {}) {
+    function openPopup(title, text, label, data, options = {}) {
+        const labelInput = document.getElementById('label-input');
+        const labelTiming = document.getElementById('label-timing');
+        const inputTiming = document.getElementById('popup-input-timing');
+        const removeBtn = document.getElementById('popup-remove');
         document.getElementById('popup-title').textContent = title;
         document.getElementById('popup-text').textContent = text;
+        labelInput.textContent = label;
         const input = document.getElementById('popup-input');
         input.style.display = (options && options.showInput) ? 'block' : 'none';
         input.value = options.defaultValue || '';
+        
+        if (options && options.onDelete) {
+            removeBtn.style.display = 'block';
+            labelTiming.style.display = 'block';
+            inputTiming.style.display = 'block';
+            removeBtn.onclick = () => {
+                closePopup();
+                options.onDelete();
+            };
+        } else {
+            removeBtn.style.display = 'none';
+            labelTiming.style.display = 'none';
+            inputTiming.style.display = 'none';
+            removeBtn.onclick = null;
+        }
 
         // OK button
         document.getElementById('popup-confirm').onclick = () => {
@@ -241,10 +338,9 @@ document.addEventListener('DOMContentLoaded', function() {
             if (options.onConfirm) options.onConfirm(value);
         };
 
-        // Cancel button
-        document.getElementById('popup-cancel').onclick = () => {
-            closePopup();
-            if (options.onCancel) options.onCancel();
+        // pair button
+        document.getElementById('popup-pair').onclick = () => {
+
         };
         document.getElementById('popup').classList.add('open');
 
@@ -268,12 +364,26 @@ document.addEventListener('DOMContentLoaded', function() {
 
       const addpopup = document.getElementById('add-popup');
       addpopup.addEventListener('click', () => {
-         openPopup('Add Device', "new device", null, {
+         openPopup('Add Device', "here add your device", "new device", null, {
            showInput: true,
-           onConfirm: (newName) => {
+           onConfirm: async (newName) => {
              if (newName.trim()) {
-               console.log('New Device:', newName);
-               // Here you can make an API call or add the device to your list
+               try {
+                 const response = await fetch('/api/command', {
+                   method: 'POST',
+                   headers: { 'Content-Type': 'application/json' },
+                   body: JSON.stringify({ command: `new1W ${newName}` })
+                 });
+                 const result = await response.json();
+                 if (result.success) {
+                   logStatus(result.message || 'Device added.');
+                   fetchAndDisplayDevices();
+                 } else {
+                   logStatus(result.message || 'Failed to add device.', true);
+                 }
+               } catch (e) {
+                 logStatus(`Error adding device: ${e.message}`, true);
+               }
              }
            }
          });
@@ -283,6 +393,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     setInterval(fetchLogs, 2000);
     fetchLogs();
+    loadMqttConfig();
     // Initial fetch of devices
     fetchAndDisplayDevices();
 });
