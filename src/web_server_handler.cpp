@@ -10,6 +10,8 @@
 #include <iohcCryptoHelpers.h>
 #include <tokens.h>
 #include <interact.h>
+#include <mqtt_handler.h>
+#include <nvs_helpers.h>
 // #include "main.h" // Or other relevant headers to access device data and command functions
 
 // Assume ESPAsyncWebServer for now.
@@ -196,6 +198,86 @@ void handleApiLogs(AsyncWebServerRequest *request) {
     request->send(response);
 }
 
+#if defined(MQTT)
+void handleApiMqttGet(AsyncWebServerRequest *request) {
+    AsyncJsonResponse* response = new AsyncJsonResponse();
+    if(!response){
+        request->send(500, "text/plain", "OOM");
+        return;
+    }
+    JsonObject root = response->getRoot().to<JsonObject>();
+    root["server"] = mqtt_server.c_str();
+    root["user"] = mqtt_user.c_str();
+    root["password"] = mqtt_password.c_str();
+    root["discovery"] = mqtt_discovery_topic.c_str();
+    response->setLength();
+    request->send(response);
+}
+
+void handleApiMqttSet(AsyncWebServerRequest *request, JsonVariant &json) {
+    if (request->method() != HTTP_POST) {
+        request->send(405, "text/plain", "Method Not Allowed");
+        return;
+    }
+
+    JsonObject doc = json.as<JsonObject>();
+    if (doc.isNull()) {
+        request->send(400, "application/json", "{\"success\":false, \"message\":\"Invalid JSON\"}");
+        return;
+    }
+
+    String server = doc["server"] | "";
+    String user = doc["user"] | "";
+    String password = doc["password"] | "";
+    String discovery = doc["discovery"] | "";
+
+    bool mqttChanged = false;
+    bool discChanged = false;
+
+    if (!server.isEmpty()) {
+        mqtt_server = server.c_str();
+        nvs_write_string(NVS_KEY_MQTT_SERVER, mqtt_server);
+        mqttChanged = true;
+    }
+    if (!user.isEmpty()) {
+        mqtt_user = user.c_str();
+        nvs_write_string(NVS_KEY_MQTT_USER, mqtt_user);
+        mqttChanged = true;
+    }
+    if (!password.isEmpty()) {
+        mqtt_password = password.c_str();
+        nvs_write_string(NVS_KEY_MQTT_PASSWORD, mqtt_password);
+        mqttChanged = true;
+    }
+    if (!discovery.isEmpty()) {
+        mqtt_discovery_topic = discovery.c_str();
+        nvs_write_string(NVS_KEY_MQTT_DISCOVERY, mqtt_discovery_topic);
+        discChanged = true;
+    }
+
+    if (mqttChanged) {
+        mqttClient.disconnect();
+        mqttClient.setServer(mqtt_server.c_str(), 1883);
+        mqttClient.setCredentials(mqtt_user.c_str(), mqtt_password.c_str());
+    }
+
+    if (discChanged && mqttStatus == ConnState::Connected) {
+        handleMqttConnect();
+    }
+
+    AsyncJsonResponse* response = new AsyncJsonResponse();
+    if(!response){
+        request->send(500, "application/json", "{\"success\":false,\"message\":\"OOM\"}");
+        return;
+    }
+    JsonObject root = response->getRoot().to<JsonObject>();
+    root["success"] = true;
+    root["message"] = "MQTT configuration updated";
+    response->setLength();
+    request->send(response);
+}
+#endif
+
 
 void setupWebServer() {
     Serial.println("Initializing HTTP server ...");
@@ -212,8 +294,14 @@ void setupWebServer() {
     // API Endpoints
     server.on("/api/devices", HTTP_GET, handleApiDevices);
     server.on("/api/logs", HTTP_GET, handleApiLogs);
+#if defined(MQTT)
+    server.on("/api/mqtt", HTTP_GET, handleApiMqttGet);
+#endif
     server.addHandler(new AsyncCallbackJsonWebHandler("/api/command", handleApiCommand)); // For POST with JSON
     server.addHandler(new AsyncCallbackJsonWebHandler("/api/action", handleApiAction));
+#if defined(MQTT)
+    server.addHandler(new AsyncCallbackJsonWebHandler("/api/mqtt", handleApiMqttSet));
+#endif
 
     auto &staticHandler = server.serveStatic("/", LittleFS, "/web_interface_data/");
     staticHandler.setDefaultFile("index.html");
