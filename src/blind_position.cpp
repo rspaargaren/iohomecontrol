@@ -1,6 +1,7 @@
 #include <blind_position.h>
 #include <esp_timer.h>
 #include <Arduino.h>
+#include <algorithm>
 
 namespace IOHC {
     BlindPosition::BlindPosition(uint32_t travelTimeMs)
@@ -64,4 +65,9 @@ namespace IOHC {
     float BlindPosition::getPosition() const { return position; }
 
     bool BlindPosition::isMoving() const { return state != State::Idle; }
+
+    void BlindPosition::setPosition(float pos) {
+        position = std::clamp(pos, 0.0f, 100.0f);
+        lastUpdateUs = esp_timer_get_time();
+    }
 }
