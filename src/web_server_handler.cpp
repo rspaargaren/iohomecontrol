@@ -9,6 +9,7 @@
 #include <iohcRemote1W.h>
 #include <iohcCryptoHelpers.h>
 #include <tokens.h>
+#include <interact.h>
 // #include "main.h" // Or other relevant headers to access device data and command functions
 
 // Assume ESPAsyncWebServer for now.
@@ -61,20 +62,53 @@ void handleApiCommand(AsyncWebServerRequest *request, JsonVariant &json) {
     String deviceId = doc["deviceId"] | "";
     String command = doc["command"] | "";
 
-    if (deviceId.isEmpty() || command.isEmpty()) {
-        request->send(400, "application/json", "{\"success\":false, \"message\":\"Missing deviceId or command\"}");
+    if (command.isEmpty()) {
+        request->send(400, "application/json", "{\\"success\\":false, \\"message\\":\\"Missing command\\"}");
         return;
     }
 
-    // TODO: Process the command here
-    // bool success = processDeviceCommand(deviceId, command);
+    Tokens segments;
+    tokenize(command.c_str(), ' ', segments);
+    if (segments.empty()) {
+        request->send(400, "application/json", "{\\"success\\":false, \\"message\\":\\"Invalid command\\"}");
+        return;
+    }
 
-    String message = "Command received for device " + deviceId + ": '" + command + "'. Processing not yet implemented.";
-    bool success = true;
+    deviceId.toLowerCase();
+    if (!deviceId.isEmpty()) {
+        const auto &remotes = IOHC::iohcRemote1W::getInstance()->getRemotes();
+        auto it = std::find_if(remotes.begin(), remotes.end(), [&](const auto &r) {
+            return bytesToHexString(r.node, sizeof(r.node)) == deviceId.c_str();
+        });
+        if (it == remotes.end()) {
+            request->send(400, "application/json", "{\\"success\\":false, \\"message\\":\\"Unknown device\\"}");
+            return;
+        }
+        segments.insert(segments.begin() + 1, it->description);
+    }
+
+    bool success = false;
+    String message;
+    for (uint8_t idx = 0; idx <= lastEntry; ++idx) {
+        if (_cmdHandler[idx] == nullptr)
+            continue;
+        if (strcmp(_cmdHandler[idx]->cmd, segments[0].c_str()) == 0) {
+            _cmdHandler[idx]->handler(&segments);
+            success = true;
+            break;
+        }
+    }
+
+    if (success)
+        message = "Command executed";
+    else
+        message = "Unknown command";
+
+    addLogMessage(message);
 
     AsyncJsonResponse* response = new AsyncJsonResponse();
     if(!response){
-        request->send(500, "application/json", "{\"success\":false,\"message\":\"OOM\"}");
+        request->send(500, "application/json", "{\\"success\\":false,\\"message\\":\\"OOM\\"}");
         return;
     }
     JsonObject root = response->getRoot().to<JsonObject>();
