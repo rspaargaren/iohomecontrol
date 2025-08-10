@@ -37,9 +37,9 @@ void handleApiDevices(AsyncWebServerRequest *request) {
     }
 
     // Provide a generic command interface as last entry
-    JsonObject cmdObj = root.add<JsonObject>();
-    cmdObj["id"] = "cmd_if";
-    cmdObj["name"] = "Command Interface";
+    //JsonObject cmdObj = root.add<JsonObject>();
+    //cmdObj["id"] = "cmd_if";
+    //cmdObj["name"] = "Command Interface";
     
     response->setLength();
     request->send(response);
