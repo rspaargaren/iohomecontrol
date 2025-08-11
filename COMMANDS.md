@@ -27,6 +27,7 @@ VARIOUS 1W (Use the description name in 1W.json as argument)
 - **open**      _1W open device_
 - **close**     _1W close device_
 - **stop**      _1W stop device_
+- **position**  _1W set position (0-100)_
 - **vent**      _1W vent device_
 - **force**     _1W force device open_
 - **mode1**     _1W Mode1_
@@ -36,7 +37,7 @@ VARIOUS 1W (Use the description name in 1W.json as argument)
 - **new1W**    _Add new 1W device_
 - **del1W**    _Remove 1W device_
 - **edit1W**   _Edit 1W device name_
-- **time1W**   _Set 1W device travel time_
+- **time1W**   _Set 1W device travel time in seconds_
 - **list1W**   _List 1W devices_
 
 COMMON

@@ -25,6 +25,7 @@
 #if defined(MQTT)
 #include <mqtt_handler.h>
 #endif
+#include <nvs_helpers.h>
 
 ConnState mqttStatus = ConnState::Disconnected;
 
@@ -108,6 +109,9 @@ void createCommands() {
     Cmd::addHandler((char *) "stop", (char *) "1W stop device", [](Tokens *cmd)-> void {
         IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Stop, cmd);
     });
+    Cmd::addHandler((char *) "position", (char *) "1W set position 0-100", [](Tokens *cmd)-> void {
+        IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Position, cmd);
+    });
     Cmd::addHandler((char *) "vent", (char *) "1W vent device", [](Tokens *cmd)-> void {
         IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Vent, cmd);
     });
@@ -149,7 +153,7 @@ void createCommands() {
     });
     Cmd::addHandler((char *) "time1W", (char *) "Set 1W device travel time", [](Tokens *cmd)-> void {
         if (cmd->size() < 3) {
-            Serial.println("Usage: time1W <description> <ms>");
+            Serial.println("Usage: time1W <description> <seconds>");
             return;
         }
         uint32_t t = strtoul(cmd->at(2).c_str(), nullptr, 10);
@@ -216,6 +220,9 @@ void createCommands() {
             return;
         }
         mqtt_server = cmd->at(1);
+
+        nvs_write_string(NVS_KEY_MQTT_SERVER, mqtt_server);
+
         mqttClient.disconnect();
         mqttClient.setServer(mqtt_server.c_str(), 1883);
         connectToMqtt();
@@ -226,6 +233,9 @@ void createCommands() {
             return;
         }
         mqtt_user = cmd->at(1);
+
+        nvs_write_string(NVS_KEY_MQTT_USER, mqtt_user);
+
         mqttClient.disconnect();
         mqttClient.setCredentials(mqtt_user.c_str(), mqtt_password.c_str());
         connectToMqtt();
@@ -236,6 +246,9 @@ void createCommands() {
             return;
         }
         mqtt_password = cmd->at(1);
+
+        nvs_write_string(NVS_KEY_MQTT_PASSWORD, mqtt_password);
+
         mqttClient.disconnect();
         mqttClient.setCredentials(mqtt_user.c_str(), mqtt_password.c_str());
         connectToMqtt();
@@ -246,6 +259,9 @@ void createCommands() {
             return;
         }
         mqtt_discovery_topic = cmd->at(1);
+
+        nvs_write_string(NVS_KEY_MQTT_DISCOVERY, mqtt_discovery_topic);
+
         if (mqttStatus == ConnState::Connected)
             handleMqttConnect();
     });

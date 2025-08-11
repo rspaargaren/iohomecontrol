@@ -25,6 +25,8 @@ void onMqttMessage(char *topic, char *payload,
                    AsyncMqttClientMessageProperties properties,
                    size_t len, size_t index, size_t total);
 void publishDiscovery(const std::string &id, const std::string &name, const std::string &key);
+void publishTravelTimeDiscovery(const std::string &id, const std::string &name,
+                                const std::string &key, uint32_t travelTime);
 void handleMqttConnect();
 void publishHeartbeat(TimerHandle_t timer);
 void mqttFuncHandler(const char *cmd);

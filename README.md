@@ -77,7 +77,7 @@ This project now includes an experimental web interface to control IOHC devices.
 
 5.  **Access the Interface:**
     *   Open a web browser on a device connected to the same WiFi network as your ESP32.
-    *   Navigate to the IP address you found in the Serial Monitor (e.g., `http://XXX.XXX.X.XXX`).
+    *   Navigate to the IP address you found in the Serial Monitor (e.g., `http://XXX.XXX.X.XXX`) or use `http://miopenio.local` if your network supports mDNS.
 
 ### Usage
 
@@ -96,8 +96,10 @@ Each blind configuration is sent to the topic `homeassistant/cover/<id>/config` 
 
 The discovery payload's `device` section now also exposes the device's AES `key` as read from `1W.json`.
 
-The `1W.json` file now accepts an optional `travel_time` field per device. This value represents the time in milliseconds a blind takes to move from fully closed to fully open. It allows the firmware to estimate the current position when no feedback is available. The estimated position is printed to the serial console and shown on the OLED display every second while the blind is moving. When a command is transmitted or received, this position feedback is appended below the action information on the display so that the original message remains visible.
+The `1W.json` file now accepts an optional `travel_time` field per device. This value represents the time in seconds a blind takes to move from fully closed to fully open. It allows the firmware to estimate the current position when no feedback is available. The estimated position is printed to the serial console and shown on the OLED display every second while the blind is moving. When a command is transmitted or received, this position feedback is appended below the action information on the display so that the original message remains visible.
 If these fields (`name` and `travel_time`) are missing, default values are applied using the device description and a 10 second travel time. These defaults are saved back to `1W.json` so subsequent boots load the updated values automatically.
+
+Each blind also publishes a Home Assistant number entity for the travel time. Adjusting this entity updates the `travel_time` value in `1W.json`, allowing calibration directly from the Home Assistant UI without editing files manually.
 
 Each entry can also contain a `paired` boolean that indicates if the blind is paired to a screen. If the field is missing, it is automatically added with a default value of `false` when the file is loaded. The flag is updated automatically when the `pair` or `remove` commands are used.
 
@@ -109,7 +111,7 @@ uploads or resets.
 Example payload for `B60D1A`:
 
 ```json
-{"name":"IZY1","command_topic":"iown/B60D1A/set","state_topic":"iown/B60D1A/state","position_topic":"iown/B60D1A/position","unique_id":"B60D1A","payload_open":"OPEN","payload_close":"CLOSE","payload_stop":"STOP","device_class":"blind","availability_topic":"iown/status"}
+{"name":"IZY1","command_topic":"iown/B60D1A/set","state_topic":"iown/B60D1A/state","position_topic":"iown/B60D1A/position","set_position_topic":"iown/B60D1A/position/set","unique_id":"B60D1A","payload_open":"OPEN","payload_close":"CLOSE","payload_stop":"STOP","device_class":"blind","availability_topic":"iown/status"}
 ```
 
 For each blind the firmware also publishes MQTT button entities that allow
@@ -120,6 +122,10 @@ The discovery topics are:
 - `homeassistant/button/<id>_add/config`
 - `homeassistant/button/<id>_remove/config`
 
+Each blind along with its control buttons is exposed as an individual device in
+Home Assistant, so the gateway no longer groups all entities into a single
+device list.
+
 Sending `PRESS` to `iown/<id>/pair`, `iown/<id>/add` or `iown/<id>/remove`
 triggers the corresponding command on the blind.
 
@@ -128,8 +134,9 @@ Configure your MQTT broker settings in `include/user_config.h` (`mqtt_server`, `
 If you don't have an OLED display connected, comment out the `DISPLAY` definition in `include/user_config.h` to disable all display related code.
 
 Once discovery is complete you can control a blind by publishing `OPEN`, `CLOSE`
-or `STOP` to `iown/<id>/set`. The firmware listens on these topics and issues the
-corresponding command to the device.
+or `STOP` to `iown/<id>/set`, or a number between `0` and `100` to
+`iown/<id>/position/set` to move the blind to a specific position. The firmware
+listens on these topics and issues the corresponding command to the device.
 When an `OPEN` or `CLOSE` command is received, it immediately publishes the new
 state (`open` or `closed`) to `iown/<id>/state` so Home Assistant can update the
 cover status.

@@ -6,9 +6,9 @@
 namespace IOHC {
     class BlindPosition {
     public:
-        explicit BlindPosition(uint32_t travelTimeMs = 0);
+        explicit BlindPosition(uint32_t travelTimeSec = 0);
 
-        void setTravelTime(uint32_t ms);
+        void setTravelTime(uint32_t sec);
         uint32_t getTravelTime() const;
 
         void startOpening();
@@ -18,11 +18,12 @@ namespace IOHC {
 
         float getPosition() const;
         bool isMoving() const;
+        void setPosition(float pos);
 
     private:
         enum class State { Idle, Opening, Closing };
         State state;
-        uint32_t travelTime; // milliseconds
+        uint32_t travelTime; // seconds
         uint64_t lastUpdateUs;
         float position; // 0..100
     };

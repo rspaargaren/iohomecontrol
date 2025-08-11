@@ -9,7 +9,7 @@
         "manufacturer_id": 2,
         "description": "IZY1",
         "name": "IZY1",
-        "travel_time": 10000,
+        "travel_time": 10,
         "paired": false
     },
     "b60d1b": {
@@ -22,7 +22,7 @@
         "manufacturer_id": 2,
         "description": "IZY2",
         "name": "IZY2",
-        "travel_time": 10000,
+        "travel_time": 10,
         "paired": false
     },
     "e8e150": {
@@ -35,7 +35,7 @@
         "manufacturer_id": 2,
         "description": "DYNA",
         "name": "DYNA",
-        "travel_time": 10000,
+        "travel_time": 10,
         "paired": false
     },
     "e00001": {
@@ -48,7 +48,7 @@
         "manufacturer_id": 2,
         "description": "SUNS",
         "name": "Luifel Tuin",
-        "travel_time": 10000,
+        "travel_time": 10,
         "paired": false
     },
     "e00002": {
@@ -61,7 +61,7 @@
         "manufacturer_id": 2,
         "description": "SUNG",
         "name": "Screen G",
-        "travel_time": 10000,
+        "travel_time": 10,
         "paired": false
     },
     "e00003": {
@@ -74,7 +74,7 @@
         "manufacturer_id": 2,
         "description": "SNT1",
         "name": "Screen T2",
-        "travel_time": 10000,
+        "travel_time": 10,
         "paired": false
     },
     "e00004": {
@@ -87,7 +87,7 @@
         "manufacturer_id": 2,
         "description": "SNT2",
         "name": "Screen T1",
-        "travel_time": 10000,
+        "travel_time": 10,
         "paired": false
     }
 }

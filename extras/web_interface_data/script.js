@@ -131,6 +131,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 editButton.textContent = 'edit';
                 editButton.classList.add('btn', 'edit');
                 editButton.onclick = () =>
+
                     openPopup('Edit Device', "here edit your device", "Adjust the name:", device.id, {
                         showInput: true,
                         defaultValue: device.name,
@@ -328,6 +329,18 @@ document.addEventListener('DOMContentLoaded', function() {
             removeBtn.style.display = 'none';
             labelTiming.style.display = 'none';
             inputTiming.style.display = 'none';
+            removeBtn.onclick = null;
+        }
+
+        const removeBtn = document.getElementById('popup-remove');
+        if (options && options.onDelete) {
+            removeBtn.style.display = 'block';
+            removeBtn.onclick = () => {
+                closePopup();
+                options.onDelete();
+            };
+        } else {
+            removeBtn.style.display = 'none';
             removeBtn.onclick = null;
         }
 
