@@ -86,14 +86,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
             devices.forEach(device => {
                 // Populate the UL for display (simple version)
-                const listItem = document.createElement('li');
-                listItem.textContent = ' ';
                 const nameSpan = document.createElement('span');
                 nameSpan.textContent = device.name;
-
+                const listItem = document.createElement('li');
+                listItem.textContent = ' ';
+                listItem.classList.add('device');
+                listItem.dataset.id = device.id;
                 listItem.appendChild(nameSpan); // Append the name span to the list item
 
-                 // 🔘 up btn
+                // 🔘 up btn
                 const upButton = document.createElement('button');
                 upButton.textContent = 'up';
                 upButton.classList.add('btn', 'open');
@@ -131,7 +132,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 editButton.textContent = 'edit';
                 editButton.classList.add('btn', 'edit');
                 editButton.onclick = () =>
-
                     openPopup('Edit Device', "here edit your device", "Adjust the name:", device.id, {
                         showInput: true,
                         defaultValue: device.name,
@@ -177,6 +177,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             }
                         }
                     });
+                updateDeviceFill('b60d1a', 50);
 
                 listItem.appendChild(upButton);
                 listItem.appendChild(stopButton);
@@ -303,8 +304,18 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
 
-    // popup open
+    function updateDeviceFill(deviceId, percent) {
+        const deviceEl = document.querySelector(`.device[data-id="${deviceId}"]`);
+        if (!deviceEl) return;
 
+        // calculate color based on percentage (green→red)
+        const color = `var(--color-accent3)`;
+
+        // set background as gradient
+        deviceEl.style.background = `linear-gradient(to bottom, ${color} ${percent}%, var(--color-input) ${percent}%)`;
+    }
+
+    // popup open
     function openPopup(title, text, label, data, options = {}) {
         const labelInput = document.getElementById('label-input');
         const labelTiming = document.getElementById('label-timing');
@@ -329,18 +340,6 @@ document.addEventListener('DOMContentLoaded', function() {
             removeBtn.style.display = 'none';
             labelTiming.style.display = 'none';
             inputTiming.style.display = 'none';
-            removeBtn.onclick = null;
-        }
-
-        const removeBtn = document.getElementById('popup-remove');
-        if (options && options.onDelete) {
-            removeBtn.style.display = 'block';
-            removeBtn.onclick = () => {
-                closePopup();
-                options.onDelete();
-            };
-        } else {
-            removeBtn.style.display = 'none';
             removeBtn.onclick = null;
         }
 
@@ -374,7 +373,6 @@ document.addEventListener('DOMContentLoaded', function() {
       if (savedTheme === 'dark') {
         body.classList.add('dark-mode');
       }
-
       const addpopup = document.getElementById('add-popup');
       addpopup.addEventListener('click', () => {
          openPopup('Add Device', "here add your device", "new device", null, {
