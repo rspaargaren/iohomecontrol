@@ -177,7 +177,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             }
                         }
                     });
-                updateDeviceFill('b60d1a', 50);
+                updateDeviceFill(device.id, device.position || 0);
 
                 listItem.appendChild(upButton);
                 listItem.appendChild(stopButton);
@@ -315,6 +315,17 @@ document.addEventListener('DOMContentLoaded', function() {
         deviceEl.style.background = `linear-gradient(to bottom, ${color} ${percent}%, var(--color-input) ${percent}%)`;
     }
 
+    async function refreshDevicePositions() {
+        try {
+            const response = await fetch('/api/devices');
+            if (!response.ok) return;
+            const devices = await response.json();
+            devices.forEach(d => updateDeviceFill(d.id, d.position || 0));
+        } catch (e) {
+            console.error('Error refreshing positions', e);
+        }
+    }
+
     // popup open
     function openPopup(title, text, label, data, options = {}) {
         const labelInput = document.getElementById('label-input');
@@ -403,6 +414,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     setInterval(fetchLogs, 2000);
+    setInterval(refreshDevicePositions, 2000);
     fetchLogs();
     loadMqttConfig();
     // Initial fetch of devices
