@@ -134,10 +134,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 editButton.onclick = () =>
                     openPopup('Edit Device', "here edit your device", "Adjust the name:", device.id, {
                         showInput: true,
+                        showTiming: true,
                         defaultValue: device.name,
-                        onConfirm: async (newName) => {
-                            if (newName.trim()) {
-                                try {
+                        defaultTiming: device.travel_time,
+                        onConfirm: async (newName, newTiming) => {
+                            try {
+                                if (newName.trim() && newName !== device.name) {
                                     const response = await fetch('/api/command', {
                                         method: 'POST',
                                         headers: { 'Content-Type': 'application/json' },
@@ -146,13 +148,27 @@ document.addEventListener('DOMContentLoaded', function() {
                                     const result = await response.json();
                                     if (result.success) {
                                         logStatus(result.message || 'Device renamed.');
-                                        fetchAndDisplayDevices();
                                     } else {
                                         logStatus(result.message || 'Failed to rename device.', true);
                                     }
-                                } catch (e) {
-                                    logStatus(`Error renaming device: ${e.message}`, true);
                                 }
+                                const parsed = parseInt(newTiming, 10);
+                                if (!isNaN(parsed) && parsed > 0 && parsed !== device.travel_time) {
+                                    const tResp = await fetch('/api/command', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ deviceId: device.id, command: `time1W ${parsed}` })
+                                    });
+                                    const tResult = await tResp.json();
+                                    if (tResult.success) {
+                                        logStatus(tResult.message || 'Travel time updated.');
+                                    } else {
+                                        logStatus(tResult.message || 'Failed to update travel time.', true);
+                                    }
+                                }
+                                fetchAndDisplayDevices();
+                            } catch (e) {
+                                logStatus(`Error updating device: ${e.message}`, true);
                             }
                         },
                         onDelete: async () => {
@@ -177,7 +193,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             }
                         }
                     });
-                updateDeviceFill('b60d1a', 50);
+                updateDeviceFill(device.id, device.position || 0);
 
                 listItem.appendChild(upButton);
                 listItem.appendChild(stopButton);
@@ -307,13 +323,24 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateDeviceFill(deviceId, percent) {
         const deviceEl = document.querySelector(`.device[data-id="${deviceId}"]`);
         if (!deviceEl) return;
-
-        // calculate color based on percentage (green→red)
         const color = `var(--color-accent3)`;
-
+        const fillPercent = 100 - percent;
+        
         // set background as gradient
-        deviceEl.style.background = `linear-gradient(to bottom, ${color} ${percent}%, var(--color-input) ${percent}%)`;
+        deviceEl.style.background = `linear-gradient(to bottom, ${color} ${fillPercent}%, var(--color-input) ${fillPercent}%)`;
     }
+
+    async function refreshDevicePositions() {
+        try {
+            const response = await fetch('/api/devices');
+            if (!response.ok) return;
+            const devices = await response.json();
+            devices.forEach(d => updateDeviceFill(d.id, d.position || 0));
+        } catch (e) {
+            console.error('Error refreshing positions', e);
+        }
+    }
+
 
     // popup open
     function openPopup(title, text, label, data, options = {}) {
@@ -321,33 +348,39 @@ document.addEventListener('DOMContentLoaded', function() {
         const labelTiming = document.getElementById('label-timing');
         const inputTiming = document.getElementById('popup-input-timing');
         const removeBtn = document.getElementById('popup-remove');
+
         document.getElementById('popup-title').textContent = title;
         document.getElementById('popup-text').textContent = text;
         labelInput.textContent = label;
+
         const input = document.getElementById('popup-input');
-        input.style.display = (options && options.showInput) ? 'block' : 'none';
+        const showInput = options && options.showInput;
+        input.style.display = showInput ? 'block' : 'none';
+        labelInput.style.display = showInput ? 'block' : 'none';
         input.value = options.defaultValue || '';
-        
+
+        const showTiming = options && options.showTiming;
+        labelTiming.style.display = showTiming ? 'block' : 'none';
+        inputTiming.style.display = showTiming ? 'block' : 'none';
+        inputTiming.value = options.defaultTiming || '';
+
         if (options && options.onDelete) {
             removeBtn.style.display = 'block';
-            labelTiming.style.display = 'block';
-            inputTiming.style.display = 'block';
             removeBtn.onclick = () => {
                 closePopup();
                 options.onDelete();
             };
         } else {
             removeBtn.style.display = 'none';
-            labelTiming.style.display = 'none';
-            inputTiming.style.display = 'none';
             removeBtn.onclick = null;
         }
 
         // OK button
         document.getElementById('popup-confirm').onclick = () => {
-            const value = (options && options.showInput) ? input.value : true;
+            const value = showInput ? input.value : true;
+            const timingValue = showTiming ? inputTiming.value : undefined;
             closePopup();
-            if (options.onConfirm) options.onConfirm(value);
+            if (options.onConfirm) options.onConfirm(value, timingValue);
         };
 
         // pair button
@@ -356,7 +389,7 @@ document.addEventListener('DOMContentLoaded', function() {
         };
         document.getElementById('popup').classList.add('open');
 
-        };
+    };
 
 
     // popup close
@@ -403,6 +436,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     setInterval(fetchLogs, 2000);
+    setInterval(refreshDevicePositions, 2000);
     fetchLogs();
     loadMqttConfig();
     // Initial fetch of devices
