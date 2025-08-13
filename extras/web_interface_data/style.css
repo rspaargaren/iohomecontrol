@@ -107,6 +107,7 @@ ul#device-list li {
   justify-content: center;
   border: 1px solid var(--color7);
   position: relative;
+  transition: background 0.5s ease;
 }
 ul#device-list li .btn {
   margin: 1px auto;
@@ -160,7 +161,7 @@ button {
 button:hover {
     background-color: var(--color-accent2);
 }
-input[type="text"], select {
+input, select {
     padding: 8px;
     margin: 5px 0 10px 0;
     display: inline-block;

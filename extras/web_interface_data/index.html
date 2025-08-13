@@ -27,8 +27,8 @@
                     </ul>
                 </div>
             </section>
-            <section id="device-list-section">
-                <div class="title"><h2>test</h2></div>
+            <section id="mqtt-settings-section">
+                <div class="title"><h2>MQTT settings</h2></div>
                 <div class="card">
                     <input type="text" id="mqtt-user" placeholder="MQTT User">
                     <input type="text" id="mqtt-server" placeholder="MQTT Server">
@@ -78,14 +78,15 @@
             <div class="title"><h2 id="popup-title">Popup Title</h2><div class="btn close" onclick="closePopup()">Sluiten</div></div>
             <div class="card-popup">
                 <p id="popup-text">Tekst komt hier.</p>
-
+                <label for="popup-input" id="label-input">device:</label>
                 <input type="text" id="popup-input" placeholder="Typ hier..." autocomplete="off">
+                <label for="popup-input-timing" id="label-timing">timing:</label>
+                <input type="text" id="popup-input-timing" placeholder="Typ hier..." autocomplete="off">
                 <div class="popup-buttons">
                     <button id="popup-confirm" class="confirm">Confirm</button>
-                    <button id="popup-cancel" class="cancel">Cancel</button>
+                    <button id="popup-pair" class="pair">Pair</button>
+                    <button id="popup-remove" class="remove-device">delete</button>
                 </div>
-                <button id="popup-remove" class="remove-device">delete</button>
-
             </div>
         </div>
     </div>

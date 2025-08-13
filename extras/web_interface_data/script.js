@@ -86,14 +86,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
             devices.forEach(device => {
                 // Populate the UL for display (simple version)
-                const listItem = document.createElement('li');
-                listItem.textContent = ' ';
                 const nameSpan = document.createElement('span');
                 nameSpan.textContent = device.name;
-
+                const listItem = document.createElement('li');
+                listItem.textContent = ' ';
+                listItem.classList.add('device');
+                listItem.dataset.id = device.id;
                 listItem.appendChild(nameSpan); // Append the name span to the list item
 
-                 // 🔘 up btn
+                // 🔘 up btn
                 const upButton = document.createElement('button');
                 upButton.textContent = 'up';
                 upButton.classList.add('btn', 'open');
@@ -131,7 +132,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 editButton.textContent = 'edit';
                 editButton.classList.add('btn', 'edit');
                 editButton.onclick = () =>
-                    openPopup('Edit Device', "Adjust the name:", device.id, {
+                    openPopup('Edit Device', "here edit your device", "Adjust the name:", device.id, {
                         showInput: true,
                         defaultValue: device.name,
                         onConfirm: async (newName) => {
@@ -176,6 +177,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             }
                         }
                     });
+                updateDeviceFill('b60d1a', 50);
 
                 listItem.appendChild(upButton);
                 listItem.appendChild(stopButton);
@@ -302,24 +304,42 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
 
-    // popup open
+    function updateDeviceFill(deviceId, percent) {
+        const deviceEl = document.querySelector(`.device[data-id="${deviceId}"]`);
+        if (!deviceEl) return;
 
-    function openPopup(title, text, data, options = {}) {
+        // calculate color based on percentage (green→red)
+        const color = `var(--color-accent3)`;
+
+        // set background as gradient
+        deviceEl.style.background = `linear-gradient(to bottom, ${color} ${percent}%, var(--color-input) ${percent}%)`;
+    }
+
+    // popup open
+    function openPopup(title, text, label, data, options = {}) {
+        const labelInput = document.getElementById('label-input');
+        const labelTiming = document.getElementById('label-timing');
+        const inputTiming = document.getElementById('popup-input-timing');
+        const removeBtn = document.getElementById('popup-remove');
         document.getElementById('popup-title').textContent = title;
         document.getElementById('popup-text').textContent = text;
+        labelInput.textContent = label;
         const input = document.getElementById('popup-input');
         input.style.display = (options && options.showInput) ? 'block' : 'none';
         input.value = options.defaultValue || '';
-
-        const removeBtn = document.getElementById('popup-remove');
+        
         if (options && options.onDelete) {
             removeBtn.style.display = 'block';
+            labelTiming.style.display = 'block';
+            inputTiming.style.display = 'block';
             removeBtn.onclick = () => {
                 closePopup();
                 options.onDelete();
             };
         } else {
             removeBtn.style.display = 'none';
+            labelTiming.style.display = 'none';
+            inputTiming.style.display = 'none';
             removeBtn.onclick = null;
         }
 
@@ -330,10 +350,9 @@ document.addEventListener('DOMContentLoaded', function() {
             if (options.onConfirm) options.onConfirm(value);
         };
 
-        // Cancel button
-        document.getElementById('popup-cancel').onclick = () => {
-            closePopup();
-            if (options.onCancel) options.onCancel();
+        // pair button
+        document.getElementById('popup-pair').onclick = () => {
+
         };
         document.getElementById('popup').classList.add('open');
 
@@ -354,10 +373,9 @@ document.addEventListener('DOMContentLoaded', function() {
       if (savedTheme === 'dark') {
         body.classList.add('dark-mode');
       }
-
       const addpopup = document.getElementById('add-popup');
       addpopup.addEventListener('click', () => {
-         openPopup('Add Device', "new device", null, {
+         openPopup('Add Device', "here add your device", "new device", null, {
            showInput: true,
            onConfirm: async (newName) => {
              if (newName.trim()) {
