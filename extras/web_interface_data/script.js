@@ -10,6 +10,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const mqttPasswordInput = document.getElementById('mqtt-password');
     const mqttDiscoveryInput = document.getElementById('mqtt-discovery');
     const mqttUpdateButton = document.getElementById('mqtt-update');
+    const firmwareFileInput = document.getElementById('firmware-file');
+    const filesystemFileInput = document.getElementById('filesystem-file');
+    const firmwareUploadButton = document.getElementById('upload-firmware');
+    const filesystemUploadButton = document.getElementById('upload-filesystem');
     const ws = new WebSocket(`ws://${window.location.host}/ws`);
 
     // Function to add a message to the status/log
@@ -76,6 +80,42 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (e) {
             console.error('Error updating MQTT config', e);
             logStatus('Error updating MQTT config', true);
+        }
+    }
+
+    async function uploadFirmware() {
+        const file = firmwareFileInput.files[0];
+        if (!file) {
+            logStatus('No firmware file selected', true);
+            return;
+        }
+        const formData = new FormData();
+        formData.append('file', file);
+        try {
+            const resp = await fetch('/api/firmware', { method: 'POST', body: formData });
+            const result = await resp.json();
+            logStatus(result.message || 'Firmware uploaded');
+        } catch (e) {
+            console.error('Error uploading firmware', e);
+            logStatus('Error uploading firmware', true);
+        }
+    }
+
+    async function uploadFilesystem() {
+        const file = filesystemFileInput.files[0];
+        if (!file) {
+            logStatus('No filesystem file selected', true);
+            return;
+        }
+        const formData = new FormData();
+        formData.append('file', file);
+        try {
+            const resp = await fetch('/api/filesystem', { method: 'POST', body: formData });
+            const result = await resp.json();
+            logStatus(result.message || 'Filesystem uploaded');
+        } catch (e) {
+            console.error('Error uploading filesystem', e);
+            logStatus('Error uploading filesystem', true);
         }
     }
 
@@ -275,6 +315,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     if (mqttUpdateButton) {
         mqttUpdateButton.addEventListener('click', updateMqttConfig);
+    }
+    if (firmwareUploadButton) {
+        firmwareUploadButton.addEventListener('click', uploadFirmware);
+    }
+    if (filesystemUploadButton) {
+        filesystemUploadButton.addEventListener('click', uploadFilesystem);
     }
 
     // suggestions for command input
