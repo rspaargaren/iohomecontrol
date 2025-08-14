@@ -123,20 +123,9 @@ void setup() {
 #endif
     nvs_init();
 
-
-    // Initialize network services
-    initWifi();
-#if defined(MQTT)
-    initMqtt();
-#endif
-    // Load 1W device definitions before starting the web server so
+    // Load 1W device definitions before starting network services so
     // that /api/devices can immediately return the configured remotes.
     remote1W = IOHC::iohcRemote1W::getInstance();
-#if defined(WEBSERVER)
-    setupWebServer();
-#endif
-    Cmd::kbd_tick.attach_ms(500, Cmd::cmdFuncHandler);
-
 
     radioInstance = IOHC::iohcRadio::getInstance();
     radioInstance->start(MAX_FREQS, frequencies, 0, msgRcvd, publishMsg); //msgArchive); //, msgRcvd);
