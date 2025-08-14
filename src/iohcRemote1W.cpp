@@ -28,6 +28,9 @@
 #if defined(MQTT)
 #include <mqtt_handler.h>
 #endif
+#if defined(WEBSERVER)
+#include <web_server_handler.h>
+#endif
 
 namespace IOHC {
     iohcRemote1W* iohcRemote1W::_iohcRemote1W = nullptr;
@@ -946,21 +949,32 @@ const std::vector<iohcRemote1W::remote>& iohcRemote1W::getRemotes() const {
 #if defined(SSD1306_DISPLAY)
                 display1WPosition(r.node, pos, r.name.c_str());
 #endif
-#if defined(MQTT)
+#if defined(MQTT) || defined(WEBSERVER)
                 std::string id = bytesToHexString(r.node, sizeof(r.node));
+#endif
+#if defined(MQTT)
                 const char *state = r.movement == remote::Movement::Opening ? "OPENING" : "CLOSING";
                 if (state != r.lastPublishedState) {
                     publishCoverState(id, state);
                     r.lastPublishedState = state;
                 }
+#endif
+#if defined(MQTT) || defined(WEBSERVER)
                 if (fabs(pos - r.lastPublishedPosition) >= 1.0f) {
+#if defined(MQTT)
                     publishCoverPosition(id, pos);
+#endif
+#if defined(WEBSERVER)
+                    broadcastDevicePosition(id.c_str(), static_cast<int>(pos));
+#endif
                     r.lastPublishedPosition = pos;
                 }
 #endif
             } else {
-#if defined(MQTT)
+#if defined(MQTT) || defined(WEBSERVER)
                 std::string id = bytesToHexString(r.node, sizeof(r.node));
+#endif
+#if defined(MQTT)
                 const char *state = "STOP";
                 if (r.movement == remote::Movement::Opening) {
                     state = pos >= 99.5f ? "OPEN" : "STOP";
@@ -971,8 +985,15 @@ const std::vector<iohcRemote1W::remote>& iohcRemote1W::getRemotes() const {
                     publishCoverState(id, state);
                     r.lastPublishedState = state;
                 }
+#endif
+#if defined(MQTT) || defined(WEBSERVER)
                 if (fabs(pos - r.lastPublishedPosition) >= 1.0f) {
+#if defined(MQTT)
                     publishCoverPosition(id, pos);
+#endif
+#if defined(WEBSERVER)
+                    broadcastDevicePosition(id.c_str(), static_cast<int>(pos));
+#endif
                     r.lastPublishedPosition = pos;
                 }
 #endif
