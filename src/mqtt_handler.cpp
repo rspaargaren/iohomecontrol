@@ -390,16 +390,19 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
             return bytesToHexString(r.node, sizeof(r.node)) == id;
         });
         if (it != remotes.end()) {
+            int openVal = atoi(payloadStr.c_str());
+            openVal = std::clamp(openVal, 0, 100);
+            int closeVal = 100 - openVal;
             Tokens t;
-            t.push_back(payloadStr);
+            t.push_back(std::to_string(closeVal));
             t.push_back(it->description);
-            IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Position, &t);
+            IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Absolute, &t);
             std::string stateTopic = "iown/" + id + "/state";
-            int val = atoi(payloadStr.c_str());
-            const char *state = (val >= 99) ? "OPEN" : (val <= 1 ? "CLOSE" : "STOP");
+            const char *state = (openVal >= 99) ? "OPEN" : (openVal <= 1 ? "CLOSE" : "STOP");
             mqttClient.publish(stateTopic.c_str(), 0, true, state);
             std::string posTopic = "iown/" + id + "/position";
-            mqttClient.publish(posTopic.c_str(), 0, true, payloadStr.c_str());
+            std::string openStr = std::to_string(openVal);
+            mqttClient.publish(posTopic.c_str(), 0, true, openStr.c_str());
             mqttClient.publish(topicStr.c_str(), 0, true, "", 0);
         }
         return;
