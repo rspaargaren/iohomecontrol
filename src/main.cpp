@@ -711,6 +711,6 @@ void txUserBuffer(Tokens *cmd) {
 }
 
 void loop() {
-    // loopWebServer(); // For ESPAsyncWebServer, this is typically not needed.
+    loopWebServer(); // For ESPAsyncWebServer, this is typically not needed.
     checkWifiConnection();
 }
