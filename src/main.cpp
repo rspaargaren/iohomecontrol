@@ -37,6 +37,7 @@
 #include <nvs_helpers.h>
 #include "log_buffer.h"
 #include <stdarg.h>
+#include <algorithm>
 
 #if defined(WEBSERVER)
 #include <web_server_handler.h>
@@ -195,6 +196,26 @@ void IRAM_ATTR forgePacket(iohcPacket* packet, const std::vector<uint8_t> &toSen
 bool msgRcvd(IOHC::iohcPacket *iohc) {
     JsonDocument doc;
     doc["type"] = "Unk";
+    String deviceId =
+        bytesToHexString(iohc->payload.packet.header.source,
+                         sizeof(iohc->payload.packet.header.source))
+            .c_str();
+    String deviceName = "Unknown device";
+    const auto &remotes = IOHC::iohcRemote1W::getInstance()->getRemotes();
+    auto rit = std::find_if(
+        remotes.begin(), remotes.end(), [&](const auto &r) {
+          return memcmp(r.node, iohc->payload.packet.header.source,
+                        sizeof(r.node)) == 0;
+        });
+    if (rit != remotes.end()) {
+      deviceName = rit->name.c_str();
+    } else if (remoteMap) {
+      const auto *entry = remoteMap->find(iohc->payload.packet.header.source);
+      if (entry)
+        deviceName = entry->name.c_str();
+    }
+    addLogMessage("Command received from " + deviceId +
+                  " (" + deviceName + ")");
     switch (iohc->payload.packet.header.cmd) {
         case iohcDevice::RECEIVED_DISCOVER_0x28: {
             printf("2W Pairing Asked\n");
