@@ -5,6 +5,7 @@
 #include "ESPAsyncWebServer.h" // Or WebServer.h if that's preferred for memory
 #include <AsyncJson.h>
 #include <LittleFS.h>
+#include <Update.h>
 #include <interact.h>
 #include <iohcCryptoHelpers.h>
 #include <iohcRemote1W.h>
@@ -346,6 +347,72 @@ void handleApiMqttSet(AsyncWebServerRequest *request, JsonVariant &json) {
 }
 #endif
 
+void handleFirmwareUpdate(AsyncWebServerRequest *request) {
+  if (Update.hasError()) {
+    request->send(500, "application/json",
+                  "{\"message\":\"Firmware update failed\"}");
+  } else {
+    request->send(200, "application/json",
+                  "{\"message\":\"Firmware update successful, rebooting\"}");
+    delay(100);
+    ESP.restart();
+  }
+}
+
+void handleFirmwareUpload(AsyncWebServerRequest *request, String filename,
+                          size_t index, uint8_t *data, size_t len,
+                          bool final) {
+  if (!index) {
+    Serial.printf("Firmware upload start: %s\n", filename.c_str());
+    if (!Update.begin(UPDATE_SIZE_UNKNOWN)) {
+      Update.printError(Serial);
+    }
+  }
+  if (!Update.hasError()) {
+    if (Update.write(data, len) != len) {
+      Update.printError(Serial);
+    }
+  }
+  if (final) {
+    if (!Update.end(true)) {
+      Update.printError(Serial);
+    }
+  }
+}
+
+void handleFilesystemUpdate(AsyncWebServerRequest *request) {
+  if (Update.hasError()) {
+    request->send(500, "application/json",
+                  "{\"message\":\"Filesystem update failed\"}");
+  } else {
+    request->send(200, "application/json",
+                  "{\"message\":\"Filesystem update successful, rebooting\"}");
+    delay(100);
+    ESP.restart();
+  }
+}
+
+void handleFilesystemUpload(AsyncWebServerRequest *request, String filename,
+                            size_t index, uint8_t *data, size_t len,
+                            bool final) {
+  if (!index) {
+    Serial.printf("Filesystem upload start: %s\n", filename.c_str());
+    if (!Update.begin(UPDATE_SIZE_UNKNOWN, U_SPIFFS)) {
+      Update.printError(Serial);
+    }
+  }
+  if (!Update.hasError()) {
+    if (Update.write(data, len) != len) {
+      Update.printError(Serial);
+    }
+  }
+  if (final) {
+    if (!Update.end(true)) {
+      Update.printError(Serial);
+    }
+  }
+}
+
 void setupWebServer() {
   Serial.println("Initializing HTTP server ...");
 
@@ -371,6 +438,10 @@ void setupWebServer() {
   server.addHandler(
       new AsyncCallbackJsonWebHandler("/api/mqtt", handleApiMqttSet));
 #endif
+  server.on("/api/firmware", HTTP_POST, handleFirmwareUpdate,
+            handleFirmwareUpload);
+  server.on("/api/filesystem", HTTP_POST, handleFilesystemUpdate,
+            handleFilesystemUpload);
 
   ws.onEvent(onWsEvent);
   server.addHandler(&ws);
