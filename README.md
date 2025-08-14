@@ -85,6 +85,7 @@ The web interface allows you to:
 
 *   **View a list of devices:** The device list is currently populated with placeholder examples. (Future development will integrate this with actual detected/configured devices).
 *   **Send commands:** Select a device, type a command string (e.g., `setTemp 21.0`), and click "Send". (Command processing is currently a placeholder and will acknowledge receipt).
+*   **Live updates:** Logs and device positions are pushed to the browser via WebSockets.
 
 This feature is under development, and functionality will be expanded in the future.
 

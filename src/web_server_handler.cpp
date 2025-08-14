@@ -18,6 +18,53 @@
 // Assume ESPAsyncWebServer for now.
 // If you use WebServer.h, the setup and request handling will be different.
 AsyncWebServer server(80); // Create AsyncWebServer object on port 80
+AsyncWebSocket ws("/ws");
+
+static void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
+                      AwsEventType type, void *arg, uint8_t *data,
+                      size_t len) {
+  if (type == WS_EVT_CONNECT) {
+    DynamicJsonDocument doc(1024);
+    doc["type"] = "init";
+
+    JsonArray devices = doc.createNestedArray("devices");
+    const auto &remotes = IOHC::iohcRemote1W::getInstance()->getRemotes();
+    for (const auto &r : remotes) {
+      JsonObject d = devices.createNestedObject();
+      d["id"] = bytesToHexString(r.node, sizeof(r.node)).c_str();
+      d["name"] = r.name.c_str();
+      d["position"] = r.positionTracker.getPosition();
+    }
+
+    JsonArray logs = doc.createNestedArray("logs");
+    auto logMsgs = getLogMessages();
+    for (const auto &m : logMsgs)
+      logs.add(m);
+
+    String payload;
+    serializeJson(doc, payload);
+    client->text(payload);
+  }
+}
+
+void broadcastLog(const String &msg) {
+  DynamicJsonDocument doc(128);
+  doc["type"] = "log";
+  doc["message"] = msg;
+  String payload;
+  serializeJson(doc, payload);
+  ws.textAll(payload);
+}
+
+void broadcastDevicePosition(const String &id, int position) {
+  DynamicJsonDocument doc(128);
+  doc["type"] = "position";
+  doc["id"] = id;
+  doc["position"] = position;
+  String payload;
+  serializeJson(doc, payload);
+  ws.textAll(payload);
+}
 
 // Structure describing a device entry returned to the web UI
 struct Device {
@@ -182,6 +229,8 @@ void handleApiAction(AsyncWebServerRequest *request, JsonVariant &json) {
   t.push_back(action.c_str());
   t.push_back(it->description);
   IOHC::iohcRemote1W::getInstance()->cmd(btn, &t);
+  broadcastDevicePosition(deviceId,
+                          static_cast<int>(it->positionTracker.getPosition()));
 
   String msg = "Action " + action + " sent to " + deviceId;
   addLogMessage(msg);
@@ -323,6 +372,9 @@ void setupWebServer() {
       new AsyncCallbackJsonWebHandler("/api/mqtt", handleApiMqttSet));
 #endif
 
+  ws.onEvent(onWsEvent);
+  server.addHandler(&ws);
+
   auto &staticHandler =
       server.serveStatic("/", LittleFS, "/web_interface_data/");
   staticHandler.setDefaultFile("index.html");
@@ -352,7 +404,7 @@ void setupWebServer() {
 
 void loopWebServer() {
   // For ESPAsyncWebServer, most work is done asynchronously.
-  // For the basic WebServer.h, you would need server.handleClient() here.
+  ws.cleanupClients();
 }
 
 #endif // defined(WEBSERVER)

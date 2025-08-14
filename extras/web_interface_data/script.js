@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const mqttPasswordInput = document.getElementById('mqtt-password');
     const mqttDiscoveryInput = document.getElementById('mqtt-discovery');
     const mqttUpdateButton = document.getElementById('mqtt-update');
+    const ws = new WebSocket(`ws://${window.location.host}/ws`);
 
     // Function to add a message to the status/log
     function logStatus(message, isError = false) {
@@ -28,6 +29,20 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     logStatus('System started');
     logStatus('Loading devices...');
+
+    ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.type === 'log') {
+            logStatus(data.message);
+        } else if (data.type === 'position') {
+            updateDeviceFill(data.id, data.position);
+        } else if (data.type === 'init') {
+            data.logs.forEach(log => logStatus(log));
+            fetchAndDisplayDevices();
+        }
+    };
+    ws.onopen = () => logStatus('WebSocket connected');
+    ws.onclose = () => logStatus('WebSocket disconnected', true);
 
     async function loadMqttConfig() {
         try {
@@ -262,26 +277,6 @@ document.addEventListener('DOMContentLoaded', function() {
         mqttUpdateButton.addEventListener('click', updateMqttConfig);
     }
 
-   async function fetchLogs() {
-        try {
-            const response = await fetch('/api/logs');
-
-        if (!response.ok) return;
-            const logs = await response.json();
-            statusMessagesDiv.innerHTML = '';
-            logs.forEach(line => {
-                const p = document.createElement('p');
-                p.textContent = line;
-                statusMessagesDiv.appendChild(p);
-            });
-          statusMessagesDiv.scrollTop = statusMessagesDiv.scrollHeight;
-        } catch (e) {
-            console.error('Error fetching logs', e);
-        }
-        while (statusMessagesDiv.children.length > MAX_LOGS) {
-            statusMessagesDiv.removeChild(statusMessagesDiv.firstChild);
-        }
-    }
     // suggestions for command input
     const suggestions = ["add", "remove", "close", "open", "ls", "cat"];
     const input = document.getElementById('command-input');
@@ -331,16 +326,7 @@ document.addEventListener('DOMContentLoaded', function() {
         deviceEl.style.background = `linear-gradient(to bottom, ${color} ${percent}%, var(--color-input) ${percent}%)`;
     }
 
-    async function refreshDevicePositions() {
-        try {
-            const response = await fetch('/api/devices');
-            if (!response.ok) return;
-            const devices = await response.json();
-            devices.forEach(d => updateDeviceFill(d.id, d.position || 0));
-        } catch (e) {
-            console.error('Error refreshing positions', e);
-        }
-    }
+    // Device positions are updated via WebSocket
 
     // popup open
     function openPopup(title, text, label, data, options = {}) {
@@ -435,10 +421,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     });
 
-    setInterval(fetchLogs, 2000);
-    setInterval(refreshDevicePositions, 2000);
-    fetchLogs();
     loadMqttConfig();
-    // Initial fetch of devices
     fetchAndDisplayDevices();
 });

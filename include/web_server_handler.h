@@ -10,6 +10,8 @@ class ESPAsyncWebServer;
 #if defined(WEBSERVER)
 void setupWebServer();
 void loopWebServer(); // If any loop processing is needed for the web server
+void broadcastLog(const String &msg);
+void broadcastDevicePosition(const String &id, int position);
 #else
 inline void setupWebServer() {}
 inline void loopWebServer() {}
