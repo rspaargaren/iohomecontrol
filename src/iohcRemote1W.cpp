@@ -49,6 +49,7 @@ namespace IOHC {
             case RemoteButton::Vent: return "VENT";
             case RemoteButton::ForceOpen: return "FORCE";
             case RemoteButton::Position: return "POSITION";
+            case RemoteButton::Absolute: return "ABSOLUTE";
             case RemoteButton::Pair: return "PAIR";
             case RemoteButton::Add: return "ADD";
             case RemoteButton::Remove: return "REMOVE";
@@ -411,6 +412,46 @@ namespace IOHC {
                                 r.movement = remote::Movement::Idle;
                             }
                             r.targetPosition = percent;
+                            break;
+                        }
+                        case RemoteButton::Absolute: {
+                            int index = (data->size() > 2) ? 2 : 0;
+                            int percent = atoi(data->at(index).c_str());
+                            percent = std::clamp(percent, 0, 100);
+                            uint16_t val = static_cast<uint16_t>(percent * 0x0200);
+                            packet->payload.packet.msg.p0x00_14.main[0] = val >> 8;
+                            packet->payload.packet.msg.p0x00_14.main[1] = val & 0xFF;
+                            float target = 100.0f - percent;
+                            float current = r.positionTracker.getPosition();
+                            if (target > current + 0.5f) {
+                                r.positionTracker.startOpening();
+                                r.movement = remote::Movement::Opening;
+#if defined(MQTT)
+                                {
+                                    std::string id = bytesToHexString(r.node, sizeof(r.node));
+                                    publishCoverState(id, "OPENING");
+                                    publishCoverPosition(id, r.positionTracker.getPosition());
+                                    r.lastPublishedState = "OPENING";
+                                    r.lastPublishedPosition = r.positionTracker.getPosition();
+                                }
+#endif
+                            } else if (target < current - 0.5f) {
+                                r.positionTracker.startClosing();
+                                r.movement = remote::Movement::Closing;
+#if defined(MQTT)
+                                {
+                                    std::string id = bytesToHexString(r.node, sizeof(r.node));
+                                    publishCoverState(id, "CLOSING");
+                                    publishCoverPosition(id, r.positionTracker.getPosition());
+                                    r.lastPublishedState = "CLOSING";
+                                    r.lastPublishedPosition = r.positionTracker.getPosition();
+                                }
+#endif
+                            } else {
+                                r.positionTracker.stop();
+                                r.movement = remote::Movement::Idle;
+                            }
+                            r.targetPosition = target;
                             break;
                         }
                         case RemoteButton::Mode1:{
