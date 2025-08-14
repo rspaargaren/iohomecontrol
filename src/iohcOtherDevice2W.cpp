@@ -91,7 +91,7 @@ namespace IOHC {
                         discovery, packets2send.back()/*[j]*/->payload.buffer);
                     forgePacket(packets2send.back()/*[j]*//*->payload.buffer[4]*/, toSend, bec);
                     bec += 0x01;
-                    // packets2send.back()/*[j]*/->repeatTime = 225;
+                    packets2send.back()->repeatTime = 250; // Slow down discovery loop
                 }
 
                 digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
@@ -288,6 +288,7 @@ namespace IOHC {
                     memcpy(packets2send.back()->payload.packet.header.source, /*from*/real/*gateway*/, 3);
 
                     packets2send.back()->delayed = 250; // Give enough time for the answer
+                    packets2send.back()->repeatTime = 250; // Slow down discover loop
                 }
                 digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
 
