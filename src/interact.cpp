@@ -112,6 +112,9 @@ void createCommands() {
     Cmd::addHandler((char *) "position", (char *) "1W set position 0-100", [](Tokens *cmd)-> void {
         IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Position, cmd);
     });
+    Cmd::addHandler((char *) "absolute", (char *) "1W set absolute position 0-100", [](Tokens *cmd)-> void {
+        IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Absolute, cmd);
+    });
     Cmd::addHandler((char *) "vent", (char *) "1W vent device", [](Tokens *cmd)-> void {
         IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Vent, cmd);
     });
