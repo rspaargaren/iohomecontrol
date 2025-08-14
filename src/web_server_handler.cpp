@@ -240,7 +240,7 @@ void handleApiAction(AsyncWebServerRequest *request, JsonVariant &json) {
   broadcastDevicePosition(deviceId,
                           static_cast<int>(it->positionTracker.getPosition()));
 
-  String msg = "Action " + action + " sent to " + deviceId;
+  String msg = "Action " + action + " sent to " + String(it->name.c_str());
   addLogMessage(msg);
 
   AsyncJsonResponse *response = new AsyncJsonResponse();
