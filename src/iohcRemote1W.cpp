@@ -942,7 +942,7 @@ const std::vector<iohcRemote1W::remote>& iohcRemote1W::getRemotes() const {
             }
 
             if (moving) {
-                Serial.printf("%s position: %.0f%%\n", r.name.c_str(), pos);
+                //Serial.printf("%s position: %.0f%%\n", r.name.c_str(), pos);
 #if defined(SSD1306_DISPLAY)
                 display1WPosition(r.node, pos, r.name.c_str());
 #endif
