@@ -25,6 +25,7 @@ static void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
                       AwsEventType type, void *arg, uint8_t *data,
                       size_t len) {
   if (type == WS_EVT_CONNECT) {
+    // Build a compact init message containing only device information
     DynamicJsonDocument doc(1024);
     doc["type"] = "init";
 
@@ -37,14 +38,20 @@ static void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
       d["position"] = r.positionTracker.getPosition();
     }
 
-    JsonArray logs = doc.createNestedArray("logs");
-    auto logMsgs = getLogMessages();
-    for (const auto &m : logMsgs)
-      logs.add(m);
-
     String payload;
     serializeJson(doc, payload);
     client->text(payload);
+
+    // Stream cached log messages individually to avoid a large JSON payload
+    auto logMsgs = getLogMessages();
+    for (const auto &m : logMsgs) {
+      DynamicJsonDocument logDoc(128);
+      logDoc["type"] = "log";
+      logDoc["message"] = m;
+      String logPayload;
+      serializeJson(logDoc, logPayload);
+      client->text(logPayload);
+    }
   }
 }
 
