@@ -49,12 +49,12 @@ header img.logo {
   max-width: 40px;
   height: auto;
 }
-main > div, main > #settings-page {
+main > div {
     padding: 0;
     display: grid;
     color: var(--color-text);
 }
-main > div, main > #settings-page {
+main > div {
     margin: 10px;
 }
 nav{
@@ -90,6 +90,9 @@ nav .items:hover {
   position: absolute;
   right: 10px;
   top: 0;
+}
+.title .btn {
+  top: 2px;
 }
 #settings {
   background: url("img/settings.svg") no-repeat;
@@ -134,6 +137,26 @@ ul#device-list span {
   text-align: center;
   margin: auto;
 }
+table {
+  border-collapse: collapse;
+}
+td {
+  position: relative;
+  padding: 10px 8px;
+}
+tr {
+  border-bottom: solid 1px #fff;
+}
+th {
+  padding: 10px 8px;
+  text-align: left;
+}
+.remote-id {
+  background: var(--color-accent2);
+  border-radius: var(--radius);
+  padding: 2px 10px;
+  width: fit-content;
+}
 .btn {
   height: 40px;
   width: 40px;
@@ -151,7 +174,7 @@ ul#device-list span {
 .btn.edit {
   background: url("img/settings.svg") no-repeat;
   position: absolute;
-  bottom: 0;
+  bottom: 6px;
   right: 0;
   height: 25px;
   width: 25px;
@@ -232,8 +255,8 @@ footer {
   border-radius: 0 0px var(--radius) var(--radius);
 }
 #popup-title {
-    font-size: 18px;
-    margin-bottom: 10px;
+  font-size: 22px;
+  margin: 2px 0;
 }
 #popup-text {
   padding-bottom: 15px;
@@ -246,7 +269,7 @@ footer {
   flex-direction: column;
 }
 @media (min-width: 1280px) {
-    main > div, main > #settings-page {
+    main > div {
         grid-template-columns: repeat(2, 1fr);
         gap: 10px;
     }
