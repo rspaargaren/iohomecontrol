@@ -410,8 +410,8 @@ void iohcRadio::onTxTicker(void *arg) {
         radio->setRadioState(RadioState::RX);
         return;
     } else {
-        Radio::setRx();
-        radio->setRadioState(RadioState::RX); // Stay TX until done
+        //Radio::setRx();
+        radio->setRadioState(RadioState::TX); // Stay TX until done
     }
 
     // 📡 Send next packet (short preamble)
