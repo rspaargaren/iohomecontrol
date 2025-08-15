@@ -28,6 +28,9 @@
 #if defined(MQTT)
 #include <mqtt_handler.h>
 #endif
+#if defined(WEBSERVER)
+#include <web_server_handler.h>
+#endif
 
 namespace IOHC {
     iohcRemote1W* iohcRemote1W::_iohcRemote1W = nullptr;
@@ -49,6 +52,7 @@ namespace IOHC {
             case RemoteButton::Vent: return "VENT";
             case RemoteButton::ForceOpen: return "FORCE";
             case RemoteButton::Position: return "POSITION";
+            case RemoteButton::Absolute: return "ABSOLUTE";
             case RemoteButton::Pair: return "PAIR";
             case RemoteButton::Add: return "ADD";
             case RemoteButton::Remove: return "REMOVE";
@@ -411,6 +415,46 @@ namespace IOHC {
                                 r.movement = remote::Movement::Idle;
                             }
                             r.targetPosition = percent;
+                            break;
+                        }
+                        case RemoteButton::Absolute: {
+                            int index = (data->size() > 2) ? 2 : 0;
+                            int percent = atoi(data->at(index).c_str());
+                            percent = std::clamp(percent, 0, 100);
+                            uint16_t val = static_cast<uint16_t>(percent * 0x0200);
+                            packet->payload.packet.msg.p0x00_14.main[0] = val >> 8;
+                            packet->payload.packet.msg.p0x00_14.main[1] = val & 0xFF;
+                            float target = 100.0f - percent;
+                            float current = r.positionTracker.getPosition();
+                            if (target > current + 0.5f) {
+                                r.positionTracker.startOpening();
+                                r.movement = remote::Movement::Opening;
+#if defined(MQTT)
+                                {
+                                    std::string id = bytesToHexString(r.node, sizeof(r.node));
+                                    publishCoverState(id, "OPENING");
+                                    publishCoverPosition(id, r.positionTracker.getPosition());
+                                    r.lastPublishedState = "OPENING";
+                                    r.lastPublishedPosition = r.positionTracker.getPosition();
+                                }
+#endif
+                            } else if (target < current - 0.5f) {
+                                r.positionTracker.startClosing();
+                                r.movement = remote::Movement::Closing;
+#if defined(MQTT)
+                                {
+                                    std::string id = bytesToHexString(r.node, sizeof(r.node));
+                                    publishCoverState(id, "CLOSING");
+                                    publishCoverPosition(id, r.positionTracker.getPosition());
+                                    r.lastPublishedState = "CLOSING";
+                                    r.lastPublishedPosition = r.positionTracker.getPosition();
+                                }
+#endif
+                            } else {
+                                r.positionTracker.stop();
+                                r.movement = remote::Movement::Idle;
+                            }
+                            r.targetPosition = target;
                             break;
                         }
                         case RemoteButton::Mode1:{
@@ -901,25 +945,36 @@ const std::vector<iohcRemote1W::remote>& iohcRemote1W::getRemotes() const {
             }
 
             if (moving) {
-                Serial.printf("%s position: %.0f%%\n", r.name.c_str(), pos);
+                //Serial.printf("%s position: %.0f%%\n", r.name.c_str(), pos);
 #if defined(SSD1306_DISPLAY)
                 display1WPosition(r.node, pos, r.name.c_str());
 #endif
-#if defined(MQTT)
+#if defined(MQTT) || defined(WEBSERVER)
                 std::string id = bytesToHexString(r.node, sizeof(r.node));
+#endif
+#if defined(MQTT)
                 const char *state = r.movement == remote::Movement::Opening ? "OPENING" : "CLOSING";
                 if (state != r.lastPublishedState) {
                     publishCoverState(id, state);
                     r.lastPublishedState = state;
                 }
+#endif
+#if defined(MQTT) || defined(WEBSERVER)
                 if (fabs(pos - r.lastPublishedPosition) >= 1.0f) {
+#if defined(MQTT)
                     publishCoverPosition(id, pos);
+#endif
+#if defined(WEBSERVER)
+                    broadcastDevicePosition(id.c_str(), static_cast<int>(pos));
+#endif
                     r.lastPublishedPosition = pos;
                 }
 #endif
             } else {
-#if defined(MQTT)
+#if defined(MQTT) || defined(WEBSERVER)
                 std::string id = bytesToHexString(r.node, sizeof(r.node));
+#endif
+#if defined(MQTT)
                 const char *state = "STOP";
                 if (r.movement == remote::Movement::Opening) {
                     state = pos >= 99.5f ? "OPEN" : "STOP";
@@ -930,8 +985,15 @@ const std::vector<iohcRemote1W::remote>& iohcRemote1W::getRemotes() const {
                     publishCoverState(id, state);
                     r.lastPublishedState = state;
                 }
+#endif
+#if defined(MQTT) || defined(WEBSERVER)
                 if (fabs(pos - r.lastPublishedPosition) >= 1.0f) {
+#if defined(MQTT)
                     publishCoverPosition(id, pos);
+#endif
+#if defined(WEBSERVER)
+                    broadcastDevicePosition(id.c_str(), static_cast<int>(pos));
+#endif
                     r.lastPublishedPosition = pos;
                 }
 #endif

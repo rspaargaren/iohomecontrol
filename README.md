@@ -85,6 +85,7 @@ The web interface allows you to:
 
 *   **View a list of devices:** The device list is currently populated with placeholder examples. (Future development will integrate this with actual detected/configured devices).
 *   **Send commands:** Select a device, type a command string (e.g., `setTemp 21.0`), and click "Send". (Command processing is currently a placeholder and will acknowledge receipt).
+*   **Live updates:** Logs and device positions are pushed to the browser via WebSockets.
 
 This feature is under development, and functionality will be expanded in the future.
 
@@ -134,9 +135,11 @@ Configure your MQTT broker settings in `include/user_config.h` (`mqtt_server`, `
 If you don't have an OLED display connected, comment out the `DISPLAY` definition in `include/user_config.h` to disable all display related code.
 
 Once discovery is complete you can control a blind by publishing `OPEN`, `CLOSE`
-or `STOP` to `iown/<id>/set`, or a number between `0` and `100` to
+or `STOP` to `iown/<id>/set`, or a number between `0` (closed) and `100` (open) to
 `iown/<id>/position/set` to move the blind to a specific position. The firmware
-listens on these topics and issues the corresponding command to the device.
+now uses the device's absolute positioning for these percentage commands, providing
+more accurate movement. For direct access to the raw absolute command where `0`
+means fully open and `100` fully closed, publish to `iown/<id>/absolute/set`.
 When an `OPEN` or `CLOSE` command is received, it immediately publishes the new
 state (`open` or `closed`) to `iown/<id>/state` so Home Assistant can update the
 cover status.

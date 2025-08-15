@@ -25,7 +25,6 @@
                 <section id="device-list-section">
 
                     <div class="title"><h2>Devices</h2><div class="btn add" id="add-popup"></div></div>
-
                     <div class="card">
                         <ul id="device-list">
                             <!-- Device items will be populated by JavaScript -->
@@ -123,10 +122,10 @@
     </div>
     <script src="script.js"></script>
     <script>
-function showPage(page) {
-  document.getElementById('devices-page').style.display = (page === 'devices') ? 'grid' : 'none';
-  document.getElementById('settings-page').style.display = (page === 'settings') ? 'grid' : 'none';
-}
-</script>
+    function showPage(page) {
+      document.getElementById('devices-page').style.display = (page === 'devices') ? 'grid' : 'none';
+      document.getElementById('settings-page').style.display = (page === 'settings') ? 'grid' : 'none';
+    }
+    </script>
 </body>
 </html>

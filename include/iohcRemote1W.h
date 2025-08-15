@@ -42,6 +42,7 @@ namespace IOHC {
         Vent,
         ForceOpen,
         Position,
+        Absolute,
         Mode1, Mode2, Mode3, Mode4
     };
 
