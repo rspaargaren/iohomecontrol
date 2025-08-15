@@ -49,21 +49,33 @@ header img.logo {
   max-width: 40px;
   height: auto;
 }
-main {
+main > div, main > #settings-page {
     padding: 0;
     display: grid;
     color: var(--color-text);
 }
-main > div {
+main > div, main > #settings-page {
     margin: 10px;
 }
-
+nav{
+    display: flex;
+}
+nav .items {
+    padding: 12px 8px;
+    border-radius: var(--radius);
+    transition: background 0.3s;
+}
+nav .items:hover {
+    background: var(--color-accent3);
+}
 .card {
   background-color: var(--color-card);
   padding: 1em;
   border-radius: 0 0 var(--radius) var(--radius);
   box-shadow: 0 0 10px rgba(0,0,0,0.1);
   margin-bottom: 1em;
+  display: flex;
+  flex-direction: column;
 }
 .title {
   background-color: var(--color-accent);
@@ -78,6 +90,11 @@ main > div {
   position: absolute;
   right: 10px;
   top: 0;
+}
+#settings {
+  background: url("img/settings.svg") no-repeat;
+  height: 40px;
+  width: 40px;
 }
 #toggle-theme {
   background: url("img/dark_mode.svg") no-repeat;
@@ -219,17 +236,18 @@ footer {
     margin-bottom: 10px;
 }
 #popup-text {
-
-  /*height: 100px;*/
-
   padding-bottom: 15px;
+}
+.popup-buttons {
+  display: flex;
 }
 #popup.open {
   display: flex;
   flex-direction: column;
 }
 @media (min-width: 1280px) {
-    main {
+    main > div, main > #settings-page {
         grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
     }
 }

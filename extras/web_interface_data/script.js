@@ -367,9 +367,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // calculate color based on percentage (green→red)
         const color = `var(--color-accent3)`;
-
+        const fillPercent = 100 - percent;
+        
         // set background as gradient
-        deviceEl.style.background = `linear-gradient(to bottom, ${color} ${percent}%, var(--color-input) ${percent}%)`;
+        deviceEl.style.background = `linear-gradient(to bottom, var(--color-input) ${percent}%, ${color} ${percent}%)`;
     }
 
     // Device positions are updated via WebSocket
