@@ -9,6 +9,7 @@
 #include <interact.h>
 #include <iohcCryptoHelpers.h>
 #include <iohcRemote1W.h>
+#include <iohcRemoteMap.h>
 #include <log_buffer.h>
 #include <mqtt_handler.h>
 #include <nvs_helpers.h>
@@ -105,6 +106,29 @@ void handleApiDevices(AsyncWebServerRequest *request) {
   response->setLength();
   request->send(response);
   // log_i("Sent device list"); // Requires a logging library
+}
+
+void handleApiRemotes(AsyncWebServerRequest *request) {
+  AsyncJsonResponse *response = new AsyncJsonResponse();
+  if (!response) {
+    request->send(500, "text/plain", "Out of memory");
+    return;
+  }
+  JsonArray root = response->getRoot().to<JsonArray>();
+
+  const auto &entries = IOHC::iohcRemoteMap::getInstance()->getEntries();
+  for (const auto &e : entries) {
+    JsonObject obj = root.add<JsonObject>();
+    obj["id"] = bytesToHexString(e.node, sizeof(e.node)).c_str();
+    obj["name"] = e.name.c_str();
+    JsonArray devs = obj.createNestedArray("devices");
+    for (const auto &d : e.devices) {
+      devs.add(d.c_str());
+    }
+  }
+
+  response->setLength();
+  request->send(response);
 }
 
 void handleApiCommand(AsyncWebServerRequest *request, JsonVariant &json) {
@@ -433,6 +457,7 @@ void setupWebServer() {
 
   // API Endpoints
   server.on("/api/devices", HTTP_GET, handleApiDevices);
+  server.on("/api/remotes", HTTP_GET, handleApiRemotes);
   server.on("/api/logs", HTTP_GET, handleApiLogs);
 #if defined(MQTT)
   server.on("/api/mqtt", HTTP_GET, handleApiMqttGet);

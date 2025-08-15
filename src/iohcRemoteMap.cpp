@@ -53,4 +53,8 @@ namespace IOHC {
         }
         return nullptr;
     }
+
+    const std::vector<iohcRemoteMap::entry>& iohcRemoteMap::getEntries() const {
+        return _entries;
+    }
 }
