@@ -10,6 +10,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const mqttPasswordInput = document.getElementById('mqtt-password');
     const mqttDiscoveryInput = document.getElementById('mqtt-discovery');
     const mqttUpdateButton = document.getElementById('mqtt-update');
+    const firmwareFileInput = document.getElementById('firmware-file');
+    const filesystemFileInput = document.getElementById('filesystem-file');
+    const firmwareUploadButton = document.getElementById('upload-firmware');
+    const filesystemUploadButton = document.getElementById('upload-filesystem');
+    const ws = new WebSocket(`ws://${window.location.host}/ws`);
 
     // Function to add a message to the status/log
     function logStatus(message, isError = false) {
@@ -28,6 +33,20 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     logStatus('System started');
     logStatus('Loading devices...');
+
+    ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.type === 'log') {
+            logStatus(data.message);
+        } else if (data.type === 'position') {
+            updateDeviceFill(data.id, data.position);
+        } else if (data.type === 'init') {
+            data.logs.forEach(log => logStatus(log));
+            fetchAndDisplayDevices();
+        }
+    };
+    ws.onopen = () => logStatus('WebSocket connected');
+    ws.onclose = () => logStatus('WebSocket disconnected', true);
 
     async function loadMqttConfig() {
         try {
@@ -61,6 +80,42 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (e) {
             console.error('Error updating MQTT config', e);
             logStatus('Error updating MQTT config', true);
+        }
+    }
+
+    async function uploadFirmware() {
+        const file = firmwareFileInput.files[0];
+        if (!file) {
+            logStatus('No firmware file selected', true);
+            return;
+        }
+        const formData = new FormData();
+        formData.append('file', file);
+        try {
+            const resp = await fetch('/api/firmware', { method: 'POST', body: formData });
+            const result = await resp.json();
+            logStatus(result.message || 'Firmware uploaded');
+        } catch (e) {
+            console.error('Error uploading firmware', e);
+            logStatus('Error uploading firmware', true);
+        }
+    }
+
+    async function uploadFilesystem() {
+        const file = filesystemFileInput.files[0];
+        if (!file) {
+            logStatus('No filesystem file selected', true);
+            return;
+        }
+        const formData = new FormData();
+        formData.append('file', file);
+        try {
+            const resp = await fetch('/api/filesystem', { method: 'POST', body: formData });
+            const result = await resp.json();
+            logStatus(result.message || 'Filesystem uploaded');
+        } catch (e) {
+            console.error('Error uploading filesystem', e);
+            logStatus('Error uploading filesystem', true);
         }
     }
 
@@ -261,27 +316,13 @@ document.addEventListener('DOMContentLoaded', function() {
     if (mqttUpdateButton) {
         mqttUpdateButton.addEventListener('click', updateMqttConfig);
     }
-
-   async function fetchLogs() {
-        try {
-            const response = await fetch('/api/logs');
-
-        if (!response.ok) return;
-            const logs = await response.json();
-            statusMessagesDiv.innerHTML = '';
-            logs.forEach(line => {
-                const p = document.createElement('p');
-                p.textContent = line;
-                statusMessagesDiv.appendChild(p);
-            });
-          statusMessagesDiv.scrollTop = statusMessagesDiv.scrollHeight;
-        } catch (e) {
-            console.error('Error fetching logs', e);
-        }
-        while (statusMessagesDiv.children.length > MAX_LOGS) {
-            statusMessagesDiv.removeChild(statusMessagesDiv.firstChild);
-        }
+    if (firmwareUploadButton) {
+        firmwareUploadButton.addEventListener('click', uploadFirmware);
     }
+    if (filesystemUploadButton) {
+        filesystemUploadButton.addEventListener('click', uploadFilesystem);
+    }
+
     // suggestions for command input
     const suggestions = ["add", "remove", "close", "open", "ls", "cat"];
     const input = document.getElementById('command-input');
@@ -323,24 +364,16 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateDeviceFill(deviceId, percent) {
         const deviceEl = document.querySelector(`.device[data-id="${deviceId}"]`);
         if (!deviceEl) return;
+
+        // calculate color based on percentage (green→red)
         const color = `var(--color-accent3)`;
         const fillPercent = 100 - percent;
         
         // set background as gradient
-        deviceEl.style.background = `linear-gradient(to bottom, ${color} ${fillPercent}%, var(--color-input) ${fillPercent}%)`;
+        deviceEl.style.background = `linear-gradient(to bottom, var(--color-input) ${percent}%, ${color} ${percent}%)`;
     }
 
-    async function refreshDevicePositions() {
-        try {
-            const response = await fetch('/api/devices');
-            if (!response.ok) return;
-            const devices = await response.json();
-            devices.forEach(d => updateDeviceFill(d.id, d.position || 0));
-        } catch (e) {
-            console.error('Error refreshing positions', e);
-        }
-    }
-
+    // Device positions are updated via WebSocket
 
     // popup open
     function openPopup(title, text, label, data, options = {}) {
@@ -435,10 +468,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     });
 
-    setInterval(fetchLogs, 2000);
-    setInterval(refreshDevicePositions, 2000);
-    fetchLogs();
     loadMqttConfig();
-    // Initial fetch of devices
     fetchAndDisplayDevices();
 });
