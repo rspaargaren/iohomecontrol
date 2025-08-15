@@ -274,11 +274,11 @@ void createCommands() {
         for (uint8_t i = 0; i < nextPacket; i++) msgRcvd(radioPackets[i]);
         sysTable->dump2W();
     });
-    // Unnecessary just for test
+*/    // Unnecessary just for test
     Cmd::addHandler((char *) "discover28", (char *) "discover28", [](Tokens *cmd)-> void {
-        IOHC::iohcCozyDevice2W::getInstance()->cmd(IOHC::DeviceButton::discover28, nullptr);
+        IOHC::iohcOtherDevice2W::getInstance()->cmd(IOHC::Other2WButton::discover28, nullptr);
     });
-*/
+
     Cmd::addHandler((char *) "discover2A", (char *) "discover2A", [](Tokens *cmd)-> void {
         IOHC::iohcOtherDevice2W::getInstance()->cmd(IOHC::Other2WButton::discover2A, nullptr);
     });
