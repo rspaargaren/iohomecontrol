@@ -21,6 +21,7 @@ namespace IOHC {
 
         const entry* find(const address node) const;
         bool load();
+        const std::vector<entry>& getEntries() const;
 
     private:
         iohcRemoteMap();
