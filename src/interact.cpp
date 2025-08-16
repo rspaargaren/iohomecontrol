@@ -17,6 +17,7 @@
 #include <iohcRemote1W.h>
 #include <iohcCozyDevice2W.h>
 #include <iohcOtherDevice2W.h>
+#include <iohcRemoteMap.h>
 #include <interact.h>
 #include <wifi_helper.h>
 #include <oled_display.h>
@@ -171,6 +172,19 @@ void createCommands() {
                           r.travelTime,
                           r.paired ? "paired" : "unpaired");
         }
+    });
+    // Remote map
+    Cmd::addHandler((char *) "newRemote", (char *) "Create remote with address and name", [](Tokens *cmd)-> void {
+        if (cmd->size() < 3) {
+            Serial.println("Usage: newRemote <address> <name>");
+            return;
+        }
+        IOHC::address node{};
+        if (hexStringToBytes(cmd->at(1), node) != sizeof(IOHC::address)) {
+            Serial.println("Invalid address");
+            return;
+        }
+        IOHC::iohcRemoteMap::getInstance()->add(node, cmd->at(2));
     });
     // Other 2W
     Cmd::addHandler((char *) "discovery", (char *) "Send discovery on air", [](Tokens *cmd)-> void {

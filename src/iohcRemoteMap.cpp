@@ -2,6 +2,7 @@
 #include <ArduinoJson.h>
 #include <LittleFS.h>
 #include <iohcCryptoHelpers.h>
+#include <cstring>
 
 namespace IOHC {
     iohcRemoteMap* iohcRemoteMap::_instance = nullptr;
@@ -56,5 +57,37 @@ namespace IOHC {
 
     const std::vector<iohcRemoteMap::entry>& iohcRemoteMap::getEntries() const {
         return _entries;
+    }
+
+    bool iohcRemoteMap::save() {
+        fs::File f = LittleFS.open(REMOTE_MAP_FILE, "w");
+        if (!f) {
+            Serial.println("Failed to open remote map for writing");
+            return false;
+        }
+        JsonDocument doc;
+        for (const auto &e : _entries) {
+            auto jobj = doc[bytesToHexString(e.node, sizeof(e.node))].to<JsonObject>();
+            jobj["name"] = e.name;
+            auto jarr = jobj["devices"].to<JsonArray>();
+            for (const auto &d : e.devices) {
+                jarr.add(d);
+            }
+        }
+        serializeJson(doc, f);
+        f.close();
+        return true;
+    }
+
+    bool iohcRemoteMap::add(const address node, const std::string &name) {
+        if (find(node)) {
+            Serial.println("Remote already exists");
+            return false;
+        }
+        entry e{};
+        memcpy(e.node, node, sizeof(address));
+        e.name = name;
+        _entries.push_back(e);
+        return save();
     }
 }
