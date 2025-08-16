@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     const deviceListUL = document.getElementById('device-list');
-    const remoteListUL = document.getElementById('remote-list');
     const deviceSelect = document.getElementById('device-select');
+    const remoteListUL = document.getElementById('remote-list');
     const commandInput = document.getElementById('command-input');
     const sendCommandButton = document.getElementById('send-command-button');
     const statusMessagesDiv = document.getElementById('status-messages');
@@ -44,7 +44,6 @@ document.addEventListener('DOMContentLoaded', function() {
         } else if (data.type === 'init') {
             data.logs.forEach(log => logStatus(log));
             fetchAndDisplayDevices();
-            fetchAndDisplayRemotes();
         }
     };
     ws.onopen = () => logStatus('WebSocket connected');
@@ -312,32 +311,6 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (error) {
             logStatus(`Error fetching devices: ${error.message}`, true);
             console.error('Error fetching devices:', error);
-        }
-    }
-
-    async function fetchAndDisplayRemotes() {
-        try {
-            const response = await fetch('/api/remotes');
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const remotes = await response.json();
-
-            remoteListUL.innerHTML = '';
-            if (remotes.length === 0) {
-                const li = document.createElement('li');
-                li.textContent = 'No remotes available.';
-                remoteListUL.appendChild(li);
-                return;
-            }
-
-            remotes.forEach(remote => {
-                const li = document.createElement('li');
-                li.textContent = `${remote.name} (${remote.id})`;
-                remoteListUL.appendChild(li);
-            });
-        } catch (error) {
-            console.error('Error fetching remotes:', error);
         }
     }
 
