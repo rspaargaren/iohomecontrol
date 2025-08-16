@@ -210,6 +210,18 @@ void createCommands() {
         }
         IOHC::iohcRemoteMap::getInstance()->unlinkDevice(node, cmd->at(2));
     });
+    Cmd::addHandler((char *) "delRemote", (char *) "Remove remote", [](Tokens *cmd)-> void {
+        if (cmd->size() < 2) {
+            Serial.println("Usage: delRemote <address>");
+            return;
+        }
+        IOHC::address node{};
+        if (hexStringToBytes(cmd->at(1), node) != sizeof(IOHC::address)) {
+            Serial.println("Invalid address");
+            return;
+        }
+        IOHC::iohcRemoteMap::getInstance()->remove(node);
+    });
     // Other 2W
     Cmd::addHandler((char *) "discovery", (char *) "Send discovery on air", [](Tokens *cmd)-> void {
         IOHC::iohcOtherDevice2W::getInstance()->cmd(IOHC::Other2WButton::discovery, nullptr);

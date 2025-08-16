@@ -45,6 +45,7 @@ COMMON
 - **newRemote** _Create remote map entry_
 - **linkRemote** _Link device to remote map entry_
 - **unlinkRemote** _Remove device from remote map entry_
+- **delRemote** _Remove remote map entry_
 - **verbose**   _Toggle verbose output on packets list_
 - **help**      _This command_
 - **ls**        _List filesystem_

@@ -24,6 +24,7 @@ namespace IOHC {
         bool add(const address node, const std::string &name);
         bool linkDevice(const address node, const std::string &device);
         bool unlinkDevice(const address node, const std::string &device);
+        bool remove(const address node);
         const std::vector<entry>& getEntries() const;
 
     private:
