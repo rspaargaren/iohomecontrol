@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const deviceListUL = document.getElementById('device-list');
     const remoteListUL = document.getElementById('remote-list');
     const deviceSelect = document.getElementById('device-select');
+    const remoteListUL = document.getElementById('remote-list');
     const commandInput = document.getElementById('command-input');
     const sendCommandButton = document.getElementById('send-command-button');
     const statusMessagesDiv = document.getElementById('status-messages');
@@ -120,7 +121,74 @@ document.addEventListener('DOMContentLoaded', function() {
             logStatus('Error uploading filesystem', true);
         }
     }
+    async function fetchAndDisplayRemotes() {
+        try {
+            const response = await fetch('/api/remotes');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const remotes = await response.json();
 
+            remoteListUL.innerHTML = '';
+
+            if (remotes.length === 0) {
+                const li = document.createElement('li');
+                li.textContent = 'No remotes available.';
+                remoteListUL.appendChild(li);
+                return;
+            }
+            remotes.forEach(remote => {
+                const li = document.createElement('li');
+                li.textContent = `${remote.name} (${remote.id})`;
+                remoteListUL.appendChild(li);
+            });
+        } catch (error) {
+            console.error('Error fetching remotes:', error);
+        }
+    }
+    async function fetchAndDisplayRemotes() {
+        try {
+            const response = await fetch('/api/remotes');
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            const remotes = await response.json();
+
+            const tbody = document.querySelector('#remote-table tbody');
+            tbody.innerHTML = '';
+
+            if (remotes.length === 0) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td colspan="3">No remotes available.</td>`;
+                tbody.appendChild(tr);
+                return;
+            }
+
+            remotes.forEach(remote => {
+                const tr = document.createElement('tr');
+
+                // gekoppelde devices tonen, neem aan remote.devices is array
+                const linkedDevices = remote.devices && remote.devices.length > 0 
+                    ? remote.devices.map(d => d.name).join(', ')
+                    : '0 devices';
+
+                tr.innerHTML = `
+                    <td><div class="remote-id">${remote.id}</div></td>
+                    <td>${remote.name}</td>
+                    <td>${linkedDevices}</td>
+                    <td>
+                    <button class="btn edit" onclick="editRemote('${remote.id}')">Edit</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } catch (error) {
+            console.error('Error fetching remotes:', error);
+        }
+    }
+    // voorbeeld functie voor de edit-knop
+    function editRemote(remoteId) {
+        console.log('Edit remote:', remoteId);
+        // hier kun je popup of form openen om naam/devices aan te passen
+    }
     // Function to fetch devices and populate the lists
     async function fetchAndDisplayDevices() {
         try {
@@ -398,7 +466,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const fillPercent = 100 - percent;
         
         // set background as gradient
-        deviceEl.style.background = `linear-gradient(to bottom, var(--color-input) ${percent}%, ${color} ${percent}%)`;
+        deviceEl.style.background = `linear-gradient(to top, var(--color-input) ${percent}%, ${color} ${percent}%)`;
     }
 
     // Device positions are updated via WebSocket

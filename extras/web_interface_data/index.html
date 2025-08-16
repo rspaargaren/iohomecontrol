@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +8,7 @@
     <link rel="icon" href="img/logo.png">
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
     <header>
         <img src="img/logo.png" alt="MiOpen.IO Logo" class="logo">
@@ -24,7 +26,11 @@
             <div class="left">
                 <section id="device-list-section">
 
-                    <div class="title"><h2>Devices</h2><div class="btn add" id="add-popup"></div></div>
+                    <div class="title">
+                        <h2>Devices</h2>
+                        <div class="btn add" id="add-popup"></div>
+                    </div>
+
                     <div class="card">
                         <ul id="device-list">
                             <!-- Device items will be populated by JavaScript -->
@@ -33,13 +39,26 @@
                     </div>
                 </section>
             </div>
-             <div class="right">
+            <div class="right">
                 <section id="status-section">
-                    <div class="title"><h2>remote <div class="btn add" id="remote-popup"></div></h2></div>
+                    <div class="title">
+                        <h2>remote <div class="btn add" id="remote-popup"></div>
+                        </h2>
+                    </div>
                     <div class="card">
-                        <ul id="remote-list">
-                            <!-- Remote items will be populated by JavaScript -->
-                        </ul>
+                        <table id="remote-table">
+                            <thead>
+                                <tr>
+                                    <th>Remote ID</th>
+                                    <th>Remote Name</th>
+                                    <th>Linked Devices</th>
+                                    <th>Edit</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- rows komen hier -->
+                            </tbody>
+                        </table>
 
                     </div>
                 </section>
@@ -49,7 +68,9 @@
         <div id="settings-page" style="display:none;">
             <div class="left">
                 <section id="mqtt-settings-section">
-                    <div class="title"><h2>MQTT settings</h2></div>
+                    <div class="title">
+                        <h2>MQTT settings</h2>
+                    </div>
                     <div class="card">
                         <label for="mqtt-user">User:</label>
                         <input type="text" id="mqtt-user" placeholder="MQTT User">
@@ -60,16 +81,27 @@
                         <label for="mqtt-discovery">Discovery Topic:</label>
                         <input type="text" id="mqtt-discovery" placeholder="Discovery Topic">
                         <button id="mqtt-update">Update</button>
-                        <input type="file" id="firmware-file" accept=".bin">
-                        <button id="upload-firmware">Upload Firmware</button><br>
-                        <input type="file" id="filesystem-file" accept=".bin">
-                        <button id="upload-filesystem">Upload Filesystem</button>
+                    </div>
+                </section>
+                <section id="update-section">
+                    <div class="title">
+                        <h2>Update</h2>
+                    </div>
+                    <div class="card">
+                        <label for="firmware-file">Firmware:</label>
+                        <div class="firmware-line"><input type="file" id="firmware-file" accept=".bin">
+                        <button id="upload-firmware">Upload Firmware</button></div>
+                        <label for="filesystem-file">Filesystem:</label>
+                        <div class="filesystem-line"><input type="file" id="filesystem-file" accept=".bin">
+                        <button id="upload-filesystem">Upload Filesystem</button></div>
                     </div>
                 </section>
             </div>
+
             <div class="right">
                 <section id="status-section">
-                    <div class="title"><h2>Status / Log </h2>  
+                    <div class="title">
+                        <h2>Status / Log </h2>
                         <select id="select-log">
                             <option value="all">All</option>
                             <option value="info">Info</option>
@@ -78,10 +110,12 @@
                         </select>
                     </div>
                     <div class="card">
-                        <label for="device-select">Select Device:</label>
-                        <select id="device-select">
-                            <!-- Options will be populated by JavaScript -->
-                        </select>
+                        <div class="device-selection">
+                            <label for="device-select">Select Device:</label>
+                            <select id="device-select">
+                                <!-- Options will be populated by JavaScript -->
+                            </select>
+                        </div>
 
                         <div id="status-messages">
                             <!-- Status messages will be populated by JavaScript -->
@@ -91,12 +125,12 @@
                             <select id="suggestions" style="width:112px"></select>
                             <button id="send-command-button" style="width:61px">Send</button>
                         </div>
-                        
+
                     </div>
                 </section>
-        </div>
-    
-           
+            </div>
+
+
     </main>
 
     <footer>
@@ -105,7 +139,10 @@
     <!-- Popup container (standaard verborgen) -->
     <div id="popup">
         <div class="popup-container">
-            <div class="title"><h2 id="popup-title">Popup Title</h2><div class="btn close" onclick="closePopup()">Sluiten</div></div>
+            <div class="title">
+                <h2 id="popup-title">Popup Title</h2>
+                <div class="btn close" onclick="closePopup()">Sluiten</div>
+            </div>
             <div class="card-popup">
                 <p id="popup-text">Tekst komt hier.</p>
                 <label for="popup-input" id="label-input">device:</label>
@@ -122,10 +159,11 @@
     </div>
     <script src="script.js"></script>
     <script>
-    function showPage(page) {
-      document.getElementById('devices-page').style.display = (page === 'devices') ? 'grid' : 'none';
-      document.getElementById('settings-page').style.display = (page === 'settings') ? 'grid' : 'none';
-    }
+        function showPage(page) {
+            document.getElementById('devices-page').style.display = (page === 'devices') ? 'grid' : 'none';
+            document.getElementById('settings-page').style.display = (page === 'settings') ? 'grid' : 'none';
+        }
     </script>
 </body>
+
 </html>
