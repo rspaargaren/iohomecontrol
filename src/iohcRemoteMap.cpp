@@ -122,4 +122,15 @@ namespace IOHC {
         Serial.println("Remote not found");
         return false;
     }
+
+    bool iohcRemoteMap::remove(const address node) {
+        auto it = std::find_if(_entries.begin(), _entries.end(),
+                               [&](const entry &e) { return memcmp(e.node, node, sizeof(address)) == 0; });
+        if (it == _entries.end()) {
+            Serial.println("Remote not found");
+            return false;
+        }
+        _entries.erase(it);
+        return save();
+    }
 }
