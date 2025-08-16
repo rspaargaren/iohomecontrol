@@ -21,10 +21,12 @@ namespace IOHC {
 
         const entry* find(const address node) const;
         bool load();
+        bool add(const address node, const std::string &name);
         const std::vector<entry>& getEntries() const;
 
     private:
         iohcRemoteMap();
+        bool save();
         static iohcRemoteMap* _instance;
         std::vector<entry> _entries;
     };

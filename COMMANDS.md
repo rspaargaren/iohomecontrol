@@ -42,6 +42,7 @@ VARIOUS 1W (Use the description name in 1W.json as argument)
 - **list1W**   _List 1W devices_
 
 COMMON
+- **newRemote** _Create remote map entry_
 - **verbose**   _Toggle verbose output on packets list_
 - **help**      _This command_
 - **ls**        _List filesystem_
