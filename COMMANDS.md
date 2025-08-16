@@ -51,6 +51,7 @@ COMMON
 - **ls**        _List filesystem_
 - **cat**       _Print file content_
 - **rm**        _Remove file_
+- **lastAddr**  _Show last received address_
 - **mqttIp**    _Set MQTT server IP_
 - **mqttUser**  _Set MQTT username_
 - **mqttPass**  _Set MQTT password_

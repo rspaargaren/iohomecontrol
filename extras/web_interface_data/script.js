@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const filesystemFileInput = document.getElementById('filesystem-file');
     const firmwareUploadButton = document.getElementById('upload-firmware');
     const filesystemUploadButton = document.getElementById('upload-filesystem');
+    const lastAddrInput = document.getElementById('last-address');
     const ws = new WebSocket(`ws://${window.location.host}/ws`);
 
     // Function to add a message to the status/log
@@ -44,10 +45,23 @@ document.addEventListener('DOMContentLoaded', function() {
         } else if (data.type === 'init') {
             data.logs.forEach(log => logStatus(log));
             fetchAndDisplayDevices();
+        } else if (data.type === 'lastaddr') {
+            lastAddrInput.value = data.address || '';
         }
     };
     ws.onopen = () => logStatus('WebSocket connected');
     ws.onclose = () => logStatus('WebSocket disconnected', true);
+
+    async function loadLastAddress() {
+        try {
+            const resp = await fetch('/api/lastaddr');
+            if (!resp.ok) return;
+            const data = await resp.json();
+            lastAddrInput.value = data.address || '';
+        } catch (e) {
+            console.error('Error fetching last address', e);
+        }
+    }
 
     async function loadMqttConfig() {
         try {
@@ -514,4 +528,5 @@ document.addEventListener('DOMContentLoaded', function() {
     loadMqttConfig();
     fetchAndDisplayDevices();
     fetchAndDisplayRemotes();
+    loadLastAddress();
 });
