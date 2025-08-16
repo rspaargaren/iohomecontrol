@@ -2,7 +2,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const deviceListUL = document.getElementById('device-list');
     const remoteListUL = document.getElementById('remote-list');
     const deviceSelect = document.getElementById('device-select');
-    const remoteListUL = document.getElementById('remote-list');
     const commandInput = document.getElementById('command-input');
     const sendCommandButton = document.getElementById('send-command-button');
     const statusMessagesDiv = document.getElementById('status-messages');
