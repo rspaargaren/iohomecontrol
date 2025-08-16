@@ -3,6 +3,7 @@
 #include <LittleFS.h>
 #include <iohcCryptoHelpers.h>
 #include <cstring>
+#include <algorithm>
 
 namespace IOHC {
     iohcRemoteMap* iohcRemoteMap::_instance = nullptr;
@@ -89,5 +90,36 @@ namespace IOHC {
         e.name = name;
         _entries.push_back(e);
         return save();
+    }
+
+    bool iohcRemoteMap::linkDevice(const address node, const std::string &device) {
+        for (auto &e : _entries) {
+            if (memcmp(e.node, node, sizeof(address)) == 0) {
+                if (std::find(e.devices.begin(), e.devices.end(), device) == e.devices.end()) {
+                    e.devices.push_back(device);
+                    return save();
+                }
+                Serial.println("Device already linked");
+                return false;
+            }
+        }
+        Serial.println("Remote not found");
+        return false;
+    }
+
+    bool iohcRemoteMap::unlinkDevice(const address node, const std::string &device) {
+        for (auto &e : _entries) {
+            if (memcmp(e.node, node, sizeof(address)) == 0) {
+                auto it = std::find(e.devices.begin(), e.devices.end(), device);
+                if (it != e.devices.end()) {
+                    e.devices.erase(it);
+                    return save();
+                }
+                Serial.println("Device not found");
+                return false;
+            }
+        }
+        Serial.println("Remote not found");
+        return false;
     }
 }

@@ -186,6 +186,30 @@ void createCommands() {
         }
         IOHC::iohcRemoteMap::getInstance()->add(node, cmd->at(2));
     });
+    Cmd::addHandler((char *) "linkRemote", (char *) "Link device to remote", [](Tokens *cmd)-> void {
+        if (cmd->size() < 3) {
+            Serial.println("Usage: linkRemote <address> <device>");
+            return;
+        }
+        IOHC::address node{};
+        if (hexStringToBytes(cmd->at(1), node) != sizeof(IOHC::address)) {
+            Serial.println("Invalid address");
+            return;
+        }
+        IOHC::iohcRemoteMap::getInstance()->linkDevice(node, cmd->at(2));
+    });
+    Cmd::addHandler((char *) "unlinkRemote", (char *) "Remove device from remote", [](Tokens *cmd)-> void {
+        if (cmd->size() < 3) {
+            Serial.println("Usage: unlinkRemote <address> <device>");
+            return;
+        }
+        IOHC::address node{};
+        if (hexStringToBytes(cmd->at(1), node) != sizeof(IOHC::address)) {
+            Serial.println("Invalid address");
+            return;
+        }
+        IOHC::iohcRemoteMap::getInstance()->unlinkDevice(node, cmd->at(2));
+    });
     // Other 2W
     Cmd::addHandler((char *) "discovery", (char *) "Send discovery on air", [](Tokens *cmd)-> void {
         IOHC::iohcOtherDevice2W::getInstance()->cmd(IOHC::Other2WButton::discovery, nullptr);
