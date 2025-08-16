@@ -18,6 +18,7 @@
 #include <iohcCozyDevice2W.h>
 #include <iohcOtherDevice2W.h>
 #include <iohcRemoteMap.h>
+#include <iohcPacket.h>
 #include <interact.h>
 #include <wifi_helper.h>
 #include <oled_display.h>
@@ -254,6 +255,9 @@ void createCommands() {
     Cmd::addHandler((char *) "ls", (char *) "List filesystem", [](Tokens *cmd)-> void { listFS(); });
     Cmd::addHandler((char *) "cat", (char *) "Print file content", [](Tokens *cmd)-> void { cat(cmd->at(1).c_str()); });
     Cmd::addHandler((char *) "rm", (char *) "Remove file", [](Tokens *cmd)-> void { rm(cmd->at(1).c_str()); });
+    Cmd::addHandler((char *) "lastAddr", (char *) "Show last received address", [](Tokens *cmd)-> void {
+        Serial.println(bytesToHexString(IOHC::lastFromAddress, sizeof(IOHC::lastFromAddress)).c_str());
+    });
 #if defined(MQTT)
     Cmd::addHandler((char *) "mqttIp", (char *) "Set MQTT server IP", [](Tokens *cmd)-> void {
         if (cmd->size() < 2) {

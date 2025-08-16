@@ -10,6 +10,7 @@
 #include <iohcCryptoHelpers.h>
 #include <iohcRemote1W.h>
 #include <iohcRemoteMap.h>
+#include <iohcPacket.h>
 #include <log_buffer.h>
 #include <mqtt_handler.h>
 #include <nvs_helpers.h>
@@ -70,6 +71,15 @@ void broadcastDevicePosition(const String &id, int position) {
   doc["type"] = "position";
   doc["id"] = id;
   doc["position"] = position;
+  String payload;
+  serializeJson(doc, payload);
+  ws.textAll(payload);
+}
+
+void broadcastLastAddress(const String &addr) {
+  DynamicJsonDocument doc(64);
+  doc["type"] = "lastaddr";
+  doc["address"] = addr;
   String payload;
   serializeJson(doc, payload);
   ws.textAll(payload);
@@ -296,6 +306,18 @@ void handleApiLogs(AsyncWebServerRequest *request) {
   request->send(response);
 }
 
+void handleApiLastAddr(AsyncWebServerRequest *request) {
+  AsyncJsonResponse *response = new AsyncJsonResponse();
+  if (!response) {
+    request->send(500, "text/plain", "OOM");
+    return;
+  }
+  JsonObject root = response->getRoot().to<JsonObject>();
+  root["address"] = bytesToHexString(IOHC::lastFromAddress, sizeof(IOHC::lastFromAddress)).c_str();
+  response->setLength();
+  request->send(response);
+}
+
 #if defined(MQTT)
 void handleApiMqttGet(AsyncWebServerRequest *request) {
   AsyncJsonResponse *response = new AsyncJsonResponse();
@@ -459,6 +481,7 @@ void setupWebServer() {
   server.on("/api/devices", HTTP_GET, handleApiDevices);
   server.on("/api/remotes", HTTP_GET, handleApiRemotes);
   server.on("/api/logs", HTTP_GET, handleApiLogs);
+  server.on("/api/lastaddr", HTTP_GET, handleApiLastAddr);
 #if defined(MQTT)
   server.on("/api/mqtt", HTTP_GET, handleApiMqttGet);
 #endif
