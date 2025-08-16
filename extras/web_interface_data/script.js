@@ -124,31 +124,6 @@ document.addEventListener('DOMContentLoaded', function() {
     async function fetchAndDisplayRemotes() {
         try {
             const response = await fetch('/api/remotes');
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const remotes = await response.json();
-
-            remoteListUL.innerHTML = '';
-
-            if (remotes.length === 0) {
-                const li = document.createElement('li');
-                li.textContent = 'No remotes available.';
-                remoteListUL.appendChild(li);
-                return;
-            }
-            remotes.forEach(remote => {
-                const li = document.createElement('li');
-                li.textContent = `${remote.name} (${remote.id})`;
-                remoteListUL.appendChild(li);
-            });
-        } catch (error) {
-            console.error('Error fetching remotes:', error);
-        }
-    }
-    async function fetchAndDisplayRemotes() {
-        try {
-            const response = await fetch('/api/remotes');
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             const remotes = await response.json();
 
