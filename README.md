@@ -1,6 +1,7 @@
 Based on the wonderfull work of [Velocet/iown-homecontrol](https://github.com/Velocet/iown-homecontrol)
 
 ![smlogo](https://github.com/user-attachments/assets/f6b606a1-0eca-4fd6-a509-d5d1136b2d31)
+
 [miopen.io](https://miopen.io) © 2025 by [djbenbe](https://creativecommons.org) is licensed under [CC BY-NC-ND 4.0](https://creativecommons.org/licenses/by-nc-nd/4.0/)
 <img src="https://mirrors.creativecommons.org/presskit/icons/cc.svg" alt="CC" style="max-width:1em; max-height:1em; margin-left:.2em;">
 <img src="https://mirrors.creativecommons.org/presskit/icons/by.svg" alt="BY" style="max-width:1em; max-height:1em; margin-left:.2em;">
