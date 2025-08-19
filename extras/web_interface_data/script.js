@@ -284,6 +284,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                 logStatus(`Error updating device: ${e.message}`, true);
                             }
                         },
+                        onPair: async () => {
+
+                        },
                         onDelete: async () => {
                             try {
                                 const response = await fetch('/api/command', {
@@ -462,7 +465,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // items is een array van strings
         const content = items.map(i => `<p>${i}</p>`).join('');
         document.getElementById('popup-content').innerHTML = content;
-
         if (options && options.onDelete) {
             removeBtn.style.display = 'block';
             removeBtn.onclick = () => {
@@ -484,7 +486,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // pair button
         document.getElementById('popup-pair').onclick = () => {
-
+            if (options.onPair) options.onPair();
         };
         document.getElementById('popup').classList.add('open');
 
@@ -556,6 +558,9 @@ document.addEventListener('DOMContentLoaded', function() {
             'here add your device',
          ], {
            showInput: true,
+           onPair: async () => {
+
+           },
            onConfirm: async (newName) => {
              if (newName.trim()) {
                try {
