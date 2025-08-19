@@ -133,6 +133,7 @@ document.addEventListener('DOMContentLoaded', function() {
             logStatus('Error uploading filesystem', true);
         }
     }
+   
     async function fetchAndDisplayRemotes() {
         try {
             const response = await fetch('/api/remotes');
@@ -162,7 +163,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <td>${remote.name}</td>
                     <td>${linkedDevices}</td>
                     <td>
-                    <button class="btn edit" onclick="editRemote('${remote.id}')">Edit</button>
+                    <button class="btn edit" onclick="editRemote('${remote.id}', '${remote.name}')">Edit</button>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -171,11 +172,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error fetching remotes:', error);
         }
     }
-    // voorbeeld functie voor de edit-knop
-    function editRemote(remoteId) {
-        console.log('Edit remote:', remoteId);
-        // hier kun je popup of form openen om naam/devices aan te passen
-    }
+    
     // Function to fetch devices and populate the lists
     async function fetchAndDisplayDevices() {
         try {
@@ -244,7 +241,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 editButton.textContent = 'edit';
                 editButton.classList.add('btn', 'edit');
                 editButton.onclick = () =>
-                    openPopup('Edit Device', "here edit your device", "Adjust the name:", device.id, {
+                    openPopup('Edit Device', "Adjust the name:",
+                        [
+                            'ID: ' + device.id,
+                            'Status: ' + device.position,
+                        ], {
                         showInput: true,
                         showTiming: true,
                         defaultValue: device.name,
@@ -433,17 +434,21 @@ document.addEventListener('DOMContentLoaded', function() {
     // Device positions are updated via WebSocket
 
     // popup open
-    function openPopup(title, text, label, data, options = {}) {
+    function openPopup(title, label, items = [], options = {}) {
         const labelInput = document.getElementById('label-input');
         const labelTiming = document.getElementById('label-timing');
         const inputTiming = document.getElementById('popup-input-timing');
         const removeBtn = document.getElementById('popup-remove');
-
+        const devicePopupLabel = document.querySelector('.device-popup-label');
+        const devicePopup = document.querySelector('.device-popup');
         document.getElementById('popup-title').textContent = title;
-        document.getElementById('popup-text').textContent = text;
         labelInput.textContent = label;
 
         const input = document.getElementById('popup-input');
+        const showDevicePopup = options && options.showDevicePopup;
+        devicePopupLabel.style.display = showDevicePopup ? 'block' : 'none';
+        devicePopup.style.display = showDevicePopup ? 'block' : 'none';
+
         const showInput = options && options.showInput;
         input.style.display = showInput ? 'block' : 'none';
         labelInput.style.display = showInput ? 'block' : 'none';
@@ -453,6 +458,10 @@ document.addEventListener('DOMContentLoaded', function() {
         labelTiming.style.display = showTiming ? 'block' : 'none';
         inputTiming.style.display = showTiming ? 'block' : 'none';
         inputTiming.value = options.defaultTiming || '';
+
+        // items is een array van strings
+        const content = items.map(i => `<p>${i}</p>`).join('');
+        document.getElementById('popup-content').innerHTML = content;
 
         if (options && options.onDelete) {
             removeBtn.style.display = 'block';
@@ -489,6 +498,38 @@ document.addEventListener('DOMContentLoaded', function() {
 
     window.closePopup = closePopup;
 
+     // voorbeeld functie voor de edit-knop
+    async function editRemote(remoteId, remoteName) {
+        openPopup('Edit Remote', "Adjust the name/devices:", [
+            'remote id: ' + remoteId,
+            'name: ' + remoteName,
+        ], {
+            showInput: true,
+            showDevicePopup: true,
+            defaultValue: remoteName,
+            onConfirm: async (newName) => {
+                try {
+                    if (newName.trim() && newName !== remoteName) {
+                        const response = await fetch('/api/command', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ RemoteId: remoteId, command: `editRemote ${newName}` })
+                        });
+                        const result = await response.json();
+                        if (result.success) {
+                            logStatus(result.message || 'Remote renamed.');
+                        } else {
+                            logStatus(result.message || 'Failed to rename remote.', true);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error renaming remote:', error);
+                    logStatus('Error renaming remote.', true);
+                }
+            }
+        });
+    }
+    window.editRemote = editRemote;
     // Theme persistence on reload and open popup
 
     window.addEventListener('DOMContentLoaded', () => {
@@ -496,9 +537,24 @@ document.addEventListener('DOMContentLoaded', function() {
       if (savedTheme === 'dark') {
         body.classList.add('dark-mode');
       }
+      
+      const remotePopup = document.getElementById('remote-popup');
+      remotePopup.addEventListener('click', () => {
+         openPopup('Add Remote', "new remote", [
+            'here add your remote',
+         ], {
+           showInput: true,
+           showDevicePopup: true,
+           onConfirm: async (newName) => {
+             
+           }
+         });
+      });
       const addpopup = document.getElementById('add-popup');
       addpopup.addEventListener('click', () => {
-         openPopup('Add Device', "here add your device", "new device", null, {
+         openPopup('Add Device', "new device", [
+            'here add your device',
+         ], {
            showInput: true,
            onConfirm: async (newName) => {
              if (newName.trim()) {
