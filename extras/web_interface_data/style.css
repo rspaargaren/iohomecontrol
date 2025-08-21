@@ -49,7 +49,7 @@ header img.logo {
   max-width: 40px;
   height: auto;
 }
-main > div {
+main > div, .card-popup {
     padding: 0;
     display: grid;
     color: var(--color-text);
@@ -269,7 +269,7 @@ footer {
   flex-direction: column;
 }
 @media (min-width: 1280px) {
-    main > div {
+    main > div, .card-popup {
         grid-template-columns: repeat(2, 1fr);
         gap: 10px;
     }

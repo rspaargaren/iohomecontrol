@@ -110,15 +110,13 @@
                         </select>
                     </div>
                     <div class="card">
-                        <div class="last-address">
-                            <label for="last-address">Last Address:</label>
-                            <input type="text" id="last-address" readonly>
-                        </div>
                         <div class="device-selection">
                             <label for="device-select">Select Device:</label>
                             <select id="device-select">
                                 <!-- Options will be populated by JavaScript -->
                             </select>
+                            <label for="last-address">Last Address:</label>
+                            <input type="text" id="last-address" readonly>
                         </div>
 
                         <div id="status-messages">
@@ -138,7 +136,7 @@
     </main>
 
     <footer>
-        <p>ESP32 MiOpen.IO</p>
+        <p>© MiOpen.IO 2025 - 2026 | djbenbe & rspaargaren. All Rights Reserved. </p>
     </footer>
     <!-- Popup container (standaard verborgen) -->
     <div id="popup">
@@ -148,16 +146,24 @@
                 <div class="btn close" onclick="closePopup()">Sluiten</div>
             </div>
             <div class="card-popup">
-                <p id="popup-text">Tekst komt hier.</p>
-                <label for="popup-input" id="label-input">device:</label>
-                <input type="text" id="popup-input" placeholder="Typ hier..." autocomplete="off">
-                <label for="popup-input-timing" id="label-timing">timing:</label>
-                <input type="text" id="popup-input-timing" placeholder="Typ hier..." autocomplete="off">
-                <div class="popup-buttons">
-                    <button id="popup-confirm" class="confirm">Confirm</button>
-                    <button id="popup-pair" class="pair">Pair</button>
-                    <button id="popup-remove" class="remove-device">delete</button>
+                <div id="left">
+                    <label for="popup-input" id="label-input">device:</label>
+                    <input type="text" id="popup-input" placeholder="Typ hier..." autocomplete="off">
+                    <label for="popup-input-timing" id="label-timing">timing:</label>
+                    <input type="text" id="popup-input-timing" placeholder="Typ hier..." autocomplete="off">
+                    <label for="select-device" class="device-popup-label">device-select:</label>
+                    <select id="device-select" class="device-popup">
+                        
+                    </select>  
+                    <div class="popup-buttons">
+                        <button id="popup-confirm" class="confirm">Confirm</button>
+                        <button id="popup-pair" class="pair">Pair</button>
+                        <button id="popup-remove" class="remove-device">delete</button>
+                    </div>
                 </div>
+                <div id="right">
+                    <p id="popup-content">Tekst komt hier.</p>
+                </div>                
             </div>
         </div>
     </div>
