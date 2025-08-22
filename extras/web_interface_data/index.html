@@ -15,8 +15,8 @@
         <h1>Device Control</h1>
         <nav>
             <a onclick="showPage('devices')" class="items">Devices</a>
+            <a onclick="showPage('help')" class="items">Help</a>
             <a onclick="showPage('settings')" class="items">Settings</a>
-
         </nav>
         <div id="toggle-theme"></div>
     </header>
@@ -64,7 +64,32 @@
                 </section>
             </div>
         </div>
+        <div id="help-page" style="display:none;">
+            <div class="left">
+                <section id="help-section">
+                    <div class="title">
+                        <h2>Help</h2>
+                    </div>
+                    <div class="card">
+                        <p>
+                            <strong>Stappen om een nieuw apparaat toe te voegen:</strong><br>
+                            Stap 1 nieuw device in de website<br>
+                            Stap 2 screen in pair mode zetten met de fysieke remote<br>
+                            Step 3 execute command add XXXX in the terminal or in the website, where XXXX is the ID<br>
+                            Stap 4 klaar…<br>
+                            Stap 3 wordt straks wat makkelijker<br>
 
+                            <strong>Steps to add a new device:</strong><br>
+                            Step 1 add new device in the website<br>
+                            Step 2 put the screen in pair mode with the physical remote<br>
+                            Stap 3 commando add XXXX uitvoeren op de terminal of in de website waar XXXX het ID is<br>
+                            Step 4 done…<br>
+                            Step 3 will become easier soon
+                        </p>
+                    </div>
+                </section>
+            </div>
+        </div>
         <div id="settings-page" style="display:none;">
             <div class="left">
                 <section id="mqtt-settings-section">
@@ -172,6 +197,7 @@
         function showPage(page) {
             document.getElementById('devices-page').style.display = (page === 'devices') ? 'grid' : 'none';
             document.getElementById('settings-page').style.display = (page === 'settings') ? 'grid' : 'none';
+            document.getElementById('help-page').style.display = (page === 'help') ? 'grid' : 'none';
         }
     </script>
 </body>
