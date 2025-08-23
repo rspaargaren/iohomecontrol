@@ -284,8 +284,39 @@ document.addEventListener('DOMContentLoaded', function() {
                                 logStatus(`Error updating device: ${e.message}`, true);
                             }
                         },
-                        onPair: async () => {
-
+                        onAdd: async () => {
+                            try {
+                                const response = await fetch('/api/command', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ deviceId: device.id, command: 'add' })
+                                });
+                                const result = await response.json();
+                                if (result.success) {
+                                    logStatus(result.message || 'Device added.');
+                                } else {
+                                    logStatus(result.message || 'Failed to add device.', true);
+                                }
+                            } catch (e) {
+                                logStatus(`Error adding device: ${e.message}`, true);
+                            }
+                        },
+                        onRemove: async () => {
+                            try {
+                                const response = await fetch('/api/command', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ deviceId: device.id, command: 'remove' })
+                                });
+                                const result = await response.json();
+                                if (result.success) {
+                                    logStatus(result.message || 'Device removed.');
+                                } else {
+                                    logStatus(result.message || 'Failed to remove device.', true);
+                                }
+                            } catch (e) {
+                                logStatus(`Error removing device: ${e.message}`, true);
+                            }
                         },
                         onDelete: async () => {
                             try {
@@ -441,7 +472,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const labelInput = document.getElementById('label-input');
         const labelTiming = document.getElementById('label-timing');
         const inputTiming = document.getElementById('popup-input-timing');
+        const addBtn = document.getElementById('popup-add');
         const removeBtn = document.getElementById('popup-remove');
+        const deleteBtn = document.getElementById('popup-delete');
         const devicePopupLabel = document.querySelector('.device-popup-label');
         const devicePopup = document.querySelector('.device-popup');
         document.getElementById('popup-title').textContent = title;
@@ -465,15 +498,37 @@ document.addEventListener('DOMContentLoaded', function() {
         // items is een array van strings
         const content = items.map(i => `<p>${i}</p>`).join('');
         document.getElementById('popup-content').innerHTML = content;
-        if (options && options.onDelete) {
+        if (options && options.onAdd) {
+            addBtn.style.display = 'block';
+            addBtn.onclick = () => {
+                closePopup();
+                options.onAdd();
+            };
+        } else {
+            addBtn.style.display = 'none';
+            addBtn.onclick = null;
+        }
+
+        if (options && options.onRemove) {
             removeBtn.style.display = 'block';
             removeBtn.onclick = () => {
                 closePopup();
-                options.onDelete();
+                options.onRemove();
             };
         } else {
             removeBtn.style.display = 'none';
             removeBtn.onclick = null;
+        }
+
+        if (options && options.onDelete) {
+            deleteBtn.style.display = 'block';
+            deleteBtn.onclick = () => {
+                closePopup();
+                options.onDelete();
+            };
+        } else {
+            deleteBtn.style.display = 'none';
+            deleteBtn.onclick = null;
         }
 
         // OK button
@@ -484,10 +539,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (options.onConfirm) options.onConfirm(value, timingValue);
         };
 
-        // pair button
-        document.getElementById('popup-pair').onclick = () => {
-            if (options.onPair) options.onPair();
-        };
+        // add/remove buttons handled above
         document.getElementById('popup').classList.add('open');
 
     };
@@ -556,11 +608,8 @@ document.addEventListener('DOMContentLoaded', function() {
       addpopup.addEventListener('click', () => {
          openPopup('Add Device', "new device", [
             'here add your device',
-         ], {
+           ], {
            showInput: true,
-           onPair: async () => {
-
-           },
            onConfirm: async (newName) => {
              if (newName.trim()) {
                try {
