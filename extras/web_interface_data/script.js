@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     const deviceListUL = document.getElementById('device-list');
     const deviceSelect = document.getElementById('device-select');
+    let devicesCache = [];
     const remoteListUL = document.getElementById('remote-list');
     const commandInput = document.getElementById('command-input');
     const sendCommandButton = document.getElementById('send-command-button');
@@ -181,6 +182,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             const devices = await response.json();
+            devicesCache = devices;
 
             deviceListUL.innerHTML = ''; // Clear existing list
             deviceSelect.innerHTML = ''; // Clear existing options
@@ -484,6 +486,15 @@ document.addEventListener('DOMContentLoaded', function() {
         const showDevicePopup = options && options.showDevicePopup;
         devicePopupLabel.style.display = showDevicePopup ? 'block' : 'none';
         devicePopup.style.display = showDevicePopup ? 'block' : 'none';
+        if (showDevicePopup) {
+            devicePopup.innerHTML = '';
+            devicesCache.forEach(d => {
+                const opt = document.createElement('option');
+                opt.value = d.id;
+                opt.textContent = d.name;
+                devicePopup.appendChild(opt);
+            });
+        }
 
         const showInput = options && options.showInput;
         input.style.display = showInput ? 'block' : 'none';
@@ -498,11 +509,16 @@ document.addEventListener('DOMContentLoaded', function() {
         // items is een array van strings
         const content = items.map(i => `<p>${i}</p>`).join('');
         document.getElementById('popup-content').innerHTML = content;
+        const addLabel = options.addLabel || 'ADD';
+        const removeLabel = options.removeLabel || 'REMOVE';
+
         if (options && options.onAdd) {
             addBtn.style.display = 'block';
+            addBtn.textContent = addLabel;
             addBtn.onclick = () => {
+                const sel = showDevicePopup ? devicePopup.value : undefined;
                 closePopup();
-                options.onAdd();
+                options.onAdd(sel);
             };
         } else {
             addBtn.style.display = 'none';
@@ -511,9 +527,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (options && options.onRemove) {
             removeBtn.style.display = 'block';
+            removeBtn.textContent = removeLabel;
             removeBtn.onclick = () => {
+                const sel = showDevicePopup ? devicePopup.value : undefined;
                 closePopup();
-                options.onRemove();
+                options.onRemove(sel);
             };
         } else {
             removeBtn.style.display = 'none';
@@ -561,6 +579,44 @@ document.addEventListener('DOMContentLoaded', function() {
             showInput: true,
             showDevicePopup: true,
             defaultValue: remoteName,
+            addLabel: 'Link',
+            removeLabel: 'Unlink',
+            onAdd: async (deviceId) => {
+                try {
+                    const response = await fetch('/api/command', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ command: `linkRemote ${remoteId} ${deviceId}` })
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        logStatus(result.message || 'Device linked.');
+                    } else {
+                        logStatus(result.message || 'Failed to link device.', true);
+                    }
+                    fetchAndDisplayRemotes();
+                } catch (error) {
+                    logStatus(`Error linking device: ${error.message}`, true);
+                }
+            },
+            onRemove: async (deviceId) => {
+                try {
+                    const response = await fetch('/api/command', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ command: `unlinkRemote ${remoteId} ${deviceId}` })
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        logStatus(result.message || 'Device unlinked.');
+                    } else {
+                        logStatus(result.message || 'Failed to unlink device.', true);
+                    }
+                    fetchAndDisplayRemotes();
+                } catch (error) {
+                    logStatus(`Error unlinking device: ${error.message}`, true);
+                }
+            },
             onConfirm: async (newName) => {
                 try {
                     if (newName.trim() && newName !== remoteName) {
@@ -575,6 +631,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         } else {
                             logStatus(result.message || 'Failed to rename remote.', true);
                         }
+                        fetchAndDisplayRemotes();
                     }
                 } catch (error) {
                     console.error('Error renaming remote:', error);
