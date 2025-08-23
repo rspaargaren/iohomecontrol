@@ -553,8 +553,9 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('popup-confirm').onclick = () => {
             const value = showInput ? input.value : true;
             const timingValue = showTiming ? inputTiming.value : undefined;
+            const deviceValue = showDevicePopup ? devicePopup.value : undefined;
             closePopup();
-            if (options.onConfirm) options.onConfirm(value, timingValue);
+            if (options.onConfirm) options.onConfirm(value, timingValue, deviceValue);
         };
 
         // add/remove buttons handled above
@@ -674,8 +675,49 @@ document.addEventListener('DOMContentLoaded', function() {
          ], {
            showInput: true,
            showDevicePopup: true,
-           onConfirm: async (newName) => {
-             
+           onConfirm: async (newName, _t, deviceId) => {
+             const addr = lastAddrInput.value.trim();
+             if (!addr) {
+               logStatus('No last address available. Press the remote first.', true);
+               return;
+             }
+             if (!newName.trim()) {
+               logStatus('Please provide a remote name.', true);
+               return;
+             }
+             try {
+               const resp = await fetch('/api/command', {
+                 method: 'POST',
+                 headers: { 'Content-Type': 'application/json' },
+                 body: JSON.stringify({ command: `newRemote ${addr} ${newName}` })
+               });
+               const result = await resp.json();
+               if (result.success) {
+                 logStatus(result.message || 'Remote added.');
+                 if (deviceId) {
+                   try {
+                     const linkResp = await fetch('/api/command', {
+                       method: 'POST',
+                       headers: { 'Content-Type': 'application/json' },
+                       body: JSON.stringify({ command: `linkRemote ${addr} ${deviceId}` })
+                     });
+                     const linkResult = await linkResp.json();
+                     if (linkResult.success) {
+                       logStatus(linkResult.message || 'Device linked.');
+                     } else {
+                       logStatus(linkResult.message || 'Failed to link device.', true);
+                     }
+                   } catch (e) {
+                     logStatus(`Error linking device: ${e.message}`, true);
+                   }
+                 }
+                 fetchAndDisplayRemotes();
+               } else {
+                 logStatus(result.message || 'Failed to add remote.', true);
+               }
+             } catch (e) {
+               logStatus(`Error adding remote: ${e.message}`, true);
+             }
            }
          });
       });
