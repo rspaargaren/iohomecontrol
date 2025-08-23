@@ -637,6 +637,24 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.error('Error renaming remote:', error);
                     logStatus('Error renaming remote.', true);
                 }
+            },
+            onDelete: async () => {
+                try {
+                    const response = await fetch('/api/command', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ command: `delRemote ${remoteId}` })
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        logStatus(result.message || 'Remote removed.');
+                    } else {
+                        logStatus(result.message || 'Failed to remove remote.', true);
+                    }
+                    fetchAndDisplayRemotes();
+                } catch (error) {
+                    logStatus(`Error removing remote: ${error.message}`, true);
+                }
             }
         });
     }
