@@ -27,6 +27,9 @@ static void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
                       AwsEventType type, void *arg, uint8_t *data,
                       size_t len) {
   if (type == WS_EVT_CONNECT) {
+    // Ensure we broadcast the current position before sending init message
+    IOHC::iohcRemote1W::getInstance()->updatePositions();
+
     // Build a compact init message containing only device information
     DynamicJsonDocument doc(1024);
     doc["type"] = "init";
@@ -92,6 +95,9 @@ struct Device {
 };
 
 void handleApiDevices(AsyncWebServerRequest *request) {
+  // Update device positions before returning them to the web client
+  IOHC::iohcRemote1W::getInstance()->updatePositions();
+
   AsyncJsonResponse *response = new AsyncJsonResponse();
   if (!response) {
     request->send(500, "text/plain", "Out of memory");
