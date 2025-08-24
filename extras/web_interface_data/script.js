@@ -249,12 +249,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     openPopup('Edit Device', "Adjust the name:",
                         [
                             'ID: ' + device.id,
-                            'Status: ' + device.position,
+                            'Description: ' + (device.description || ''),
+                            'Position: ' + device.position + '%',
+                            'Paired: ' + (device.paired ? 'Yes' : 'No'),
                         ], {
                         showInput: true,
                         showTiming: true,
                         defaultValue: device.name,
                         defaultTiming: device.travel_time,
+                        pairLabel: 'Add / Remove the device to the physical screen',
+                        deleteInfo: 'Only use when the device is not linked to a physical screen.',
                         onConfirm: async (newName, newTiming) => {
                             try {
                                 if (newName.trim() && newName !== device.name) {
@@ -482,6 +486,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const deleteBtn = document.getElementById('popup-delete');
         const devicePopupLabel = document.querySelector('.device-popup-label');
         const devicePopup = document.querySelector('.device-popup');
+        const pairLabelEl = document.getElementById('pair-label');
+        const deleteInfo = document.getElementById('delete-info');
         document.getElementById('popup-title').textContent = title;
         labelInput.textContent = label;
 
@@ -515,8 +521,15 @@ document.addEventListener('DOMContentLoaded', function() {
         // items is een array van strings
         const content = items.map(i => `<p>${i}</p>`).join('');
         document.getElementById('popup-content').innerHTML = content;
-        const addLabel = options.addLabel || 'ADD';
-        const removeLabel = options.removeLabel || 'REMOVE';
+        const addLabel = options.addLabel || 'Add';
+        const removeLabel = options.removeLabel || 'Remove';
+
+        if (options && options.pairLabel && (options.onAdd || options.onRemove)) {
+            pairLabelEl.style.display = 'block';
+            pairLabelEl.textContent = options.pairLabel;
+        } else {
+            pairLabelEl.style.display = 'none';
+        }
 
         if (options && options.onAdd) {
             addBtn.style.display = 'block';
@@ -546,6 +559,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (options && options.onDelete) {
             deleteBtn.style.display = 'block';
+            deleteInfo.style.display = options.deleteInfo ? 'block' : 'none';
+            if (options.deleteInfo) deleteInfo.textContent = options.deleteInfo;
             deleteBtn.onclick = () => {
                 closePopup();
                 options.onDelete();
@@ -553,6 +568,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             deleteBtn.style.display = 'none';
             deleteBtn.onclick = null;
+            deleteInfo.style.display = 'none';
         }
 
         // OK button

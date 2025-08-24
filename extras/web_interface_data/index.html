@@ -172,24 +172,30 @@
             </div>
             <div class="card-popup">
                 <div id="left">
-                    <label for="popup-input" id="label-input">device:</label>
-                    <input type="text" id="popup-input" placeholder="Typ hier..." autocomplete="off">
-                    <label for="popup-input-timing" id="label-timing">timing:</label>
-                    <input type="text" id="popup-input-timing" placeholder="Typ hier..." autocomplete="off">
-                    <label for="popup-device-select" class="device-popup-label">device:</label>
-                    <select id="popup-device-select" class="device-popup">
-                        
-                    </select>  
-                    <div class="popup-buttons">
+                    <div class="edit-group">
+                        <label for="popup-input" id="label-input">device:</label>
+                        <input type="text" id="popup-input" placeholder="Typ hier..." autocomplete="off">
+                        <label for="popup-input-timing" id="label-timing">timing:</label>
+                        <input type="text" id="popup-input-timing" placeholder="Typ hier..." autocomplete="off">
+                        <label for="popup-device-select" class="device-popup-label">device:</label>
+                        <select id="popup-device-select" class="device-popup">
+
+                        </select>
                         <button id="popup-confirm" class="confirm">Confirm</button>
-                        <button id="popup-add" class="pair">LINK</button>
-                        <button id="popup-remove" class="pair">UNLINK</button>
-                        <button id="popup-delete" class="remove-device">delete</button>
+                    </div>
+                    <p id="pair-label">Add / Remove the device to the physical screen</p>
+                    <div class="popup-buttons">
+                        <button id="popup-add" class="pair">Add</button>
+                        <button id="popup-remove" class="pair">Remove</button>
+                    </div>
+                    <div class="delete-block">
+                        <button id="popup-delete" class="remove-device">Delete</button>
+                        <p id="delete-info">Only use when the device is not linked to a physical screen.</p>
                     </div>
                 </div>
                 <div id="right">
                     <p id="popup-content">Tekst komt hier.</p>
-                </div>                
+                </div>
             </div>
         </div>
     </div>
