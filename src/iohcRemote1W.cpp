@@ -906,6 +906,65 @@ const std::vector<iohcRemote1W::remote>& iohcRemote1W::getRemotes() const {
         return true;
     }
 
+    void iohcRemote1W::handleRemoteAction(RemoteButton cmd, const std::string &description) {
+        auto it = std::find_if(remotes.begin(), remotes.end(), [&](const remote &e) {
+            return e.description == description;
+        });
+        if (it == remotes.end()) {
+            Serial.printf("Device %s not found\n", description.c_str());
+            return;
+        }
+        remote &r = *it;
+        r.positionTracker.update();
+
+        switch (cmd) {
+            case RemoteButton::Open:
+                r.positionTracker.startOpening();
+                r.movement = remote::Movement::Opening;
+                r.targetPosition = 100.0f;
+#if defined(MQTT)
+                {
+                    std::string id = bytesToHexString(r.node, sizeof(r.node));
+                    publishCoverState(id, "OPENING");
+                    publishCoverPosition(id, r.positionTracker.getPosition());
+                    r.lastPublishedState = "OPENING";
+                    r.lastPublishedPosition = r.positionTracker.getPosition();
+                }
+#endif
+                break;
+            case RemoteButton::Close:
+                r.positionTracker.startClosing();
+                r.movement = remote::Movement::Closing;
+                r.targetPosition = 0.0f;
+#if defined(MQTT)
+                {
+                    std::string id = bytesToHexString(r.node, sizeof(r.node));
+                    publishCoverState(id, "CLOSING");
+                    publishCoverPosition(id, r.positionTracker.getPosition());
+                    r.lastPublishedState = "CLOSING";
+                    r.lastPublishedPosition = r.positionTracker.getPosition();
+                }
+#endif
+                break;
+            case RemoteButton::Stop:
+                r.positionTracker.stop();
+                r.movement = remote::Movement::Idle;
+                r.targetPosition = r.positionTracker.getPosition();
+#if defined(MQTT)
+                {
+                    std::string id = bytesToHexString(r.node, sizeof(r.node));
+                    publishCoverState(id, "STOP");
+                    publishCoverPosition(id, r.positionTracker.getPosition());
+                    r.lastPublishedState = "STOP";
+                    r.lastPublishedPosition = r.positionTracker.getPosition();
+                }
+#endif
+                break;
+            default:
+                break;
+        }
+    }
+
     bool iohcRemote1W::setTravelTime(const std::string &description, uint32_t travelTime) {
         auto it = std::find_if(remotes.begin(), remotes.end(), [&](const remote &e) {
             return e.description == description;
