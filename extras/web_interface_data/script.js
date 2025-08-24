@@ -504,7 +504,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const showTiming = options && options.showTiming;
         labelTiming.style.display = showTiming ? 'block' : 'none';
         inputTiming.style.display = showTiming ? 'block' : 'none';
-        inputTiming.value = options.defaultTiming || '';
+        if (showTiming) {
+            labelTiming.textContent = options.timingLabel || 'timing:';
+        }
+        inputTiming.value = showTiming ? (options.defaultTiming || '') : '';
 
         // items is een array van strings
         const content = items.map(i => `<p>${i}</p>`).join('');
@@ -670,15 +673,17 @@ document.addEventListener('DOMContentLoaded', function() {
       
       const remotePopup = document.getElementById('remote-popup');
       remotePopup.addEventListener('click', () => {
-         openPopup('Add Remote', "new remote", [
+         openPopup('Add Remote', 'Remote ID:', [
             'here add your remote',
          ], {
            showInput: true,
-           showDevicePopup: true,
-           onConfirm: async (newName, _t, deviceId) => {
-             const addr = lastAddrInput.value.trim();
-             if (!addr) {
-               logStatus('No last address available. Press the remote first.', true);
+           showTiming: true,
+           timingLabel: 'Remote Name:',
+           defaultValue: lastAddrInput.value.trim(),
+           onConfirm: async (addr, newName) => {
+             const id = addr.trim();
+             if (!id) {
+               logStatus('Please provide a remote ID.', true);
                return;
              }
              if (!newName.trim()) {
@@ -689,28 +694,11 @@ document.addEventListener('DOMContentLoaded', function() {
                const resp = await fetch('/api/command', {
                  method: 'POST',
                  headers: { 'Content-Type': 'application/json' },
-                 body: JSON.stringify({ command: `newRemote ${addr} ${newName}` })
+                 body: JSON.stringify({ command: `newRemote ${id} ${newName}` })
                });
                const result = await resp.json();
                if (result.success) {
                  logStatus(result.message || 'Remote added.');
-                 if (deviceId) {
-                   try {
-                     const linkResp = await fetch('/api/command', {
-                       method: 'POST',
-                       headers: { 'Content-Type': 'application/json' },
-                       body: JSON.stringify({ command: `linkRemote ${addr} ${deviceId}` })
-                     });
-                     const linkResult = await linkResp.json();
-                     if (linkResult.success) {
-                       logStatus(linkResult.message || 'Device linked.');
-                     } else {
-                       logStatus(linkResult.message || 'Failed to link device.', true);
-                     }
-                   } catch (e) {
-                     logStatus(`Error linking device: ${e.message}`, true);
-                   }
-                 }
                  fetchAndDisplayRemotes();
                } else {
                  logStatus(result.message || 'Failed to add remote.', true);
