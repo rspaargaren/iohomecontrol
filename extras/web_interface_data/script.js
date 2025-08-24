@@ -154,9 +154,12 @@ document.addEventListener('DOMContentLoaded', function() {
             remotes.forEach(remote => {
                 const tr = document.createElement('tr');
 
-                // gekoppelde devices tonen, neem aan remote.devices is array
-                const linkedDevices = remote.devices && remote.devices.length > 0 
-                    ? remote.devices.map(d => d.name).join(', ')
+                // Show linked device names if available; fall back to raw id/name
+                const linkedDevices = (remote.devices && remote.devices.length > 0)
+                    ? remote.devices.map(d => {
+                        const dev = devicesCache.find(v => v.id === d || v.name === d);
+                        return dev ? dev.name : d;
+                    }).join(', ')
                     : '0 devices';
 
                 tr.innerHTML = `
