@@ -148,6 +148,24 @@ void handleApiRemotes(AsyncWebServerRequest *request) {
   request->send(response);
 }
 
+void handleDownloadDevices(AsyncWebServerRequest *request) {
+  if (LittleFS.exists(IOHC_1W_REMOTE)) {
+    request->send(LittleFS, IOHC_1W_REMOTE, "application/json", true);
+  } else {
+    request->send(404, "application/json",
+                  "{\"message\":\"1W.json not found\"}");
+  }
+}
+
+void handleDownloadRemotes(AsyncWebServerRequest *request) {
+  if (LittleFS.exists(REMOTE_MAP_FILE)) {
+    request->send(LittleFS, REMOTE_MAP_FILE, "application/json", true);
+  } else {
+    request->send(404, "application/json",
+                  "{\"message\":\"RemoteMap.json not found\"}");
+  }
+}
+
 void handleApiCommand(AsyncWebServerRequest *request, JsonVariant &json) {
   if (request->method() != HTTP_POST) {
     request->send(405, "text/plain", "Method Not Allowed");
@@ -504,6 +522,8 @@ void setupWebServer() {
             handleFirmwareUpload);
   server.on("/api/filesystem", HTTP_POST, handleFilesystemUpdate,
             handleFilesystemUpload);
+  server.on("/api/download/devices", HTTP_GET, handleDownloadDevices);
+  server.on("/api/download/remotes", HTTP_GET, handleDownloadRemotes);
 
   ws.onEvent(onWsEvent);
   server.addHandler(&ws);

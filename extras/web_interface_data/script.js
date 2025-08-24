@@ -16,6 +16,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const filesystemFileInput = document.getElementById('filesystem-file');
     const firmwareUploadButton = document.getElementById('upload-firmware');
     const filesystemUploadButton = document.getElementById('upload-filesystem');
+    const downloadDevicesButton = document.getElementById('download-devices');
+    const downloadRemotesButton = document.getElementById('download-remotes');
     const lastAddrInput = document.getElementById('last-address');
     const ws = new WebSocket(`ws://${window.location.host}/ws`);
 
@@ -133,6 +135,25 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error uploading filesystem', e);
             logStatus('Error uploading filesystem', true);
         }
+    }
+
+    function downloadFile(url, filename) {
+        fetch(url)
+            .then(resp => {
+                if (!resp.ok) throw new Error('Network response was not ok');
+                return resp.blob();
+            })
+            .then(blob => {
+                const link = document.createElement('a');
+                link.href = window.URL.createObjectURL(blob);
+                link.download = filename;
+                link.click();
+                window.URL.revokeObjectURL(link.href);
+            })
+            .catch(err => {
+                console.error('Error downloading file', err);
+                logStatus('Error downloading file', true);
+            });
     }
    
     async function fetchAndDisplayRemotes() {
@@ -424,6 +445,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     if (filesystemUploadButton) {
         filesystemUploadButton.addEventListener('click', uploadFilesystem);
+    }
+    if (downloadDevicesButton) {
+        downloadDevicesButton.addEventListener('click', () => downloadFile('/api/download/devices', '1W.json'));
+    }
+    if (downloadRemotesButton) {
+        downloadRemotesButton.addEventListener('click', () => downloadFile('/api/download/remotes', 'RemoteMap.json'));
     }
 
     // suggestions for command input
