@@ -166,6 +166,47 @@ void handleDownloadRemotes(AsyncWebServerRequest *request) {
   }
 }
 
+void handleUploadDevicesDone(AsyncWebServerRequest *request) {
+  request->send(200, "application/json",
+                "{\"message\":\"Devices file uploaded\"}");
+  IOHC::iohcRemote1W::getInstance()->load();
+  IOHC::iohcRemoteMap::getInstance()->load();
+}
+
+void handleUploadDevicesFile(AsyncWebServerRequest *request, String filename,
+                             size_t index, uint8_t *data, size_t len,
+                             bool final) {
+  if (!index) {
+    request->_tempFile = LittleFS.open(IOHC_1W_REMOTE, "w");
+  }
+  if (len) {
+    request->_tempFile.write(data, len);
+  }
+  if (final) {
+    request->_tempFile.close();
+  }
+}
+
+void handleUploadRemotesDone(AsyncWebServerRequest *request) {
+  request->send(200, "application/json",
+                "{\"message\":\"Remotes file uploaded\"}");
+  IOHC::iohcRemoteMap::getInstance()->load();
+}
+
+void handleUploadRemotesFile(AsyncWebServerRequest *request, String filename,
+                             size_t index, uint8_t *data, size_t len,
+                             bool final) {
+  if (!index) {
+    request->_tempFile = LittleFS.open(REMOTE_MAP_FILE, "w");
+  }
+  if (len) {
+    request->_tempFile.write(data, len);
+  }
+  if (final) {
+    request->_tempFile.close();
+  }
+}
+
 void handleApiCommand(AsyncWebServerRequest *request, JsonVariant &json) {
   if (request->method() != HTTP_POST) {
     request->send(405, "text/plain", "Method Not Allowed");
@@ -524,6 +565,10 @@ void setupWebServer() {
             handleFilesystemUpload);
   server.on("/api/download/devices", HTTP_GET, handleDownloadDevices);
   server.on("/api/download/remotes", HTTP_GET, handleDownloadRemotes);
+  server.on("/api/upload/devices", HTTP_POST, handleUploadDevicesDone,
+            handleUploadDevicesFile);
+  server.on("/api/upload/remotes", HTTP_POST, handleUploadRemotesDone,
+            handleUploadRemotesFile);
 
   ws.onEvent(onWsEvent);
   server.addHandler(&ws);
