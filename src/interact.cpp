@@ -140,7 +140,11 @@ void createCommands() {
             Serial.println("Usage: new1W <name>");
             return;
         }
-        IOHC::iohcRemote1W::getInstance()->addRemote(cmd->at(1));
+        std::string name = cmd->at(1);
+        for (size_t i = 2; i < cmd->size(); ++i) {
+            name += " " + cmd->at(i);
+        }
+        IOHC::iohcRemote1W::getInstance()->addRemote(name);
     });
     Cmd::addHandler((char *) "del1W", (char *) "Remove 1W device", [](Tokens *cmd)-> void {
         if (cmd->size() < 2) {
@@ -154,7 +158,11 @@ void createCommands() {
             Serial.println("Usage: edit1W <description> <name>");
             return;
         }
-        IOHC::iohcRemote1W::getInstance()->renameRemote(cmd->at(1), cmd->at(2));
+        std::string name = cmd->at(2);
+        for (size_t i = 3; i < cmd->size(); ++i) {
+            name += " " + cmd->at(i);
+        }
+        IOHC::iohcRemote1W::getInstance()->renameRemote(cmd->at(1), name);
     });
     Cmd::addHandler((char *) "time1W", (char *) "Set 1W device travel time", [](Tokens *cmd)-> void {
         if (cmd->size() < 3) {
@@ -185,7 +193,11 @@ void createCommands() {
             Serial.println("Invalid address");
             return;
         }
-        IOHC::iohcRemoteMap::getInstance()->add(node, cmd->at(2));
+        std::string name = cmd->at(2);
+        for (size_t i = 3; i < cmd->size(); ++i) {
+            name += " " + cmd->at(i);
+        }
+        IOHC::iohcRemoteMap::getInstance()->add(node, name);
     });
     Cmd::addHandler((char *) "linkRemote", (char *) "Link device to remote", [](Tokens *cmd)-> void {
         if (cmd->size() < 3) {
