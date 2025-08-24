@@ -349,7 +349,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             }
                         }
                     });
-                updateDeviceFill(device.id, device.position || 0);
 
                 listItem.appendChild(upButton);
                 listItem.appendChild(stopButton);
@@ -357,6 +356,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 listItem.appendChild(editButton);
                 // TODO: Add buttons for simple actions if desired in future
                 deviceListUL.appendChild(listItem);
+
+                // Apply initial position now that the element exists in the DOM
+                updateDeviceFill(device.id, device.position || 0);
 
                 // Populate the SELECT for command sending
                 const option = document.createElement('option');
