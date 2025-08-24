@@ -110,6 +110,7 @@ void handleApiDevices(AsyncWebServerRequest *request) {
     JsonObject deviceObj = root.add<JsonObject>();
     deviceObj["id"] = bytesToHexString(r.node, sizeof(r.node)).c_str();
     deviceObj["name"] = r.name.c_str();
+    deviceObj["description"] = r.description.c_str();
     deviceObj["position"] = r.positionTracker.getPosition();
     deviceObj["travel_time"] = r.travelTime;
   }
