@@ -655,6 +655,7 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
 
    bool iohcRemote1W::load() {
         _radioInstance = iohcRadio::getInstance();
+        remotes.clear();
 
         if (LittleFS.exists(IOHC_1W_REMOTE))
             Serial.printf("Loading 1W remote settings from %s\n", IOHC_1W_REMOTE);

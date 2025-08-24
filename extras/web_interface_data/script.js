@@ -16,6 +16,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const filesystemFileInput = document.getElementById('filesystem-file');
     const firmwareUploadButton = document.getElementById('upload-firmware');
     const filesystemUploadButton = document.getElementById('upload-filesystem');
+    const devicesFileInput = document.getElementById('devices-file');
+    const remotesFileInput = document.getElementById('remotes-file');
+    const devicesUploadButton = document.getElementById('upload-devices');
+    const remotesUploadButton = document.getElementById('upload-remotes');
     const downloadDevicesButton = document.getElementById('download-devices');
     const downloadRemotesButton = document.getElementById('download-remotes');
     const lastAddrInput = document.getElementById('last-address');
@@ -134,6 +138,45 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (e) {
             console.error('Error uploading filesystem', e);
             logStatus('Error uploading filesystem', true);
+        }
+    }
+
+    async function uploadDevices() {
+        const file = devicesFileInput.files[0];
+        if (!file) {
+            logStatus('No devices file selected', true);
+            return;
+        }
+        const formData = new FormData();
+        formData.append('file', file);
+        try {
+            const resp = await fetch('/api/upload/devices', { method: 'POST', body: formData });
+            const result = await resp.json();
+            logStatus(result.message || 'Devices file uploaded');
+            fetchAndDisplayDevices();
+            fetchAndDisplayRemotes();
+        } catch (e) {
+            console.error('Error uploading devices file', e);
+            logStatus('Error uploading devices file', true);
+        }
+    }
+
+    async function uploadRemotes() {
+        const file = remotesFileInput.files[0];
+        if (!file) {
+            logStatus('No remotes file selected', true);
+            return;
+        }
+        const formData = new FormData();
+        formData.append('file', file);
+        try {
+            const resp = await fetch('/api/upload/remotes', { method: 'POST', body: formData });
+            const result = await resp.json();
+            logStatus(result.message || 'Remotes file uploaded');
+            fetchAndDisplayRemotes();
+        } catch (e) {
+            console.error('Error uploading remotes file', e);
+            logStatus('Error uploading remotes file', true);
         }
     }
 
@@ -445,6 +488,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     if (filesystemUploadButton) {
         filesystemUploadButton.addEventListener('click', uploadFilesystem);
+    }
+    if (devicesUploadButton) {
+        devicesUploadButton.addEventListener('click', uploadDevices);
+    }
+    if (remotesUploadButton) {
+        remotesUploadButton.addEventListener('click', uploadRemotes);
     }
     if (downloadDevicesButton) {
         downloadDevicesButton.addEventListener('click', () => downloadFile('/api/download/devices', '1W.json'));
