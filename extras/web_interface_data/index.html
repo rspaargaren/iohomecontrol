@@ -119,6 +119,10 @@
                         <label for="filesystem-file">Filesystem:</label>
                         <div class="filesystem-line"><input type="file" id="filesystem-file" accept=".bin">
                         <button id="upload-filesystem">Upload Filesystem</button></div>
+                        <label>Download:</label>
+                        <div class="download-line">
+                        <button id="download-devices">Download Devices</button>
+                        <button id="download-remotes">Download Remotes</button></div>
                     </div>
                 </section>
             </div>
@@ -178,16 +182,24 @@
                     <input type="text" id="popup-input-timing" placeholder="Typ hier..." autocomplete="off">
                     <label for="select-device" class="device-popup-label">device-select:</label>
                     <select id="device-select" class="device-popup">
-                        
+                        <!-- Options will be populated by JavaScript -->
                     </select>  
+                    <button id="popup-save" class="save">Save</button>
+                    <p id="delete-info" style="display:none; color:red; font-weight:bold;"></p>
+                    <p id="pair-label">Pair / Unpair the device to the physical screen</p>
                     <div class="popup-buttons">
-                        <button id="popup-confirm" class="confirm">Confirm</button>
-                        <button id="popup-pair" class="pair">Pair</button>
-                        <button id="popup-remove" class="remove-device">delete</button>
+                            <button id="popup-add" class="pair">pair</button>
+                            <button id="popup-remove" class="unpair">unpair</button>
+                            <button id="popup-delete" type="button" class="danger">Delete</button>
+                            <button id="popup-confirm" type="button">OK</button>
+                            <button id="popup-cancel"  type="button">Cancel</button>
                     </div>
                 </div>
                 <div id="right">
-                    <p id="popup-content">Tekst komt hier.</p>
+                    <p id="popup-content">
+                        <!-- Dynamic content will be populated by JavaScript -->
+                    </p>
+                    
                 </div>                
             </div>
         </div>

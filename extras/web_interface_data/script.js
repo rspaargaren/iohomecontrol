@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     const deviceListUL = document.getElementById('device-list');
     const deviceSelect = document.getElementById('device-select');
+    let devicesCache = [];
     const remoteListUL = document.getElementById('remote-list');
     const commandInput = document.getElementById('command-input');
     const sendCommandButton = document.getElementById('send-command-button');
@@ -15,6 +16,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const filesystemFileInput = document.getElementById('filesystem-file');
     const firmwareUploadButton = document.getElementById('upload-firmware');
     const filesystemUploadButton = document.getElementById('upload-filesystem');
+    const devicesFileInput = document.getElementById('devices-file');
+    const remotesFileInput = document.getElementById('remotes-file');
+    const devicesUploadButton = document.getElementById('upload-devices');
+    const remotesUploadButton = document.getElementById('upload-remotes');
+    const downloadDevicesButton = document.getElementById('download-devices');
+    const downloadRemotesButton = document.getElementById('download-remotes');
     const lastAddrInput = document.getElementById('last-address');
     const ws = new WebSocket(`ws://${window.location.host}/ws`);
 
@@ -133,6 +140,64 @@ document.addEventListener('DOMContentLoaded', function() {
             logStatus('Error uploading filesystem', true);
         }
     }
+
+    async function uploadDevices() {
+        const file = devicesFileInput.files[0];
+        if (!file) {
+            logStatus('No devices file selected', true);
+            return;
+        }
+        const formData = new FormData();
+        formData.append('file', file);
+        try {
+            const resp = await fetch('/api/upload/devices', { method: 'POST', body: formData });
+            const result = await resp.json();
+            logStatus(result.message || 'Devices file uploaded');
+            fetchAndDisplayDevices();
+            fetchAndDisplayRemotes();
+        } catch (e) {
+            console.error('Error uploading devices file', e);
+            logStatus('Error uploading devices file', true);
+        }
+    }
+
+    async function uploadRemotes() {
+        const file = remotesFileInput.files[0];
+        if (!file) {
+            logStatus('No remotes file selected', true);
+            return;
+        }
+        const formData = new FormData();
+        formData.append('file', file);
+        try {
+            const resp = await fetch('/api/upload/remotes', { method: 'POST', body: formData });
+            const result = await resp.json();
+            logStatus(result.message || 'Remotes file uploaded');
+            fetchAndDisplayRemotes();
+        } catch (e) {
+            console.error('Error uploading remotes file', e);
+            logStatus('Error uploading remotes file', true);
+        }
+    }
+
+    function downloadFile(url, filename) {
+        fetch(url)
+            .then(resp => {
+                if (!resp.ok) throw new Error('Network response was not ok');
+                return resp.blob();
+            })
+            .then(blob => {
+                const link = document.createElement('a');
+                link.href = window.URL.createObjectURL(blob);
+                link.download = filename;
+                link.click();
+                window.URL.revokeObjectURL(link.href);
+            })
+            .catch(err => {
+                console.error('Error downloading file', err);
+                logStatus('Error downloading file', true);
+            });
+    }
    
     async function fetchAndDisplayRemotes() {
         try {
@@ -153,9 +218,12 @@ document.addEventListener('DOMContentLoaded', function() {
             remotes.forEach(remote => {
                 const tr = document.createElement('tr');
 
-                // gekoppelde devices tonen, neem aan remote.devices is array
-                const linkedDevices = remote.devices && remote.devices.length > 0 
-                    ? remote.devices.map(d => d.name).join(', ')
+                // Show linked device names if available; fall back to raw id/name
+                const linkedDevices = (remote.devices && remote.devices.length > 0)
+                    ? remote.devices.map(d => {
+                        const dev = devicesCache.find(v => v.id === d || v.name === d || v.description === d);
+                        return dev ? dev.name : d;
+                    }).join(', ')
                     : '0 devices';
 
                 tr.innerHTML = `
@@ -181,6 +249,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             const devices = await response.json();
+            devicesCache = devices;
 
             deviceListUL.innerHTML = ''; // Clear existing list
             deviceSelect.innerHTML = ''; // Clear existing options
@@ -244,13 +313,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     openPopup('Edit Device', "Adjust the name:",
                         [
                             'ID: ' + device.id,
-                            'Status: ' + device.position,
+                            'Description: ' + (device.description || ''),
+                            'Position: ' + device.position + '%',
+                            'Paired: ' + (device.paired ? 'Yes' : 'No'),
                         ], {
                         showInput: true,
                         showTiming: true,
                         defaultValue: device.name,
                         defaultTiming: device.travel_time,
-                        onConfirm: async (newName, newTiming) => {
+                        pairLabel: 'Add / Remove the device to the physical screen',
+                        deleteInfo: 'Only use when the device is not linked to a physical screen.',
+                        onSave: async (newName, newTiming) => {
                             try {
                                 if (newName.trim() && newName !== device.name) {
                                     const response = await fetch('/api/command', {
@@ -285,31 +358,52 @@ document.addEventListener('DOMContentLoaded', function() {
                             }
                         },
                         onPair: async () => {
-
-                        },
-                        onDelete: async () => {
                             try {
                                 const response = await fetch('/api/command', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ deviceId: device.id, command: 'del1W' })
+                                    body: JSON.stringify({ deviceId: device.id, command: 'add' })
                                 });
                                 const result = await response.json();
-                                const devicesResp = await fetch('/api/devices');
-                                const devices = await devicesResp.json();
-                                const exists = devices.some(d => d.id === device.id);
-                                if (result.success && !exists) {
-                                    logStatus(result.message || 'Device deleted.');
+                                if (result.success) {
+                                    logStatus(result.message || 'Device added.');
                                 } else {
-                                    logStatus(result.message || 'Failed to delete device. Ensure it is unpaired.', true);
+                                    logStatus(result.message || 'Failed to add device.', true);
                                 }
-                                fetchAndDisplayDevices();
                             } catch (e) {
-                                logStatus(`Error deleting device: ${e.message}`, true);
+                                logStatus(`Error adding device: ${e.message}`, true);
                             }
-                        }
+                        },
+                        onUnpair: async () => {
+                            try {
+                                const response = await fetch('/api/command', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ deviceId: device.id, command: 'remove' })
+                                });
+                                const result = await response.json();
+                                if (result.success) {
+                                    logStatus(result.message || 'Device unpaired.');
+                                } else {
+                                    logStatus(result.message || 'Failed to unpair device.', true);
+                                }
+                            } catch (e) {
+                                logStatus(`Error unpairing device: ${e.message}`, true);
+                            }
+                        },
+                       onDelete: async () => {
+                            const resp = await fetch('/api/command', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ deviceId: device.id, command: 'del1W' })
+                            });
+                            const res = await resp.json();
+                            if (!resp.ok || res.success === false) throw new Error(res.message || 'Delete failed');
+
+                            logStatus(res.message || 'Device deleted.');
+                            await fetchAndDisplayDevices();
+                            }
                     });
-                updateDeviceFill(device.id, device.position || 0);
 
                 listItem.appendChild(upButton);
                 listItem.appendChild(stopButton);
@@ -317,6 +411,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 listItem.appendChild(editButton);
                 // TODO: Add buttons for simple actions if desired in future
                 deviceListUL.appendChild(listItem);
+
+                // Apply initial position now that the element exists in the DOM
+                updateDeviceFill(device.id, device.position || 0);
 
                 // Populate the SELECT for command sending
                 const option = document.createElement('option');
@@ -383,6 +480,18 @@ document.addEventListener('DOMContentLoaded', function() {
     if (filesystemUploadButton) {
         filesystemUploadButton.addEventListener('click', uploadFilesystem);
     }
+    if (devicesUploadButton) {
+        devicesUploadButton.addEventListener('click', uploadDevices);
+    }
+    if (remotesUploadButton) {
+        remotesUploadButton.addEventListener('click', uploadRemotes);
+    }
+    if (downloadDevicesButton) {
+        downloadDevicesButton.addEventListener('click', () => downloadFile('/api/download/devices', '1W.json'));
+    }
+    if (downloadRemotesButton) {
+        downloadRemotesButton.addEventListener('click', () => downloadFile('/api/download/remotes', 'RemoteMap.json'));
+    }
 
     // suggestions for command input
     const suggestions = ["add", "remove", "close", "open", "ls", "cat"];
@@ -414,7 +523,7 @@ document.addEventListener('DOMContentLoaded', function() {
     toggleBtn.addEventListener('click', () => {
       body.classList.toggle('dark-mode');
 
-      // Optioneel: opslaan in localStorage
+    // Optional: save to localStorage
       if (body.classList.contains('dark-mode')) {
         localStorage.setItem('theme', 'dark');
       } else {
@@ -441,9 +550,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const labelInput = document.getElementById('label-input');
         const labelTiming = document.getElementById('label-timing');
         const inputTiming = document.getElementById('popup-input-timing');
-        const removeBtn = document.getElementById('popup-remove');
+        const addBtn = document.getElementById('popup-add');
+        const unPairBtn = document.getElementById('popup-remove');
+        const deleteBtn = document.getElementById('popup-delete');
         const devicePopupLabel = document.querySelector('.device-popup-label');
         const devicePopup = document.querySelector('.device-popup');
+        const pairLabelEl = document.getElementById('pair-label');
+        const deleteInfo = document.getElementById('delete-info');
         document.getElementById('popup-title').textContent = title;
         labelInput.textContent = label;
 
@@ -451,6 +564,15 @@ document.addEventListener('DOMContentLoaded', function() {
         const showDevicePopup = options && options.showDevicePopup;
         devicePopupLabel.style.display = showDevicePopup ? 'block' : 'none';
         devicePopup.style.display = showDevicePopup ? 'block' : 'none';
+        if (showDevicePopup) {
+            devicePopup.innerHTML = '';
+            devicesCache.forEach(d => {
+                const opt = document.createElement('option');
+                opt.value = d.id;
+                opt.textContent = d.name;
+                devicePopup.appendChild(opt);
+            });
+        }
 
         const showInput = options && options.showInput;
         input.style.display = showInput ? 'block' : 'none';
@@ -460,39 +582,109 @@ document.addEventListener('DOMContentLoaded', function() {
         const showTiming = options && options.showTiming;
         labelTiming.style.display = showTiming ? 'block' : 'none';
         inputTiming.style.display = showTiming ? 'block' : 'none';
-        inputTiming.value = options.defaultTiming || '';
+        if (showTiming) {
+            labelTiming.textContent = options.timingLabel || 'timing:';
+        }
+        inputTiming.value = showTiming ? (options.defaultTiming || '') : '';
 
         // items is een array van strings
         const content = items.map(i => `<p>${i}</p>`).join('');
         document.getElementById('popup-content').innerHTML = content;
-        if (options && options.onDelete) {
-            removeBtn.style.display = 'block';
-            removeBtn.onclick = () => {
+
+        if (options && options.pairLabel && (options.onPair || options.onUnpair)) {
+            pairLabelEl.style.display = 'block';
+            pairLabelEl.textContent = options.pairLabel;
+        } else {
+            pairLabelEl.style.display = 'none';
+        }
+
+         if (options && options.onPair) {
+            addBtn.style.display = 'block';
+            addBtn.onclick = () => {
+                const sel = showDevicePopup ? devicePopup.value : undefined;
                 closePopup();
-                options.onDelete();
+                options.onPair(sel);
             };
         } else {
-            removeBtn.style.display = 'none';
-            removeBtn.onclick = null;
+            addBtn.style.display = 'none';
+            addBtn.onclick = null;
+        }
+
+        if (options && options.onUnpair) {
+            unPairBtn.style.display = 'block';
+            unPairBtn.onclick = () => {
+                const sel = showDevicePopup ? devicePopup.value : undefined;
+                closePopup();
+                options.onUnpair(sel);
+            };
+        } else {
+            unPairBtn.style.display = 'none';
+            unPairBtn.onclick = null;
+        }
+        if (options && options.onDelete) {
+            
+            deleteBtn.style.display = 'block';
+
+            const confirmBtn = document.getElementById('popup-confirm');
+            const cancelBtn = document.getElementById('popup-cancel');
+            const exitDeleteMode = () => {
+                deleteInfo.style.display = 'none';
+                cancelBtn.style.display  = 'none';
+                deleteBtn.style.display  = 'block';
+                confirmBtn.style.display  = 'none';  
+                addBtn.style.display     = options.onPair   ? 'block' : 'none';
+                unPairBtn.style.display  = options.onUnpair ? 'block' : 'none';
+            };
+            const enterDeleteMode = () => {
+                addBtn.style.display    = 'none';
+                unPairBtn.style.display = 'none';
+                deleteBtn.style.display = 'none';    // Delete-knop verdwijnt
+
+                deleteInfo.style.display = 'block';
+                deleteInfo.textContent   = options.deleteInfo || '⚠️ Unpair devices first before deleting.';
+
+                confirmBtn.style.display = 'inline-block';
+                confirmBtn.textContent   = 'Confirm';
+                confirmBtn.onclick = async (ev) => {
+                ev.preventDefault(); ev.stopPropagation();
+                try {
+                        await options.onDelete();
+                    closePopup();
+                } catch (err) {
+                    logStatus?.(`Error deleting: ${err.message}`, true);
+                    reset();
+                }
+            };
+
+                cancelBtn.style.display = 'inline-block';
+                cancelBtn.onclick = (ev) => {
+                ev.preventDefault(); ev.stopPropagation();
+                reset();
+                };
+            };
+
+            
+            exitDeleteMode();
+            deleteBtn.onclick = enterDeleteMode;
+        } else {
+            exitDeleteMode();
+            confirmBtn.style.display  = 'none';
         }
 
         // OK button
         document.getElementById('popup-confirm').onclick = () => {
             const value = showInput ? input.value : true;
             const timingValue = showTiming ? inputTiming.value : undefined;
+            const deviceValue = showDevicePopup ? devicePopup.value : undefined;
             closePopup();
-            if (options.onConfirm) options.onConfirm(value, timingValue);
+            if (options.onConfirm) options.onConfirm(value, timingValue, deviceValue);
         };
 
-        // pair button
-        document.getElementById('popup-pair').onclick = () => {
-            if (options.onPair) options.onPair();
-        };
+        // add/remove buttons handled above
         document.getElementById('popup').classList.add('open');
 
     };
-
-
+    window.openPopup = openPopup;
     // popup close
     function closePopup() {
         document.getElementById('popup').classList.remove('open');
@@ -500,7 +692,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     window.closePopup = closePopup;
 
-     // voorbeeld functie voor de edit-knop
+    // example function for the edit button
     async function editRemote(remoteId, remoteName) {
         openPopup('Edit Remote', "Adjust the name/devices:", [
             'remote id: ' + remoteId,
@@ -509,7 +701,45 @@ document.addEventListener('DOMContentLoaded', function() {
             showInput: true,
             showDevicePopup: true,
             defaultValue: remoteName,
-            onConfirm: async (newName) => {
+            addLabel: 'Link',
+            removeLabel: 'Unlink',
+            onAdd: async (deviceId) => {
+                try {
+                    const response = await fetch('/api/command', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ command: `linkRemote ${remoteId} ${deviceId}` })
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        logStatus(result.message || 'Device linked.');
+                    } else {
+                        logStatus(result.message || 'Failed to link device.', true);
+                    }
+                    fetchAndDisplayRemotes();
+                } catch (error) {
+                    logStatus(`Error linking device: ${error.message}`, true);
+                }
+            },
+            onRemove: async (deviceId) => {
+                try {
+                    const response = await fetch('/api/command', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ command: `unlinkRemote ${remoteId} ${deviceId}` })
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        logStatus(result.message || 'Device unlinked.');
+                    } else {
+                        logStatus(result.message || 'Failed to unlink device.', true);
+                    }
+                    fetchAndDisplayRemotes();
+                } catch (error) {
+                    logStatus(`Error unlinking device: ${error.message}`, true);
+                }
+            },
+            onSave: async (newName) => {
                 try {
                     if (newName.trim() && newName !== remoteName) {
                         const response = await fetch('/api/command', {
@@ -523,44 +753,88 @@ document.addEventListener('DOMContentLoaded', function() {
                         } else {
                             logStatus(result.message || 'Failed to rename remote.', true);
                         }
+                        fetchAndDisplayRemotes();
                     }
                 } catch (error) {
                     console.error('Error renaming remote:', error);
                     logStatus('Error renaming remote.', true);
                 }
+            },
+            onDelete: async () => {
+                try {
+                    const response = await fetch('/api/command', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ command: `delRemote ${remoteId}` })
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        logStatus(result.message || 'Remote removed.');
+                    } else {
+                        logStatus(result.message || 'Failed to remove remote.', true);
+                    }
+                    fetchAndDisplayRemotes();
+                } catch (error) {
+                    logStatus(`Error removing remote: ${error.message}`, true);
+                }
             }
         });
     }
     window.editRemote = editRemote;
-    // Theme persistence on reload and open popup
 
     window.addEventListener('DOMContentLoaded', () => {
+        // Theme persistence
       const savedTheme = localStorage.getItem('theme');
       if (savedTheme === 'dark') {
         body.classList.add('dark-mode');
       }
-      
+      // popup for adding remotes
       const remotePopup = document.getElementById('remote-popup');
       remotePopup.addEventListener('click', () => {
-         openPopup('Add Remote', "new remote", [
+         openPopup('Add Remote', 'Remote ID:', [
             'here add your remote',
          ], {
            showInput: true,
-           showDevicePopup: true,
-           onConfirm: async (newName) => {
-             
+           showTiming: true,
+           timingLabel: 'Remote Name:',
+           defaultValue: lastAddrInput.value.trim(),
+           onConfirm: async (addr, newName) => {
+             const id = addr.trim();
+             if (!id) {
+               logStatus('Please provide a remote ID.', true);
+               return;
+             }
+             if (!newName.trim()) {
+               logStatus('Please provide a remote name.', true);
+               return;
+             }
+             try {
+               const resp = await fetch('/api/command', {
+                 method: 'POST',
+                 headers: { 'Content-Type': 'application/json' },
+                 body: JSON.stringify({ command: `newRemote ${id} ${newName}` })
+               });
+               const result = await resp.json();
+               if (result.success) {
+                 logStatus(result.message || 'Remote added.');
+                 fetchAndDisplayRemotes();
+               } else {
+                 logStatus(result.message || 'Failed to add remote.', true);
+               }
+             } catch (e) {
+               logStatus(`Error adding remote: ${e.message}`, true);
+             }
            }
          });
       });
+
+      // popup for adding devices
       const addpopup = document.getElementById('add-popup');
       addpopup.addEventListener('click', () => {
          openPopup('Add Device', "new device", [
             'here add your device',
-         ], {
+           ], {
            showInput: true,
-           onPair: async () => {
-
-           },
            onConfirm: async (newName) => {
              if (newName.trim()) {
                try {
