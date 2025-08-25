@@ -646,20 +646,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 confirmBtn.style.display = 'inline-block';
                 confirmBtn.textContent   = 'Confirm';
                 confirmBtn.onclick = async (ev) => {
-                ev.preventDefault(); ev.stopPropagation();
                 try {
                         await options.onDelete();
                     closePopup();
                 } catch (err) {
                     logStatus?.(`Error deleting: ${err.message}`, true);
-                    reset();
+                    exitDeleteMode();
                 }
             };
 
                 cancelBtn.style.display = 'inline-block';
                 cancelBtn.onclick = (ev) => {
-                ev.preventDefault(); ev.stopPropagation();
-                reset();
+                exitDeleteMode();
                 };
             };
 

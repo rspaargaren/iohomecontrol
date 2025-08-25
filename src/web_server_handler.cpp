@@ -27,6 +27,9 @@ static void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
                       AwsEventType type, void *arg, uint8_t *data,
                       size_t len) {
   if (type == WS_EVT_CONNECT) {
+    // Ensure we broadcast the current position before sending init message
+    IOHC::iohcRemote1W::getInstance()->updatePositions();
+
     // Build a compact init message containing only device information
     DynamicJsonDocument doc(1024);
     doc["type"] = "init";
@@ -92,6 +95,9 @@ struct Device {
 };
 
 void handleApiDevices(AsyncWebServerRequest *request) {
+  // Update device positions before returning them to the web client
+  IOHC::iohcRemote1W::getInstance()->updatePositions();
+
   AsyncJsonResponse *response = new AsyncJsonResponse();
   if (!response) {
     request->send(500, "text/plain", "Out of memory");
@@ -104,6 +110,7 @@ void handleApiDevices(AsyncWebServerRequest *request) {
     JsonObject deviceObj = root.add<JsonObject>();
     deviceObj["id"] = bytesToHexString(r.node, sizeof(r.node)).c_str();
     deviceObj["name"] = r.name.c_str();
+    deviceObj["description"] = r.description.c_str();
     deviceObj["position"] = r.positionTracker.getPosition();
     deviceObj["travel_time"] = r.travelTime;
   }
@@ -139,6 +146,65 @@ void handleApiRemotes(AsyncWebServerRequest *request) {
 
   response->setLength();
   request->send(response);
+}
+
+void handleDownloadDevices(AsyncWebServerRequest *request) {
+  if (LittleFS.exists(IOHC_1W_REMOTE)) {
+    request->send(LittleFS, IOHC_1W_REMOTE, "application/json", true);
+  } else {
+    request->send(404, "application/json",
+                  "{\"message\":\"1W.json not found\"}");
+  }
+}
+
+void handleDownloadRemotes(AsyncWebServerRequest *request) {
+  if (LittleFS.exists(REMOTE_MAP_FILE)) {
+    request->send(LittleFS, REMOTE_MAP_FILE, "application/json", true);
+  } else {
+    request->send(404, "application/json",
+                  "{\"message\":\"RemoteMap.json not found\"}");
+  }
+}
+
+void handleUploadDevicesDone(AsyncWebServerRequest *request) {
+  request->send(200, "application/json",
+                "{\"message\":\"Devices file uploaded\"}");
+  IOHC::iohcRemote1W::getInstance()->load();
+  IOHC::iohcRemoteMap::getInstance()->load();
+}
+
+void handleUploadDevicesFile(AsyncWebServerRequest *request, String filename,
+                             size_t index, uint8_t *data, size_t len,
+                             bool final) {
+  if (!index) {
+    request->_tempFile = LittleFS.open(IOHC_1W_REMOTE, "w");
+  }
+  if (len) {
+    request->_tempFile.write(data, len);
+  }
+  if (final) {
+    request->_tempFile.close();
+  }
+}
+
+void handleUploadRemotesDone(AsyncWebServerRequest *request) {
+  request->send(200, "application/json",
+                "{\"message\":\"Remotes file uploaded\"}");
+  IOHC::iohcRemoteMap::getInstance()->load();
+}
+
+void handleUploadRemotesFile(AsyncWebServerRequest *request, String filename,
+                             size_t index, uint8_t *data, size_t len,
+                             bool final) {
+  if (!index) {
+    request->_tempFile = LittleFS.open(REMOTE_MAP_FILE, "w");
+  }
+  if (len) {
+    request->_tempFile.write(data, len);
+  }
+  if (final) {
+    request->_tempFile.close();
+  }
 }
 
 void handleApiCommand(AsyncWebServerRequest *request, JsonVariant &json) {
@@ -497,6 +563,12 @@ void setupWebServer() {
             handleFirmwareUpload);
   server.on("/api/filesystem", HTTP_POST, handleFilesystemUpdate,
             handleFilesystemUpload);
+  server.on("/api/download/devices", HTTP_GET, handleDownloadDevices);
+  server.on("/api/download/remotes", HTTP_GET, handleDownloadRemotes);
+  server.on("/api/upload/devices", HTTP_POST, handleUploadDevicesDone,
+            handleUploadDevicesFile);
+  server.on("/api/upload/remotes", HTTP_POST, handleUploadRemotesDone,
+            handleUploadRemotesFile);
 
   ws.onEvent(onWsEvent);
   server.addHandler(&ws);

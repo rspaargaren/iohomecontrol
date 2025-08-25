@@ -261,8 +261,31 @@ footer {
 #popup-text {
   padding-bottom: 15px;
 }
+.edit-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#pair-label {
+  margin-top: 12px;
+}
+
 .popup-buttons {
   display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.delete-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 12px;
+}
+
+#delete-info {
+  font-size: 12px;
 }
 #popup.open {
   display: flex;

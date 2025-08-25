@@ -69,6 +69,7 @@ namespace IOHC {
         ~iohcRemote1W() override = default;
 
         void cmd(RemoteButton cmd, Tokens* data);
+        void handleRemoteAction(RemoteButton cmd, const std::string &description);
         bool load() override;
         bool save() override;
 //        void scanDump() override { }
