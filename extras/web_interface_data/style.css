@@ -291,6 +291,10 @@ footer {
   display: flex;
   flex-direction: column;
 }
+.inline-confirm { margin-top:8px; font-size:.9em; }
+.inline-confirm .warning { color:#b00020; font-weight:600; display:block; margin-bottom:6px; }
+.btn.danger { background:#d9534f; color:#fff; }
+.btn.ghost  { background:#eee; }
 @media (min-width: 1280px) {
     main > div, .card-popup {
         grid-template-columns: repeat(2, 1fr);

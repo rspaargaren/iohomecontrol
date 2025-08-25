@@ -323,7 +323,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         defaultTiming: device.travel_time,
                         pairLabel: 'Add / Remove the device to the physical screen',
                         deleteInfo: 'Only use when the device is not linked to a physical screen.',
-                        onConfirm: async (newName, newTiming) => {
+                        onSave: async (newName, newTiming) => {
                             try {
                                 if (newName.trim() && newName !== device.name) {
                                     const response = await fetch('/api/command', {
@@ -357,7 +357,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 logStatus(`Error updating device: ${e.message}`, true);
                             }
                         },
-                        onAdd: async () => {
+                        onPair: async () => {
                             try {
                                 const response = await fetch('/api/command', {
                                     method: 'POST',
@@ -374,7 +374,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 logStatus(`Error adding device: ${e.message}`, true);
                             }
                         },
-                        onRemove: async () => {
+                        onUnpair: async () => {
                             try {
                                 const response = await fetch('/api/command', {
                                     method: 'POST',
@@ -383,35 +383,26 @@ document.addEventListener('DOMContentLoaded', function() {
                                 });
                                 const result = await response.json();
                                 if (result.success) {
-                                    logStatus(result.message || 'Device removed.');
+                                    logStatus(result.message || 'Device unpaired.');
                                 } else {
-                                    logStatus(result.message || 'Failed to remove device.', true);
+                                    logStatus(result.message || 'Failed to unpair device.', true);
                                 }
                             } catch (e) {
-                                logStatus(`Error removing device: ${e.message}`, true);
+                                logStatus(`Error unpairing device: ${e.message}`, true);
                             }
                         },
-                        onDelete: async () => {
-                            try {
-                                const response = await fetch('/api/command', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ deviceId: device.id, command: 'del1W' })
-                                });
-                                const result = await response.json();
-                                const devicesResp = await fetch('/api/devices');
-                                const devices = await devicesResp.json();
-                                const exists = devices.some(d => d.id === device.id);
-                                if (result.success && !exists) {
-                                    logStatus(result.message || 'Device deleted.');
-                                } else {
-                                    logStatus(result.message || 'Failed to delete device. Ensure it is unpaired.', true);
-                                }
-                                fetchAndDisplayDevices();
-                            } catch (e) {
-                                logStatus(`Error deleting device: ${e.message}`, true);
+                       onDelete: async () => {
+                            const resp = await fetch('/api/command', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ deviceId: device.id, command: 'del1W' })
+                            });
+                            const res = await resp.json();
+                            if (!resp.ok || res.success === false) throw new Error(res.message || 'Delete failed');
+
+                            logStatus(res.message || 'Device deleted.');
+                            await fetchAndDisplayDevices();
                             }
-                        }
                     });
 
                 listItem.appendChild(upButton);
@@ -532,7 +523,7 @@ document.addEventListener('DOMContentLoaded', function() {
     toggleBtn.addEventListener('click', () => {
       body.classList.toggle('dark-mode');
 
-      // Optioneel: opslaan in localStorage
+    // Optional: save to localStorage
       if (body.classList.contains('dark-mode')) {
         localStorage.setItem('theme', 'dark');
       } else {
@@ -560,7 +551,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const labelTiming = document.getElementById('label-timing');
         const inputTiming = document.getElementById('popup-input-timing');
         const addBtn = document.getElementById('popup-add');
-        const removeBtn = document.getElementById('popup-remove');
+        const unPairBtn = document.getElementById('popup-remove');
         const deleteBtn = document.getElementById('popup-delete');
         const devicePopupLabel = document.querySelector('.device-popup-label');
         const devicePopup = document.querySelector('.device-popup');
@@ -599,54 +590,83 @@ document.addEventListener('DOMContentLoaded', function() {
         // items is een array van strings
         const content = items.map(i => `<p>${i}</p>`).join('');
         document.getElementById('popup-content').innerHTML = content;
-        const addLabel = options.addLabel || 'Add';
-        const removeLabel = options.removeLabel || 'Remove';
 
-        if (options && options.pairLabel && (options.onAdd || options.onRemove)) {
+        if (options && options.pairLabel && (options.onPair || options.onUnpair)) {
             pairLabelEl.style.display = 'block';
             pairLabelEl.textContent = options.pairLabel;
         } else {
             pairLabelEl.style.display = 'none';
         }
 
-        if (options && options.onAdd) {
+         if (options && options.onPair) {
             addBtn.style.display = 'block';
-            addBtn.textContent = addLabel;
             addBtn.onclick = () => {
                 const sel = showDevicePopup ? devicePopup.value : undefined;
                 closePopup();
-                options.onAdd(sel);
+                options.onPair(sel);
             };
         } else {
             addBtn.style.display = 'none';
             addBtn.onclick = null;
         }
 
-        if (options && options.onRemove) {
-            removeBtn.style.display = 'block';
-            removeBtn.textContent = removeLabel;
-            removeBtn.onclick = () => {
+        if (options && options.onUnpair) {
+            unPairBtn.style.display = 'block';
+            unPairBtn.onclick = () => {
                 const sel = showDevicePopup ? devicePopup.value : undefined;
                 closePopup();
-                options.onRemove(sel);
+                options.onUnpair(sel);
             };
         } else {
-            removeBtn.style.display = 'none';
-            removeBtn.onclick = null;
+            unPairBtn.style.display = 'none';
+            unPairBtn.onclick = null;
         }
-
         if (options && options.onDelete) {
+            
             deleteBtn.style.display = 'block';
-            deleteInfo.style.display = options.deleteInfo ? 'block' : 'none';
-            if (options.deleteInfo) deleteInfo.textContent = options.deleteInfo;
-            deleteBtn.onclick = () => {
-                closePopup();
-                options.onDelete();
+
+            const confirmBtn = document.getElementById('popup-confirm');
+            const cancelBtn = document.getElementById('popup-cancel');
+            const exitDeleteMode = () => {
+                deleteInfo.style.display = 'none';
+                cancelBtn.style.display  = 'none';
+                deleteBtn.style.display  = 'block';
+                confirmBtn.style.display  = 'none';  
+                addBtn.style.display     = options.onPair   ? 'block' : 'none';
+                unPairBtn.style.display  = options.onUnpair ? 'block' : 'none';
             };
+            const enterDeleteMode = () => {
+                addBtn.style.display    = 'none';
+                unPairBtn.style.display = 'none';
+                deleteBtn.style.display = 'none';    // Delete-knop verdwijnt
+
+                deleteInfo.style.display = 'block';
+                deleteInfo.textContent   = options.deleteInfo || '⚠️ Unpair devices first before deleting.';
+
+                confirmBtn.style.display = 'inline-block';
+                confirmBtn.textContent   = 'Confirm';
+                confirmBtn.onclick = async (ev) => {
+                try {
+                        await options.onDelete();
+                    closePopup();
+                } catch (err) {
+                    logStatus?.(`Error deleting: ${err.message}`, true);
+                    exitDeleteMode();
+                }
+            };
+
+                cancelBtn.style.display = 'inline-block';
+                cancelBtn.onclick = (ev) => {
+                exitDeleteMode();
+                };
+            };
+
+            
+            exitDeleteMode();
+            deleteBtn.onclick = enterDeleteMode;
         } else {
-            deleteBtn.style.display = 'none';
-            deleteBtn.onclick = null;
-            deleteInfo.style.display = 'none';
+            exitDeleteMode();
+            confirmBtn.style.display  = 'none';
         }
 
         // OK button
@@ -662,8 +682,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('popup').classList.add('open');
 
     };
-
-
+    window.openPopup = openPopup;
     // popup close
     function closePopup() {
         document.getElementById('popup').classList.remove('open');
@@ -671,7 +690,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     window.closePopup = closePopup;
 
-     // voorbeeld functie voor de edit-knop
+    // example function for the edit button
     async function editRemote(remoteId, remoteName) {
         openPopup('Edit Remote', "Adjust the name/devices:", [
             'remote id: ' + remoteId,
@@ -718,7 +737,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     logStatus(`Error unlinking device: ${error.message}`, true);
                 }
             },
-            onConfirm: async (newName) => {
+            onSave: async (newName) => {
                 try {
                     if (newName.trim() && newName !== remoteName) {
                         const response = await fetch('/api/command', {
@@ -760,14 +779,14 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     window.editRemote = editRemote;
-    // Theme persistence on reload and open popup
 
     window.addEventListener('DOMContentLoaded', () => {
+        // Theme persistence
       const savedTheme = localStorage.getItem('theme');
       if (savedTheme === 'dark') {
         body.classList.add('dark-mode');
       }
-      
+      // popup for adding remotes
       const remotePopup = document.getElementById('remote-popup');
       remotePopup.addEventListener('click', () => {
          openPopup('Add Remote', 'Remote ID:', [
@@ -806,6 +825,8 @@ document.addEventListener('DOMContentLoaded', function() {
            }
          });
       });
+
+      // popup for adding devices
       const addpopup = document.getElementById('add-popup');
       addpopup.addEventListener('click', () => {
          openPopup('Add Device', "new device", [

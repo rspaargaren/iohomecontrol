@@ -119,13 +119,9 @@
                         <label for="filesystem-file">Filesystem:</label>
                         <div class="filesystem-line"><input type="file" id="filesystem-file" accept=".bin">
                         <button id="upload-filesystem">Upload Filesystem</button></div>
-                        <label for="devices-file">Devices:</label>
-                        <div class="devices-line"><input type="file" id="devices-file" accept=".json">
-                        <button id="upload-devices">Upload Devices</button>
-                        <button id="download-devices">Download Devices</button></div>
-                        <label for="remotes-file">Remotes:</label>
-                        <div class="remotes-line"><input type="file" id="remotes-file" accept=".json">
-                        <button id="upload-remotes">Upload Remotes</button>
+                        <label>Download:</label>
+                        <div class="download-line">
+                        <button id="download-devices">Download Devices</button>
                         <button id="download-remotes">Download Remotes</button></div>
                     </div>
                 </section>
@@ -180,31 +176,33 @@
             </div>
             <div class="card-popup">
                 <div id="left">
-                    <div class="edit-group">
-                        <label for="popup-input" id="label-input">device:</label>
-                        <input type="text" id="popup-input" placeholder="Typ hier..." autocomplete="off">
-                        <label for="popup-input-timing" id="label-timing">timing:</label>
-                        <input type="text" id="popup-input-timing" placeholder="Typ hier..." autocomplete="off">
-                        <label for="popup-device-select" class="device-popup-label">device:</label>
-                        <select id="popup-device-select" class="device-popup">
 
-                        </select>
-                        <button id="popup-confirm" class="confirm">Confirm</button>
-                    </div>
-                    <p id="pair-label">Add / Remove the device to the physical screen</p>
+                    <label for="popup-input" id="label-input">device:</label>
+                    <input type="text" id="popup-input" placeholder="Typ hier..." autocomplete="off">
+                    <label for="popup-input-timing" id="label-timing">timing:</label>
+                    <input type="text" id="popup-input-timing" placeholder="Typ hier..." autocomplete="off">
+                    <label for="select-device" class="device-popup-label">device-select:</label>
+                    <select id="device-select" class="device-popup">
+                        <!-- Options will be populated by JavaScript -->
+                    </select>  
+                    <button id="popup-save" class="save">Save</button>
+                    <p id="delete-info" style="display:none; color:red; font-weight:bold;"></p>
+                    <p id="pair-label">Pair / Unpair the device to the physical screen</p>
                     <div class="popup-buttons">
-                        <button id="popup-add" class="pair">Add</button>
-                        <button id="popup-remove" class="pair">Remove</button>
-                    </div>
-                    <div class="delete-block">
-                        <p> Delete the device</p>
-                        <button id="popup-delete" class="remove-device">Delete</button>
-                        <p id="delete-info">Only use when the device is not linked to a physical screen.</p>
+                            <button id="popup-add" class="pair">pair</button>
+                            <button id="popup-remove" class="unpair">unpair</button>
+                            <button id="popup-delete" type="button" class="danger">Delete</button>
+                            <button id="popup-confirm" type="button">OK</button>
+                            <button id="popup-cancel"  type="button">Cancel</button>
                     </div>
                 </div>
                 <div id="right">
-                    <p id="popup-content">Tekst komt hier.</p>
-                </div>
+                    <p id="popup-content">
+                        <!-- Dynamic content will be populated by JavaScript -->
+                    </p>
+                    
+                </div>                
+
             </div>
         </div>
     </div>
