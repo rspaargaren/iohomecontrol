@@ -49,6 +49,9 @@ header img.logo {
   max-width: 40px;
   height: auto;
 }
+main {
+  min-height: calc(90dvh);
+}
 main > div, .card-popup {
     padding: 0;
     display: grid;
@@ -121,7 +124,7 @@ ul#device-list li {
   padding: 5px;
   border-radius: var(--radius);
   color: var(--color-text);
-  width: 118px;
+  width: calc(93% / 2);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -226,14 +229,14 @@ input, select {
   width: calc(100% - 187px);
 }
 footer {
-    text-align: center;
-    padding: 1em 0;
-    background-color: var(--color-accent2);
-    color: var(--color-header-text);
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
+  text-align: center;
+  padding: 1em 0;
+  background-color: var(--color-accent2);
+  color: var(--color-header-text);
+  position: relative;
+  bottom: 0;
+  left: 0;
+  width: 100%;
 }
 #popup {
     display: none;
@@ -261,35 +264,15 @@ footer {
 #popup-text {
   padding-bottom: 15px;
 }
-.edit-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-#pair-label {
-  margin-top: 12px;
-}
-
 .popup-buttons {
   display: flex;
-  gap: 8px;
-  margin-top: 4px;
-}
-
-.delete-block {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-top: 12px;
-}
-
-#delete-info {
-  font-size: 12px;
 }
 #popup.open {
   display: flex;
   flex-direction: column;
+}
+header h1 {
+  display: none;
 }
 .inline-confirm { margin-top:8px; font-size:.9em; }
 .inline-confirm .warning { color:#b00020; font-weight:600; display:block; margin-bottom:6px; }
@@ -299,5 +282,11 @@ footer {
     main > div, .card-popup {
         grid-template-columns: repeat(2, 1fr);
         gap: 10px;
+    }
+    header h1 {
+      display: block;
+    }
+    ul#device-list li {
+      width: calc(93% / 6);
     }
 }
