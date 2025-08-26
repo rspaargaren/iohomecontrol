@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error fetching last address', e);
         }
     }
-
+    // load MQTT config
     async function loadMqttConfig() {
         try {
             const resp = await fetch('/api/mqtt');
@@ -83,7 +83,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error fetching MQTT config', e);
         }
     }
-
+    // update MQTT config
     async function updateMqttConfig() {
         const payload = {
             user: mqttUserInput.value,
@@ -104,7 +104,7 @@ document.addEventListener('DOMContentLoaded', function() {
             logStatus('Error updating MQTT config', true);
         }
     }
-
+    // upload firmware
     async function uploadFirmware() {
         const file = firmwareFileInput.files[0];
         if (!file) {
@@ -122,7 +122,7 @@ document.addEventListener('DOMContentLoaded', function() {
             logStatus('Error uploading firmware', true);
         }
     }
-
+    // upload filesystem
     async function uploadFilesystem() {
         const file = filesystemFileInput.files[0];
         if (!file) {
@@ -140,7 +140,7 @@ document.addEventListener('DOMContentLoaded', function() {
             logStatus('Error uploading filesystem', true);
         }
     }
-
+    // upload devices
     async function uploadDevices() {
         const file = devicesFileInput.files[0];
         if (!file) {
@@ -160,7 +160,7 @@ document.addEventListener('DOMContentLoaded', function() {
             logStatus('Error uploading devices file', true);
         }
     }
-
+    // upload remotes
     async function uploadRemotes() {
         const file = remotesFileInput.files[0];
         if (!file) {
@@ -179,7 +179,7 @@ document.addEventListener('DOMContentLoaded', function() {
             logStatus('Error uploading remotes file', true);
         }
     }
-
+    // download remotes
     function downloadFile(url, filename) {
         fetch(url)
             .then(resp => {
@@ -198,7 +198,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 logStatus('Error downloading file', true);
             });
     }
-   
+
+    // Fetch and display remotes
     async function fetchAndDisplayRemotes() {
         try {
             const response = await fetch('/api/remotes');
@@ -319,6 +320,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         ], {
                         showInput: true,
                         showTiming: true,
+                        btnShowDelete: true,
                         defaultValue: device.name,
                         defaultTiming: device.travel_time,
                         pairLabel: 'Add / Remove the device to the physical screen',
@@ -550,17 +552,20 @@ document.addEventListener('DOMContentLoaded', function() {
         const labelInput = document.getElementById('label-input');
         const labelTiming = document.getElementById('label-timing');
         const inputTiming = document.getElementById('popup-input-timing');
-        const addBtn = document.getElementById('popup-add');
+        const pairBtn = document.getElementById('popup-add');
         const unPairBtn = document.getElementById('popup-remove');
         const deleteBtn = document.getElementById('popup-delete');
         const devicePopupLabel = document.querySelector('.device-popup-label');
         const devicePopup = document.querySelector('.device-popup');
         const pairLabelEl = document.getElementById('pair-label');
         const deleteInfo = document.getElementById('delete-info');
+        const confirmBtn = document.getElementById('popup-confirm');
+        const cancelBtn = document.getElementById('popup-cancel');
+        const input = document.getElementById('popup-input');
+
         document.getElementById('popup-title').textContent = title;
         labelInput.textContent = label;
 
-        const input = document.getElementById('popup-input');
         const showDevicePopup = options && options.showDevicePopup;
         devicePopupLabel.style.display = showDevicePopup ? 'block' : 'none';
         devicePopup.style.display = showDevicePopup ? 'block' : 'none';
@@ -586,11 +591,16 @@ document.addEventListener('DOMContentLoaded', function() {
             labelTiming.textContent = options.timingLabel || 'timing:';
         }
         inputTiming.value = showTiming ? (options.defaultTiming || '') : '';
-
+        const btnShowDelete = options && options.btnShowDelete;
+        deleteBtn.style.display = btnShowDelete ? 'block' : 'none';
+        const btnShowCancel = options && options.btnShowCancel;
+        cancelBtn.style.display = btnShowCancel ? 'block' : 'none';
         // items is een array van strings
         const content = items.map(i => `<p>${i}</p>`).join('');
         document.getElementById('popup-content').innerHTML = content;
-
+        // pair & unpair // link & unlink
+        const pairBtnN = options.pairBtnName || 'Pair';
+        const unpairBtnN = options.unpairBtnName || 'Unpair';
         if (options && options.pairLabel && (options.onPair || options.onUnpair)) {
             pairLabelEl.style.display = 'block';
             pairLabelEl.textContent = options.pairLabel;
@@ -599,19 +609,21 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
          if (options && options.onPair) {
-            addBtn.style.display = 'block';
-            addBtn.onclick = () => {
+            pairBtn.style.display = 'block';
+            pairBtn.textContent = pairBtnN;
+            pairBtn.onclick = () => {
                 const sel = showDevicePopup ? devicePopup.value : undefined;
                 closePopup();
                 options.onPair(sel);
             };
         } else {
-            addBtn.style.display = 'none';
-            addBtn.onclick = null;
+            pairBtn.style.display = 'none';
+            pairBtn.onclick = null;
         }
 
         if (options && options.onUnpair) {
             unPairBtn.style.display = 'block';
+            unPairBtn.textContent = unpairBtnN;
             unPairBtn.onclick = () => {
                 const sel = showDevicePopup ? devicePopup.value : undefined;
                 closePopup();
@@ -621,22 +633,20 @@ document.addEventListener('DOMContentLoaded', function() {
             unPairBtn.style.display = 'none';
             unPairBtn.onclick = null;
         }
+        
         if (options && options.onDelete) {
             
             deleteBtn.style.display = 'block';
-
-            const confirmBtn = document.getElementById('popup-confirm');
-            const cancelBtn = document.getElementById('popup-cancel');
             const exitDeleteMode = () => {
                 deleteInfo.style.display = 'none';
                 cancelBtn.style.display  = 'none';
                 deleteBtn.style.display  = 'block';
                 confirmBtn.style.display  = 'none';  
-                addBtn.style.display     = options.onPair   ? 'block' : 'none';
-                unPairBtn.style.display  = options.onUnpair ? 'block' : 'none';
+                pairBtn.style.display     =  'block';
+                unPairBtn.style.display  = 'block';
             };
             const enterDeleteMode = () => {
-                addBtn.style.display    = 'none';
+                pairBtn.style.display    = 'none';
                 unPairBtn.style.display = 'none';
                 deleteBtn.style.display = 'none';    // Delete-knop verdwijnt
 
@@ -660,12 +670,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 exitDeleteMode();
                 };
             };
-
-            
             exitDeleteMode();
             deleteBtn.onclick = enterDeleteMode;
         } else {
-            exitDeleteMode();
             confirmBtn.style.display  = 'none';
         }
 
@@ -683,11 +690,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     };
     window.openPopup = openPopup;
+
     // popup close
     function closePopup() {
         document.getElementById('popup').classList.remove('open');
     }
-
     window.closePopup = closePopup;
 
     // example function for the edit button
@@ -698,10 +705,12 @@ document.addEventListener('DOMContentLoaded', function() {
         ], {
             showInput: true,
             showDevicePopup: true,
+            btnShowDelete: true,
             defaultValue: remoteName,
-            addLabel: 'Link',
-            removeLabel: 'Unlink',
-            onAdd: async (deviceId) => {
+            pairLabel: 'link / Unlink the device to the physical screen',
+            pairBtnName: 'Link',
+            unpairBtnName: 'Unlink',
+            onPair: async (deviceId) => {
                 try {
                     const response = await fetch('/api/command', {
                         method: 'POST',
@@ -719,7 +728,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     logStatus(`Error linking device: ${error.message}`, true);
                 }
             },
-            onRemove: async (deviceId) => {
+            onUnpair: async (deviceId) => {
                 try {
                     const response = await fetch('/api/command', {
                         method: 'POST',
@@ -786,6 +795,38 @@ document.addEventListener('DOMContentLoaded', function() {
       if (savedTheme === 'dark') {
         body.classList.add('dark-mode');
       }
+      
+      // popup for adding devices
+      const addpopup = document.getElementById('add-popup');
+      addpopup.addEventListener('click', () => {
+         openPopup('Add Device', "new device", [
+            'here add your device',
+           ], {
+           showInput: true,
+           btnShowDelete: false,
+           btnShowCancel: false,
+           onSave: async (newName) => {
+             if (newName.trim()) {
+               try {
+                 const response = await fetch('/api/command', {
+                   method: 'POST',
+                   headers: { 'Content-Type': 'application/json' },
+                   body: JSON.stringify({ command: `new1W ${newName}` })
+                 });
+                 const result = await response.json();
+                 if (result.success) {
+                   logStatus(result.message || 'Device added.');
+                   fetchAndDisplayDevices();
+                 } else {
+                   logStatus(result.message || 'Failed to add device.', true);
+                 }
+               } catch (e) {
+                 logStatus(`Error adding device: ${e.message}`, true);
+               }
+             }
+           }
+         });
+      });
       // popup for adding remotes
       const remotePopup = document.getElementById('remote-popup');
       remotePopup.addEventListener('click', () => {
@@ -794,9 +835,11 @@ document.addEventListener('DOMContentLoaded', function() {
          ], {
            showInput: true,
            showTiming: true,
+           btnShowDelete: false,
+           btnShowCancel: false,
            timingLabel: 'Remote Name:',
            defaultValue: lastAddrInput.value.trim(),
-           onConfirm: async (addr, newName) => {
+           onSave: async (addr, newName) => {
              const id = addr.trim();
              if (!id) {
                logStatus('Please provide a remote ID.', true);
@@ -821,36 +864,6 @@ document.addEventListener('DOMContentLoaded', function() {
                }
              } catch (e) {
                logStatus(`Error adding remote: ${e.message}`, true);
-             }
-           }
-         });
-      });
-
-      // popup for adding devices
-      const addpopup = document.getElementById('add-popup');
-      addpopup.addEventListener('click', () => {
-         openPopup('Add Device', "new device", [
-            'here add your device',
-           ], {
-           showInput: true,
-           onConfirm: async (newName) => {
-             if (newName.trim()) {
-               try {
-                 const response = await fetch('/api/command', {
-                   method: 'POST',
-                   headers: { 'Content-Type': 'application/json' },
-                   body: JSON.stringify({ command: `new1W ${newName}` })
-                 });
-                 const result = await response.json();
-                 if (result.success) {
-                   logStatus(result.message || 'Device added.');
-                   fetchAndDisplayDevices();
-                 } else {
-                   logStatus(result.message || 'Failed to add device.', true);
-                 }
-               } catch (e) {
-                 logStatus(`Error adding device: ${e.message}`, true);
-               }
              }
            }
          });
