@@ -682,7 +682,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const timingValue = showTiming ? inputTiming.value : undefined;
             const deviceValue = showDevicePopup ? devicePopup.value : undefined;
             closePopup();
-            if (options.onConfirm) options.onConfirm(value, timingValue, deviceValue);
+            if (options.onSave) options.onSave(value, timingValue, deviceValue);
         };
 
         // add/remove buttons handled above
