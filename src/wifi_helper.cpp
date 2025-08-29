@@ -50,7 +50,7 @@ void connectToWifi(TimerHandle_t /*timer*/) {
 
     unsigned long startTime = millis();
     WiFi.begin();
-    wl_status_t result = WiFi.waitForConnectResult(5000);  // wait up to 5 seconds
+    wl_status_t result = static_cast<wl_status_t>(WiFi.waitForConnectResult(5000UL)); // ms
 
     WiFiManager wm;
     wm.setConnectTimeout(30);        // 10 sec voor verbinding met AP
