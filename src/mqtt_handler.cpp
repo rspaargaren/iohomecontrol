@@ -22,35 +22,33 @@ const char AVAILABILITY_TOPIC[] = "iown/status";
 static const char GATEWAY_ID[] = "MyOpenIO";
 
 void initMqtt() {
-    if (mqtt_server.empty()) {
-
-        if (!nvs_read_string(NVS_KEY_MQTT_SERVER, mqtt_server)) {
+    if (!nvs_read_string(NVS_KEY_MQTT_SERVER, mqtt_server)) {
+        if (mqtt_server.empty()) {
             Serial.println("MQTT server not set");
+        } else {
+            nvs_write_string(NVS_KEY_MQTT_SERVER, mqtt_server);
         }
-    } else {
-        nvs_write_string(NVS_KEY_MQTT_SERVER, mqtt_server);
     }
-    if (mqtt_user.empty()) {
-        if (!nvs_read_string(NVS_KEY_MQTT_USER, mqtt_user)) {
+    if (!nvs_read_string(NVS_KEY_MQTT_USER, mqtt_user)) {
+        if (mqtt_user.empty()) {
             Serial.println("MQTT user not set");
+        } else {
+            nvs_write_string(NVS_KEY_MQTT_USER, mqtt_user);
         }
-    } else {
-        nvs_write_string(NVS_KEY_MQTT_USER, mqtt_user);
     }
-    if (mqtt_password.empty()) {
-        if (!nvs_read_string(NVS_KEY_MQTT_PASSWORD, mqtt_password)) {
+    if (!nvs_read_string(NVS_KEY_MQTT_PASSWORD, mqtt_password)) {
+        if (mqtt_password.empty()) {
             Serial.println("MQTT password not set");
+        } else {
+            nvs_write_string(NVS_KEY_MQTT_PASSWORD, mqtt_password);
         }
-    } else {
-        nvs_write_string(NVS_KEY_MQTT_PASSWORD, mqtt_password);
     }
-    if (mqtt_discovery_topic.empty()) {
-        if (!nvs_read_string(NVS_KEY_MQTT_DISCOVERY, mqtt_discovery_topic)) {
+    if (!nvs_read_string(NVS_KEY_MQTT_DISCOVERY, mqtt_discovery_topic)) {
+        if (mqtt_discovery_topic.empty()) {
             Serial.println("MQTT discovery topic not set");
+        } else {
+            nvs_write_string(NVS_KEY_MQTT_DISCOVERY, mqtt_discovery_topic);
         }
-    } else {
-        nvs_write_string(NVS_KEY_MQTT_DISCOVERY, mqtt_discovery_topic);
-
     }
 
     mqttClient.setWill(AVAILABILITY_TOPIC, 0, true, "offline");
