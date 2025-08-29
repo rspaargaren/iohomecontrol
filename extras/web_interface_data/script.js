@@ -284,7 +284,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         body: JSON.stringify({ deviceId: device.id, action: 'open' })
                     }).then(r => r.json()).then(j => logStatus(j.message));
                 };
-
                  // 🔘 stop btn
                 const stopButton = document.createElement('button');
                 stopButton.textContent = 'stop';
@@ -562,6 +561,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const confirmBtn = document.getElementById('popup-confirm');
         const cancelBtn = document.getElementById('popup-cancel');
         const input = document.getElementById('popup-input');
+        const saveBtn = document.getElementById('popup-save');
 
         document.getElementById('popup-title').textContent = title;
         labelInput.textContent = label;
@@ -677,7 +677,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // OK button
-        document.getElementById('popup-confirm').onclick = () => {
+        saveBtn.onclick = () => {
             const value = showInput ? input.value : true;
             const timingValue = showTiming ? inputTiming.value : undefined;
             const deviceValue = showDevicePopup ? devicePopup.value : undefined;
