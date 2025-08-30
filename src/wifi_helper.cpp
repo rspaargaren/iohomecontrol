@@ -47,6 +47,7 @@ void connectToWifi(TimerHandle_t /*timer*/) {
     updateDisplayStatus();
 
     WiFi.mode(WIFI_STA);
+    WiFi.setHostname("MIOPENIO");
 
     unsigned long startTime = millis();
     WiFi.begin();

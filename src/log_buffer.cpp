@@ -22,7 +22,7 @@ void addLogMessage(const String &msg) {
     }
     logDeque.push_back(msg);
 #if defined(WEBSERVER)
-    broadcastLog(msg);
+    //broadcastLog(msg);
 #endif
 #if defined(SYSLOG)
     sendSyslog(msg);
