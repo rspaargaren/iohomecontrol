@@ -35,6 +35,10 @@ inline std::string mqtt_user = "mosquitto";
 inline std::string mqtt_password = "";
 inline std::string mqtt_discovery_topic = "homeassistant";
 
+#define SYSLOG                       // Comment out to disable remote syslog
+inline std::string syslog_server = ""; // Syslog server IP address
+inline uint16_t syslog_port = 514;     // Syslog server port
+
 // Comment out the next line if no display is connected
 #define SSD1306_DISPLAY
 
