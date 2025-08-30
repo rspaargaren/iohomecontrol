@@ -1,9 +1,11 @@
 #include <syslog_helper.h>
+#include <user_config.h>
+
 
 #if defined(SYSLOG)
-
+#include <Arduino.h>
 #include <WiFiUdp.h>
-#include <user_config.h>
+
 #include <esp_log.h>
 
 namespace {
@@ -43,7 +45,7 @@ void sendSyslog(const String &msg) {
     }
     ESP_LOGD(TAG, "Sending syslog message: %s", msg.c_str());
     syslogUdp.beginPacket(syslogIP, syslog_port);
-    syslogUdp.write(msg.c_str());
+    syslogUdp.write((const uint8_t*)msg.c_str(), msg.length());
     int result = syslogUdp.endPacket();
     ESP_LOGD(TAG, "Message send result: %d", result);
 }
