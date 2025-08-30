@@ -18,11 +18,5 @@ void sendSyslog(const String &msg);
 // 0 emerg, 1 alert, 2 crit, 3 err, 4 warn, 5 notice, 6 info, 7 debug
 void sendSyslog(const String &msg, int severity);
 
-// Convenience helpers
-void syslogInfo(const String& m);
-void syslogWarn(const String& m);
-void syslogErr (const String& m);
-void syslogDbg (const String& m);
-
 #endif // SYSLOG_HELPER_H
 

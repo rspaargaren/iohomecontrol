@@ -121,21 +121,12 @@ void sendSyslog(const String &msg) {
     sendSyslog(msg, 6);
 }
 
-// Convenience helpers
-void syslogInfo(const String& m) { sendSyslog(m, 6); } // info
-void syslogWarn(const String& m) { sendSyslog(m, 4); } // warning
-void syslogErr (const String& m) { sendSyslog(m, 3); } // error
-void syslogDbg (const String& m) { sendSyslog(m, 7); } // debug
-
 #else  // !SYSLOG
 
 // No-op definitions so you can build without SYSLOG
 void initSyslog() {}
 void sendSyslog(const String &) {}
 void sendSyslog(const String &, int) {}
-void syslogInfo(const String&) {}
-void syslogWarn(const String&) {}
-void syslogErr (const String&) {}
-void syslogDbg (const String&) {}
+
 
 #endif // SYSLOG
