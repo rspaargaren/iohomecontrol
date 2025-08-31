@@ -232,7 +232,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <td>${remote.name}</td>
                     <td>${linkedDevices}</td>
                     <td>
-                    <button class="btn edit" onclick="editRemote('${remote.id}', '${remote.name}')">Edit</button>
+                    <button class="btn edit bg" onclick="editRemote('${remote.id}', '${remote.name}')">Edit</button>
                     </td>
                 `;
                 tbody.appendChild(tr);
