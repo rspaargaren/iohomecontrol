@@ -21,6 +21,7 @@
 #include <string>
 
 #include <board-config.h>
+#include <cstring>
 
 #if defined(RADIO_SX127X)
 #include <SX1276Helpers.h>
@@ -32,7 +33,7 @@
 #define IOHC_OUTBOUND_MAX_PACKETS       20      // Maximum Outbound packets
 
 namespace IOHC {
-    typedef uint8_t address[3];
+    using address = uint8_t[3];
 
     struct CB1 {
         uint8_t MsgLen: 5; //1
@@ -194,7 +195,7 @@ namespace IOHC {
         _msg msg;
     };
 
-    typedef union {
+    typedef union payload {
         uint8_t buffer[MAX_FRAME_LEN];
         _packet packet;
     } Payload;
@@ -205,6 +206,7 @@ namespace IOHC {
         std::vector<uint8_t> memorizedData;
     } Memorize;
 
+    // Frequencies
     inline unsigned long packetStamp = 0L;
     inline unsigned long relStamp = 0L;
     inline size_t lastSendCmd = 0xFF;
@@ -214,7 +216,6 @@ namespace IOHC {
     class iohcPacket {
     public:
         iohcPacket() = default;
-
         ~iohcPacket() = default;
 
         Payload payload{};
@@ -233,8 +234,9 @@ namespace IOHC {
         void decode(bool verbosity = false);
         std::string decodeToString(bool verbosity = false);
 
-    protected:
-        uint8_t source_originator[3] = {0};
+        bool operator==(const iohcPacket &other) const {
+            return (memcmp(this->payload.buffer, other.payload.buffer, 16) == 0);
+        }
     };
 }
 #endif

@@ -48,7 +48,7 @@
     IOHC timings, async sending and receiving through callbacks, ...
 */
 namespace IOHC {
-    using IohcPacketDelegate = Delegate<bool(iohcPacket *iohc)>;
+    using CallbackFunction = Delegate<bool(iohcPacket *iohc)>;
 
     class iohcRadio  {
         public:
@@ -63,7 +63,7 @@ namespace IOHC {
                 LOCKED,      ///< Frequency locked
                 ERROR        ///< Error or unknown state
             };
-            void start(uint8_t num_freqs, uint32_t *scan_freqs, uint32_t scanTimeUs, IohcPacketDelegate rxCallback, IohcPacketDelegate txCallback);
+            void start(uint8_t num_freqs, uint32_t *scan_freqs, uint32_t scanTimeUs, CallbackFunction rxCallback, CallbackFunction txCallback);
             void send(std::vector<iohcPacket*>&iohcTx);
             void send_2(std::vector<iohcPacket*>&iohcTx);
 
@@ -105,29 +105,21 @@ namespace IOHC {
             uint32_t scanTimeUs{};
             uint8_t currentFreqIdx = 0;
 
-        #if defined(ESP8266)
-            Timers::TickerUs TickTimer;
-            Timers::TickerUs Sender;
-//            Timers::TickerUs FreqScanner;
-        #elif defined(ESP32)
+        #if defined(ESP32)
             TimersUS::TickerUsESP32 TickTimer;
             TimersUS::TickerUsESP32 Sender;
         #endif
             iohcPacket *iohc{};
             iohcPacket *delayed{};
             
-            IohcPacketDelegate rxCB = nullptr;
-            IohcPacketDelegate txCB = nullptr;
+            CallbackFunction rxCB = nullptr;
+            CallbackFunction txCB = nullptr;
             std::vector<iohcPacket*> packets2send{};
         protected:
             static void i_preamble();
             static void i_payload();
             static void packetSender(iohcRadio *radio);
-            static void configureAutoTxRx(iohcPacket *packet); // Hulpfunctie om AutoTxRx te activeren
-
-        #if defined(CC1101)
-            uint8_t lenghtFrame=0;
-        #endif
+            static void configureAutoTxRx(iohcPacket *packet); // Fonction auxiliaire pour activer Autotxrx
     };
 }
 
