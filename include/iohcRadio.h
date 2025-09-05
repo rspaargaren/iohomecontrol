@@ -116,8 +116,8 @@ namespace IOHC {
             CallbackFunction txCB = nullptr;
             std::vector<iohcPacket*> packets2send{};
         protected:
-            static void i_preamble();
-            static void i_payload();
+            // static void i_preamble();
+            // static void i_payload();
             static void packetSender(iohcRadio *radio);
             static void configureAutoTxRx(iohcPacket *packet); // Fonction auxiliaire pour activer Autotxrx
     };

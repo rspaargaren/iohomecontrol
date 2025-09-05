@@ -206,7 +206,6 @@ namespace IOHC {
         std::vector<uint8_t> memorizedData;
     } Memorize;
 
-    // Frequencies
     inline unsigned long packetStamp = 0L;
     inline unsigned long relStamp = 0L;
     inline size_t lastSendCmd = 0xFF;
@@ -226,16 +225,16 @@ namespace IOHC {
         bool lock = false;
         unsigned long delayed = 0;
 
-        double afc{}; // AFC freq correction applied
+        double afc{};  // AFC freq correction applied
         uint8_t snr{}; // in dB
-        float rssi{}; // -RSSI*2 of last packet received
+        float rssi{};  // -RSSI*2 of last packet received
         uint8_t lna{}; // LNA attenuation in dB
 
         void decode(bool verbosity = false);
         std::string decodeToString(bool verbosity = false);
 
         bool operator==(const iohcPacket &other) const {
-            return (memcmp(this->payload.buffer, other.payload.buffer, 16) == 0);
+            return (memcmp(this->payload.buffer+2, other.payload.buffer+2, 16) == 0);
         }
     };
 }

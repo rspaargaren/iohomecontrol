@@ -56,8 +56,11 @@ namespace IOHC {
         while (true) {
             thread_notification = ulTaskNotifyTake(pdTRUE, xMaxBlockTime/*xNoDelay*/); // Attendre la notification
             if (thread_notification &&
-                (iohcRadio::_g_payload ||
-                    iohcRadio::_g_preamble)) {
+                // (iohcRadio::_g_payload ||
+                    // iohcRadio::_g_preamble)) {
+                (iohcRadio::radioState == iohcRadio::RadioState::PAYLOAD ||
+                 iohcRadio::radioState == iohcRadio::RadioState::PREAMBLE)) {
+
                 iohcRadio::tickerCounter(static_cast<iohcRadio *>(pvParameters));
             }
         }
@@ -70,7 +73,9 @@ namespace IOHC {
     void IRAM_ATTR handle_interrupt_fromisr(/*void *arg*/) {
         iohcRadio::_g_preamble = digitalRead(RADIO_PREAMBLE_DETECTED);
         iohcRadio::f_lock = iohcRadio::_g_preamble;
+iohcRadio::setRadioState(iohcRadio::_g_preamble ? iohcRadio::RadioState::PREAMBLE : iohcRadio::RadioState::RX);
         iohcRadio::_g_payload = digitalRead(RADIO_PACKET_AVAIL);
+iohcRadio::setRadioState(iohcRadio::_g_payload ? iohcRadio::RadioState::PAYLOAD : iohcRadio::RadioState::RX);
         iohcRadio::txComplete = true;
         // Notify the thread so it will wake up when the ISR is complete
         BaseType_t xHigherPriorityTaskWoken = pdFALSE;
@@ -161,7 +166,7 @@ namespace IOHC {
 
 /**
  * The `tickerCounter` function in C++ handles various radio operations based on different conditions
- * and configurations for SX127X and CC1101 radios.
+ * and configurations for SX127X
  * 
  * @param radio The `radio` parameter in the `iohcRadio::tickerCounter` function is a pointer to an
  * instance of the `iohcRadio` class. This pointer is used to access and modify the properties and
@@ -177,8 +182,8 @@ namespace IOHC {
         Radio::readBytes(REG_IRQFLAGS1, _flags, sizeof(_flags));
 
         // If Int of PayLoad
-        // if (radioState == iohcRadio::RadioState::PAYLOAD) {
-        if (_g_payload) {
+        if (radioState == iohcRadio::RadioState::PAYLOAD) {
+        // if (_g_payload) {
             // if TX ready?
             if (_flags[0] & RF_IRQFLAGS1_TXREADY) {
                 radio->sent(radio->iohc);
@@ -200,8 +205,8 @@ namespace IOHC {
             return;
         }
 
-        // if (radioState == iohcRadio::RadioState::PREAMBLE) {
-        if (_g_preamble) {
+        if (radioState == iohcRadio::RadioState::PREAMBLE) {
+        // if (_g_preamble) {
             radio->tickCounter = 0;
             radio->preCounter = radio->preCounter + 1;
             //radio->preCounter += 1;
@@ -218,7 +223,6 @@ namespace IOHC {
         // if (radioState != iohcRadio::RadioState::RX) return;
         if (f_lock) return;
 
-        //if (++radio->tickCounter * SM_GRANULARITY_US < radio->scanTimeUs) return;
         radio->tickCounter = radio->tickCounter + 1;
         if (radio->tickCounter * SM_GRANULARITY_US < radio->scanTimeUs) return;
 
@@ -547,7 +551,7 @@ namespace IOHC {
             }
         }
 
-        if (bool is_duplicate = last1wPacketValid && (*currentPacket == last1wPacket)) {
+        if (/*bool is_duplicate = last1wPacketValid &&*/ *currentPacket == last1wPacket) {
             // ets_printf("Same packet, skipping\n");
         } else {
             if (rxCB) rxCB(currentPacket);
@@ -556,7 +560,7 @@ namespace IOHC {
 
             // Save the new packet's data for the next comparison
             last1wPacket = *currentPacket;
-            last1wPacketValid = true;
+            /*last1wPacketValid = true;*/
         }
 
         delete currentPacket; // The packet is processed or duplicated, we can free it.
@@ -568,20 +572,20 @@ namespace IOHC {
 /**
  * The function `i_preamble` sets the value of `f_lock` based on the state of `_g_preamble`
  */
-    void IRAM_ATTR iohcRadio::i_preamble() {
-        _g_preamble = digitalRead(RADIO_PREAMBLE_DETECTED);
-        f_lock = _g_preamble;
-        iohcRadio::setRadioState(_g_preamble ? iohcRadio::RadioState::PREAMBLE : iohcRadio::RadioState::RX);
-    }
+    // void IRAM_ATTR iohcRadio::i_preamble() {
+    //     _g_preamble = digitalRead(RADIO_PREAMBLE_DETECTED);
+    //     f_lock = _g_preamble;
+    //     iohcRadio::setRadioState(_g_preamble ? iohcRadio::RadioState::PREAMBLE : iohcRadio::RadioState::RX);
+    // }
 
 /**
  * The function `iohcRadio::i_payload()` reads the value of a digital pin and stores it in a variable
- * `_g_payload` if the macro `RADIO_SX127X` is defined.
+ * `_g_payload`
  */
-    void IRAM_ATTR iohcRadio::i_payload() {
-        _g_payload = digitalRead(RADIO_PACKET_AVAIL);
-        iohcRadio::setRadioState(_g_payload ? iohcRadio::RadioState::PAYLOAD : iohcRadio::RadioState::RX);
-    }
+    // void IRAM_ATTR iohcRadio::i_payload() {
+    //     _g_payload = digitalRead(RADIO_PACKET_AVAIL);
+    //     iohcRadio::setRadioState(_g_payload ? iohcRadio::RadioState::PAYLOAD : iohcRadio::RadioState::RX);
+    // }
 
     const char* iohcRadio::radioStateToString(RadioState state) {
     switch (state) {
