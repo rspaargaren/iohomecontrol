@@ -14,15 +14,15 @@
    limitations under the License.
  */
 
+#include <ArduinoJson.h>
 #include <iohcRemote1W.h>
 #include <LittleFS.h>
-#include <ArduinoJson.h>
 
+#include <cmath>
 #include <iohcCryptoHelpers.h>
+#include <nvs_helpers.h>
 #include <oled_display.h>
 #include <TickerUsESP32.h>
-#include <nvs_helpers.h>
-#include <cmath>
 #if defined(MQTT)
 #include <mqtt_handler.h>
 #endif
@@ -63,7 +63,7 @@ namespace IOHC {
         if (!_iohcRemote1W) {
             _iohcRemote1W = new iohcRemote1W();
             _iohcRemote1W->load();
-            positionTicker.attach_ms(1000, positionTickerCallback);
+            // positionTicker.attach_ms(1000, positionTickerCallback);
         }
         return _iohcRemote1W;
     }
@@ -184,9 +184,9 @@ namespace IOHC {
                     digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
 //                }
                 _radioInstance->send(packets2send);
+#if defined(SSD1306_DISPLAY)
                 display1WAction(r.node, remoteButtonToString(cmd), "TX", r.name.c_str());
                 Serial.printf("%s position: %.0f%%\n", r.name.c_str(), r.positionTracker.getPosition());
-#if defined(SSD1306_DISPLAY)
                 display1WPosition(r.node, r.positionTracker.getPosition(), r.name.c_str());
 #endif
                 r.paired = true;
@@ -234,9 +234,9 @@ namespace IOHC {
 //                }
                 _radioInstance->send(packets2send);
 
+#if defined(SSD1306_DISPLAY)
                 display1WAction(r.node, remoteButtonToString(cmd), "TX", r.name.c_str());
                 Serial.printf("%s position: %.0f%%\n", r.name.c_str(), r.positionTracker.getPosition());
-#if defined(SSD1306_DISPLAY)
                 display1WPosition(r.node, r.positionTracker.getPosition(), r.name.c_str());
 #endif
                 r.paired = false;
@@ -283,9 +283,9 @@ namespace IOHC {
                     digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
 //                }
                 _radioInstance->send(packets2send);
+#if defined(SSD1306_DISPLAY)
                 display1WAction(r.node, remoteButtonToString(cmd), "TX", r.name.c_str());
                 Serial.printf("%s position: %.0f%%\n", r.name.c_str(), r.positionTracker.getPosition());
-#if defined(SSD1306_DISPLAY)
                 display1WPosition(r.node, r.positionTracker.getPosition(), r.name.c_str());
 #endif
                 break;
@@ -549,9 +549,9 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
                     digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
                 }
                 _radioInstance->send(packets2send);
+#if defined(SSD1306_DISPLAY)
                 display1WAction(r.node, remoteButtonToString(cmd), "TX", r.name.c_str());
                 Serial.printf("%s position: %.0f%%\n", r.name.c_str(), r.positionTracker.getPosition());
-#if defined(SSD1306_DISPLAY)
                 display1WPosition(r.node, r.positionTracker.getPosition(), r.name.c_str());
 #endif
                 break;

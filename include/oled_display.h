@@ -17,13 +17,13 @@
 
 #include <board-config.h>
 #include <user_config.h>
+#include <IPAddress.h>
+#include <stdint.h>
 
 #if defined(SSD1306_DISPLAY)
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <Wire.h>
-#include <IPAddress.h>
-#include <stdint.h>
 
 #define OLED_ADDRESS 0x3c
 #define OLED_SDA     I2C_SDA_PIN

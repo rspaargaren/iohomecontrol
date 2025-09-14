@@ -19,9 +19,9 @@
 #ifndef WIFI_HELPER_H
 #define WIFI_HELPER_H
 
-#include <interact.h>
 #include <WiFi.h>
 #include <WiFiManager.h>
+#include <interact.h>
 
 extern TimerHandle_t wifiReconnectTimer;
 extern ConnState wifiStatus;

@@ -18,6 +18,13 @@
 #include <numeric>
 
 namespace IOHC {
+    // iohcDevice *iohcDevice::_iohcDevice = nullptr;
+    // iohcDevice *iohcDevice::getInstance() {
+    //     if (!_iohcDevice)
+    //         _iohcDevice = new iohcDevice();
+    //     return _iohcDevice;
+    // }
+
     bool iohcDevice::isFake(address nodeSrc, address nodeDst) {
         this->Fake = false;
         return this->Fake;

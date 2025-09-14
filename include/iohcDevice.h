@@ -26,7 +26,7 @@ namespace IOHC {
     /* Base classe for all devices type */
     class iohcDevice {
     public:
-        static iohcDevice *getInstance();
+        // static iohcDevice *getInstance();
         virtual ~iohcDevice() = default;
         virtual bool isFake(address, address);
         virtual bool isHome(address, address);
@@ -59,6 +59,7 @@ namespace IOHC {
             RECEIVED_CHALLENGE_REQUEST_0x3C = 0x3c, SEND_CHALLENGE_REQUEST_0x3C = 0x3c,
             RECEIVED_CHALLENGE_ANSWER_0x3D = 0x3d, SEND_CHALLENGE_ANSWER_0x3D = 0x3d,
             RECEIVED_GET_NAME_0x50 = 0x50, SEND_GET_NAME_0x50 = 0x50,
+            RECEIVED_GET_NAME_ANSWER_0x51 = 0x51, SEND_GET_NAME_ANSWER_0x51 = 0x51,
             RECEIVED_STATUS_0xFE = 0xfe, SEND_STATUS_0xFE = 0xfe,
         };
 
@@ -68,6 +69,9 @@ namespace IOHC {
 
         std::vector<iohcPacket *> packets2send{};
         iohcRadio *_radioInstance{};
+
+    private:
+        // static iohcDevice *_iohcDevice;
     };
 }
 #endif

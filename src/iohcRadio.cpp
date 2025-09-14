@@ -19,8 +19,9 @@
 #include "esp_log.h"
 
 #include <iohcRadio.h>
-#include <utility>
 #include <log_buffer.h>
+#include <utility>
+
 #define LONG_PREAMBLE_MS 1920
 #define SHORT_PREAMBLE_MS 40
 
@@ -30,7 +31,7 @@ namespace IOHC {
     iohcRadio *iohcRadio::_iohcRadio = nullptr;
     volatile bool iohcRadio::_g_preamble = false;
     volatile bool iohcRadio::_g_payload = false;
-    volatile unsigned long iohcRadio::_g_payload_millis = 0L;
+    volatile uint32_t iohcRadio::_g_payload_millis = 0L;
     uint8_t iohcRadio::_flags[2] = {0, 0};
     volatile bool iohcRadio::f_lock = false;
     volatile bool iohcRadio::send_lock = false;
@@ -363,7 +364,7 @@ iohcRadio::setRadioState(iohcRadio::_g_payload ? iohcRadio::RadioState::PAYLOAD 
     void iohcRadio::lightTxTask(void *pvParameters) {
         const auto radio = static_cast<iohcRadio *>(pvParameters);
         while (true) {
-            // Wacht tot er werk is
+            // Attendez qu'il y ait du travail
             ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
             while (radio->txCounter < radio->packets2send.size()) {
@@ -381,7 +382,7 @@ iohcRadio::setRadioState(iohcRadio::_g_payload ? iohcRadio::RadioState::PAYLOAD 
                     vTaskDelay(pdMS_TO_TICKS(radio->iohc->repeatTime));
             }
 
-            // Alles verzonden
+            // Tous envoyés
             radio->packets2send.clear();
             Radio::setRx();
             radio->setRadioState(iohcRadio::RadioState::RX);
@@ -570,7 +571,7 @@ iohcRadio::setRadioState(iohcRadio::_g_payload ? iohcRadio::RadioState::PAYLOAD 
     }
 
 /**
- * The function `i_preamble` sets the value of `f_lock` based on the state of `_g_preamble`
+ * @deprecated The function `i_preamble` sets the value of `f_lock` based on the state of `_g_preamble`
  */
     // void IRAM_ATTR iohcRadio::i_preamble() {
     //     _g_preamble = digitalRead(RADIO_PREAMBLE_DETECTED);
@@ -579,7 +580,7 @@ iohcRadio::setRadioState(iohcRadio::_g_payload ? iohcRadio::RadioState::PAYLOAD 
     // }
 
 /**
- * The function `iohcRadio::i_payload()` reads the value of a digital pin and stores it in a variable
+ * @deprecated The function `iohcRadio::i_payload()` reads the value of a digital pin and stores it in a variable
  * `_g_payload`
  */
     // void IRAM_ATTR iohcRadio::i_payload() {

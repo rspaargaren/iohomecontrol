@@ -1,6 +1,6 @@
+#include <Arduino.h>
 #include <blind_position.h>
 #include <esp_timer.h>
-#include <Arduino.h>
 
 namespace IOHC {
     BlindPosition::BlindPosition(uint32_t travelTimeMs)

@@ -20,9 +20,9 @@
 #include <unordered_map>
 /* Various Part*/
 #include <iohcPacket.h>
+#include <iomanip>
 #include <iostream>
 #include <sstream>
-#include <iomanip>
 
 namespace IOHC {
 #define to_hex_str(hex_val) (static_cast<std::stringstream const&>(std::stringstream() << /*"0x" <<*/ std::hex << static_cast<int>(hex_val))).str()

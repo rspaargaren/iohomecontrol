@@ -22,13 +22,11 @@
 #if defined(RADIO_SX127X)
 #include <map>
 
-#if defined(ESP8266)
-    #include <TickerUs.h>
-#elif defined(ESP32)
+#if defined(ESP32)
 #define CONFIG_DISABLE_HAL_LOCKS true
+#include <SPI.h>
 #include <TickerUsESP32.h>
 #include <esp_task_wdt.h>
-#include <SPI.h>
 // #include <SPIeX.h>
 #endif
 

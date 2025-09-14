@@ -14,13 +14,13 @@
    limitations under the License.
  */
 #include <fileSystemHelpers.h>
-#include <iohcRemote1W.h>
-#include <iohcCozyDevice2W.h>
-#include <iohcOtherDevice2W.h>
 #include <interact.h>
-#include <wifi_helper.h>
-#include <oled_display.h>
+#include <iohcCozyDevice2W.h>
 #include <iohcCryptoHelpers.h>
+#include <iohcOtherDevice2W.h>
+#include <iohcRemote1W.h>
+#include <oled_display.h>
+#include <wifi_helper.h>
 #if defined(MQTT)
 #include <mqtt_handler.h>
 #endif
@@ -30,7 +30,6 @@ ConnState mqttStatus = ConnState::Disconnected;
 _cmdEntry* _cmdHandler[MAXCMDS];
 uint8_t lastEntry = 0;
 
-
 void tokenize(std::string const &str, const char delim, Tokens &out) {
   std::stringstream ss(str);
   std::string s;
@@ -38,7 +37,6 @@ void tokenize(std::string const &str, const char delim, Tokens &out) {
     out.push_back(s);
   }
 }
-
 
 namespace Cmd {
 bool verbosity = true;
