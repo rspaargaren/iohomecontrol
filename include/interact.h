@@ -22,10 +22,8 @@
 #include <board-config.h>
 #include <user_config.h>
 
-#include <algorithm>
-#include <cstring>
-#include <sstream>
-#include <vector>
+#include <tokens.h>
+#include <utils.h>
 
 extern "C" {
         #include "freertos/FreeRTOS.h"
@@ -36,20 +34,19 @@ extern "C" {
 #include <Adafruit_SSD1306.h>
 #endif
 
+enum class ConnState { Connecting, Connected, Disconnected };
 #if defined(WEBSERVER)
 #include <web_server_handler.h>
+extern ConnState webServerStatus;
 #endif
-//#if defined(MQTT)
-//#  include <AsyncMqttClient.h>
-//#  include <ArduinoJson.h>
-//#endif
-
+#if defined(UECHO)
+#include <echonet_handler.hpp>
+extern ConnState echonetStatus;
+#endif
 #if defined(MQTT)
-#include "mqtt_handler.h"
+#include <mqtt_handler.h>
+extern ConnState mqttStatus;
 #endif
-
-#include <tokens.h>
-#include <utils.h>
 
 namespace IOHC {
   class iohcRemote1W;
@@ -61,11 +58,10 @@ namespace IOHC {
 #endif
 
 #if defined(SSD1306_DISPLAY)
-extern Adafruit_SSD1306 display;
+    extern Adafruit_SSD1306 display;
 #endif
 
-enum class ConnState { Connecting, Connected, Disconnected };
-extern ConnState mqttStatus;
+
 void tokenize(std::string const &str, const char delim, Tokens &out);
 
 struct _cmdEntry {
@@ -88,22 +84,22 @@ extern uint8_t lastEntry;
 
 namespace Cmd {
 
-extern bool verbosity;
-extern bool pairMode;
-extern bool scanMode;
+    extern bool verbosity;
+    extern bool pairMode;
+    extern bool scanMode;
 
 #if defined(ESP32)
-  extern TimersUS::TickerUsESP32 kbd_tick;
+      extern TimersUS::TickerUsESP32 kbd_tick;
 #endif
 
-extern TimerHandle_t consoleTimer;
+    extern TimerHandle_t consoleTimer;
 
+    bool addHandler(const char *cmd, const char *description, void (*handler)(Tokens*));
 
-bool addHandler(char *cmd, char *description, void (*handler)(Tokens*));
-char *cmdReceived(bool echo = false);
-void cmdFuncHandler();
-void createCommands();
-void init();
+    const char *cmdReceived(bool echo = false);
+    void cmdFuncHandler();
+    void createCommands();
+    void init();
 
 }
 
