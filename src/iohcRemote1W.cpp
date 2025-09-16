@@ -77,7 +77,7 @@ namespace IOHC {
         packet->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
         packet->payload.packet.header.CtrlByte1.asStruct.EndFrame = 1;
         packet->payload.packet.header.CtrlByte2.asByte = 0;
-        packet->payload.packet.header.CtrlByte2.asStruct.LPM = 1;
+        packet->payload.packet.header.CtrlByte2.asStruct.LPM = 1; // Low Power Mode
         // Broadcast Target
         uint16_t bcast = (typn << 6) + 0b111111; 
         packet->payload.packet.header.target[0] = 0x00;
@@ -97,7 +97,7 @@ namespace IOHC {
         if (data->size() == 1) {return; }
         std::string description = data->at(1).c_str();
 
-        auto it = std::find_if( remotes.begin(), remotes.end(),  [&] ( const remote &r  ) {
+        auto it = std::ranges::find_if(remotes,  [&] ( const remote &r  ) {
                  return description == r.description;
               } );
 
@@ -105,7 +105,7 @@ namespace IOHC {
         remote& r = *it;
         bool found = true;
         if (it == remotes.end()) {
-            printf("ERROR %s NOT IN JSON", description.c_str());
+            ets_printf("ERROR %s not in filesystem (extra/1W.json)\n", description.c_str());
             found = false;
             // return;
         }
@@ -146,12 +146,12 @@ namespace IOHC {
         switch (cmd) {
             case RemoteButton::Pair: {
                 // 0x2e: 0x1120 + target broadcast + source + 0x2e00 + sequence + hmac
-                packets2send.clear();
 
 //                for (auto&r: remotes) {
                 if (!found) break;
 
-                    auto* packet = new iohcPacket;
+                    auto* packet = new iohcPacket();
+
                     IOHC::iohcRemote1W::forgePacket(packet, r.type[0]);
                     // Packet length
                     packet->payload.packet.header.CtrlByte1.asStruct.MsgLen += sizeof(_p0x2e);
@@ -180,7 +180,7 @@ namespace IOHC {
                     packet->buffer_length = packet->payload.packet.header.CtrlByte1.asStruct.MsgLen + 1;
 
                     packets2send.push_back(packet);
-                    // if (typn) packet->payload.packet.header.CtrlByte2.asStruct.LPM = 0; //TODO only first is LPM
+                    // delete packet;
                     digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
 //                }
                 _radioInstance->send(packets2send);
@@ -195,13 +195,11 @@ namespace IOHC {
 
             case RemoteButton::Remove: {
                 // 0x39: 0x1c00 + target broadcast + source + 0x3900 + sequence + hmac
-                packets2send.clear();
 
 //                for (auto&r: remotes) {
                 if (!found) break;
+                    auto* packet = new iohcPacket();
 
-
-                    auto* packet = new iohcPacket;
                     IOHC::iohcRemote1W::forgePacket(packet, r.type[0]);
                     // Packet length
                     //                    packet->payload.packet.header.CtrlByte1.asStruct.MsgLen = sizeof(_header) - 1;
@@ -230,6 +228,7 @@ namespace IOHC {
                     packet->buffer_length = packet->payload.packet.header.CtrlByte1.asStruct.MsgLen + 1;
 
                     packets2send.push_back(packet);
+                // delete packet;
                     digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
 //                }
                 _radioInstance->send(packets2send);
@@ -245,12 +244,12 @@ namespace IOHC {
 
             case RemoteButton::Add: {
                 // 0x30: 0x1100 + target broadcast + source + 0x3000 + ???
-                packets2send.clear();
 
 //                for (auto&r: remotes) {
                 if (!found) break;
 
-                    auto* packet = new iohcPacket;
+                    auto* packet = new iohcPacket();
+
                     IOHC::iohcRemote1W::forgePacket(packet, r.type[0]);
                     // Packet length
                     packet->payload.packet.header.CtrlByte1.asStruct.MsgLen += sizeof(_p0x30);
@@ -280,6 +279,7 @@ namespace IOHC {
                     packet->buffer_length = packet->payload.packet.header.CtrlByte1.asStruct.MsgLen + 1;
 
                     packets2send.push_back(packet);
+                // delete packet;
                     digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
 //                }
                 _radioInstance->send(packets2send);
@@ -291,13 +291,12 @@ namespace IOHC {
                 break;
             }
            default: {
-                packets2send.clear();
-
                 // 0x00: 0x1600 + target broadcast + source + 0x00 + Originator + ACEI + Main Param + FP1 + FP2 + sequence + hmac
 //                for (auto&r: remotes) {
                 if (!found) break;
 
-                    auto* packet = new iohcPacket;
+                    auto* packet = new iohcPacket();
+
                     IOHC::iohcRemote1W::forgePacket(packet, r.type[0]);
                     // Packet length
                     // packet->payload.packet.header.CtrlByte1.asStruct.MsgLen += sizeof(_p0x00);
@@ -307,8 +306,8 @@ namespace IOHC {
                     //Command
                     packet->payload.packet.header.cmd = 0x00;
                     packet->payload.packet.msg.p0x00_14.origin = 0x01; // Command Source Originator is: 0x01 User
-                    //Acei packet->payload.packet.msg.p0x00.acei;
-                    setAcei(packet->payload.packet.msg.p0x00_14.acei, 0x43); //0xE7); //0x61);
+                    uint8_t acei = (r.type[1] == 0) ? 0x43 : 0x67; //0x43; // 0x43 for type 0x00 (telecommande), 0x67 for type 0x01 (interrupteur)
+                    setAcei(packet->payload.packet.msg.p0x00_14.acei, acei);
                     switch (cmd) {
                         // Switch for Main Parameter of cmd 0x00: Open/Close/Stop/Ventilation
                         case RemoteButton::Open:
@@ -366,7 +365,7 @@ namespace IOHC {
                             break;
                         case RemoteButton::Mode1:{
                             /* fast = 4x13 Increment fp2 - slow = 0x01 4x13 followed 0x00 4x14 Main 0xD2
-                            Every 9 : 10:31:38.367 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  DATA(15)  02db000900000323e7ceefedf9ce81        SEQ 23e7 MAC ceefedf9ce81  Org 2 Acei DB Main 9 fp1 0 fp2 0  Acei 6 3 1 1  Type All
+Every 9 : 10:31:38.367 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  DATA(15)  02db000900000323e7ceefedf9ce81        SEQ 23e7 MAC ceefedf9ce81  Org 2 Acei DB Main 9 fp1 0 fp2 0  Acei 6 3 1 1  Type All
 16:59:58.148 > (21) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 01 >  DATA(13)  01430500112416406780a53021    SEQ 2416 MAC 406780a53021  Org 1 Acei 43 Main 5 fp1 0 fp2 11  Acei 2 0 1 1  Type All
 16:59:58.188 > (21) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 01 <  DATA(13)  01430500112416406780a53021    SEQ 2416 MAC 406780a53021  Org 1 Acei 43 Main 5 fp1 0 fp2 11  Acei 2 0 1 1  Type All
 16:59:58.212 > (21) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 01 <  DATA(13)  01430500112416406780a53021    SEQ 2416 MAC 406780a53021  Org 1 Acei 43 Main 5 fp1 0 fp2 11  Acei 2 0 1 1  Type All
@@ -446,7 +445,7 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
 10:12:18.402 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  DATA(15)  02db0009000003 23dc49fa35972c4b        SEQ 23dc MAC 49fa35972c4b  Org 2 Acei DB Main 9 fp1 0 fp2 0  Acei 6 3 1 1  Type All
 10:12:18.427 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  DATA(15)  02db0009000003 23dc49fa35972c4b        SEQ 23dc MAC 49fa35972c4b  Org 2 Acei DB Main 9 fp1 0 fp2 0  Acei 6 3 1 1  Type All
 */
-                            // r.sequence = 0x2313; // DEBUG
+                            // r.sequence = 0x2313; // DEBUG IZY1
                             packet->payload.packet.header.cmd = 0x00;
                             packet->payload.packet.msg.p0x00_16.main[0] = 0xd2;
                             packet->payload.packet.msg.p0x00_16.main[1] = 0x00;
@@ -454,7 +453,7 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
                             packet->payload.packet.msg.p0x00_16.fp2 = 0xCD;
                             packet->payload.packet.msg.p0x00_16.data[0] = 0x2E;
                             packet->payload.packet.msg.p0x00_16.data[1] = 0x00;
-                             if (packet->payload.packet.header.source[2] == 0x1B) {
+                             if (packet->payload.packet.header.source[2] == 0x1B) { // DEBUG IZY2
                                 // packet->payload.packet.header.source[2] = 0x1A;
                                 packet->payload.packet.msg.p0x00_16.fp2 = 0xCC;
                                 packet->payload.packet.msg.p0x00_16.data[0] = 0xA2;
@@ -466,13 +465,13 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
                             return;
                     }
                     /*
-                                        if (r.type == 6) { // Vert
-                                            //typen
-                                            packet->payload.packet.msg.p0x00_14.fp1 = 0x80;
-                                            packet->payload.packet.msg.p0x00_14.fp2 = 0xD3;
-                                            // Packet length
-                                            packet->payload.packet.header.CtrlByte1.asStruct.MsgLen += sizeof(_p0x00_14);
-                                        }
+                    if (r.type == 6) { // Vert
+                        //typen
+                        packet->payload.packet.msg.p0x00_14.fp1 = 0x80;
+                        packet->payload.packet.msg.p0x00_14.fp2 = 0xD3;
+                        // Packet length
+                        packet->payload.packet.header.CtrlByte1.asStruct.MsgLen += sizeof(_p0x00_14);
+                    }
                     */
                     // if (r.type == 6) { // Jaune
                     //     packet->payload.packet.msg.p0x00.fp1 = 0x80;
@@ -546,8 +545,45 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
                     packet->buffer_length = packet->payload.packet.header.CtrlByte1.asStruct.MsgLen + 1;
 
                     packets2send.push_back(packet);
+                    // delete packet;
                     digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
                 }
+
+                // Create 1W 'echo' packets for the associated gateway with cmd 0x20 (size 16 bytes)
+                    auto echoPacket = new iohcPacket();
+                    forgePacket(echoPacket, r.type[0]);
+                    echoPacket->payload.packet.header.CtrlByte2.asStruct.LPM = 0;
+
+                    // Source (me)
+                    for (size_t i = 0; i < sizeof(address); i++)
+                        echoPacket->payload.packet.header.source[i] = r.node[i];
+                    //Command
+
+                    echoPacket->payload.packet.header.cmd = 0x20;
+                    echoPacket->payload.packet.msg.p0x20_16.origin = 0x02;
+                    echoPacket->payload.packet.msg.p0x20_16.acei.asByte = 0xFF;
+                    echoPacket->payload.packet.msg.p0x00_16.main[0] = 0x01; echoPacket->payload.packet.msg.p0x00_16.main[1] = 0x63;
+                    echoPacket->payload.packet.msg.p0x20_16.fp1 = 0x02; echoPacket->payload.packet.msg.p0x20_16.fp2 = 0x05;
+                    echoPacket->payload.packet.msg.p0x20_16.data[0] = 0xFF; echoPacket->payload.packet.msg.p0x20_16.data[1] = 0x00;
+                    echoPacket->payload.packet.header.CtrlByte1.asStruct.MsgLen += sizeof(_p0x20_16);
+
+                    // Sequence
+                    echoPacket->payload.packet.msg.p0x20_16.sequence[0] = r.sequence >> 8;
+                    echoPacket->payload.packet.msg.p0x20_16.sequence[1] = r.sequence & 0x00ff;
+                    uint8_t toAdd = 8 + 1;
+                    uint8_t hmac[16];
+                    frame = std::vector(&echoPacket->payload.packet.header.cmd, &echoPacket->payload.packet.header.cmd + toAdd);
+                    iohcCrypto::create_1W_hmac(hmac, echoPacket->payload.packet.msg.p0x20_16.sequence, r.key, frame);
+                    for (uint8_t i = 0; i < 6; i++) {
+                        echoPacket->payload.packet.msg.p0x20_16.hmac[i] = hmac[i];
+                    }
+                    echoPacket->buffer_length = echoPacket->payload.packet.header.CtrlByte1.asStruct.MsgLen + 1;
+                    packets2send.push_back(echoPacket);
+
+                    r.sequence += 1;
+                    nvs_write_sequence(r.node, r.sequence);
+
+                // Send all packets
                 _radioInstance->send(packets2send);
 #if defined(SSD1306_DISPLAY)
                 display1WAction(r.node, remoteButtonToString(cmd), "TX", r.name.c_str());
@@ -669,8 +705,6 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
             jobj["key"] = bytesToHexString(r.key, sizeof(r.key));
 
             uint8_t btmp[2];
-            // btmp[1] = _sequence & 0x00ff;
-            // btmp[0] = _sequence >> 8;
             btmp[1] = r.sequence & 0x00ff;
             btmp[0] = r.sequence >> 8;
 
@@ -685,7 +719,6 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
                 // break;
                 }
 
-            // jobj["manufacturer_id"] = _manufacturer;
             jobj["manufacturer_id"] = r.manufacturer;
             jobj["description"] = r.description;
             jobj["name"] = r.name;

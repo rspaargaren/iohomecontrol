@@ -251,12 +251,13 @@ iohcRadio::setRadioState(iohcRadio::_g_payload ? iohcRadio::RadioState::PAYLOAD 
     void iohcRadio::send(std::vector<iohcPacket *> &iohcTx) {
         // if (radioState == iohcRadio::RadioState::TX) return;
         if (txMode) return;
+        setRadioState(iohcRadio::RadioState::TX);
 
-        packets2send = iohcTx; //std::move(iohcTx); //
+        packets2send = iohcTx; //std::move(iohcTx); // NO !!
         iohcTx.clear();
 
         txCounter = 0;
-        setRadioState(iohcRadio::RadioState::TX);
+
         Sender.attach_ms(packets2send[txCounter]->repeatTime, packetSender, this);
     }
 
@@ -441,11 +442,11 @@ iohcRadio::setRadioState(iohcRadio::_g_payload ? iohcRadio::RadioState::PAYLOAD 
             // Plus de Delayed Packet
             if (radio->delayed != nullptr)
                 // Use Saved Delayed Packet
-                radio->iohc = radio->delayed;
+                    radio->iohc = radio->delayed;
         } else
             radio->iohc = radio->packets2send[radio->txCounter];
 
-        //        if (radio->iohc->frequency != 0) {
+        // if (radio->iohc->frequency != 0) {
         if (radio->iohc->frequency != radio->scan_freqs[radio->currentFreqIdx]) {
             // printf("ChangedFreq !\n");
             Radio::setCarrier(Radio::Carrier::Frequency, radio->iohc->frequency);
@@ -469,14 +470,17 @@ iohcRadio::setRadioState(iohcRadio::_g_payload ? iohcRadio::RadioState::PAYLOAD 
         // There is no need to maintain radio locked between packets transmission unless clearly asked
         txMode = radio->iohc->lock;
 
-        if (radio->iohc->repeat)
+        if (radio->iohc->repeat) {
+            // Only the first frame is LPM (1W)
+            radio->iohc->payload.packet.header.CtrlByte2.asStruct.LPM = 0;
+
             radio->iohc->repeat -= 1;
+        }
         if (radio->iohc->repeat == 0) {
             radio->Sender.detach();
-            //++radio->txCounter;
             radio->txCounter = radio->txCounter + 1;
             if (radio->txCounter < radio->packets2send.size() && radio->packets2send[radio->txCounter] != nullptr) {
-                //if (radio->packets2send[++(radio->txCounter)]) {
+
                 if (radio->packets2send[radio->txCounter]->delayed != 0) {
                     radio->delayed = radio->packets2send[radio->txCounter];
                     radio->packets2send[radio->txCounter] = nullptr;
@@ -488,9 +492,14 @@ iohcRadio::setRadioState(iohcRadio::_g_payload ? iohcRadio::RadioState::PAYLOAD 
             } else {
                 // In any case, after last packet sent, unlock the radio
                 txMode = false;
+                // FIX: Deallocate memory from previous packets before clearing the vector to prevent memory leaks.
+                for (auto p : radio->packets2send) {
+                    delete p;
+                }
                 radio->packets2send.clear();
             }
         }
+
         digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
     }
 

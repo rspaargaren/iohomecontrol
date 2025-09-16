@@ -14,7 +14,7 @@
    limitations under the License.
  */
 
-#include <iohcOtherDevice2W.h>
+#include <iohcUtils2W.h>
 #include <LittleFS.h>
 #include <ArduinoJson.h>
 #include <iohcCryptoHelpers.h>
@@ -25,13 +25,13 @@
 #include <numeric>
 
 namespace IOHC {
-    iohcOtherDevice2W *iohcOtherDevice2W::_iohcOtherDevice2W = nullptr;
+    iohcUtils2W *iohcUtils2W::_iohcOtherDevice2W = nullptr;
 
-    iohcOtherDevice2W::iohcOtherDevice2W() = default;
+    iohcUtils2W::iohcUtils2W() = default;
 
-    iohcOtherDevice2W *iohcOtherDevice2W::getInstance() {
+    iohcUtils2W *iohcUtils2W::getInstance() {
         if (!_iohcOtherDevice2W) {
-            _iohcOtherDevice2W = new iohcOtherDevice2W();
+            _iohcOtherDevice2W = new iohcUtils2W();
             _iohcOtherDevice2W->load();
             _iohcOtherDevice2W->initializeValid();
         }
@@ -40,7 +40,7 @@ namespace IOHC {
 
     address fake_gateway = {0xba, 0x11, 0xad};
 
-    void iohcOtherDevice2W::forgePacket(iohcPacket *packet, const std::vector<uint8_t> &toSend, size_t typn = 0) {
+    void iohcUtils2W::forgePacket(iohcPacket *packet, const std::vector<uint8_t> &toSend, size_t typn = 0) {
         digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
         IOHC::relStamp = esp_timer_get_time();
 
@@ -70,9 +70,9 @@ namespace IOHC {
         packet->lock = false;
     }
 
-    void iohcOtherDevice2W::cmd(Other2WButton cmd, Tokens *data) {
+    void iohcUtils2W::cmd(Other2WButton cmd, Tokens *data) {
         if (!_radioInstance) {
-            Serial.println("NO RADIO INSTANCE");
+            ets_printf("NO RADIO INSTANCE\n");
             _radioInstance = iohcRadio::getInstance();
         }
         packets2send.clear();
@@ -455,7 +455,7 @@ namespace IOHC {
      00 04 - 01 04 - 03 04 - 0a 0D - 0c 0D - 19 1a - 1e fe - 20 21 - 23 24 - 28 29 - 2a(12) 2b - 2c 2d - 2e 2f - 31 3c - 32(16) 33 - 36 37 - 38(6) 32 - 39 fe - 3c(6) 3d - 46(9) 47 - 48(9) 49 - 4a(18) 4b
      50 51 - 52(16) 53 - 54 55 - 56 57 - 60(21) .. - 64(2) 65 - 6e(9) fe - 6f(9) .. - 71 72 - 73(3) .. - 80 81 - 82(21) .. - 84  85 - 86 87 - 88 89 - 8a(18) 8c - 8b(1) 8c - 8e .. - 90 91 - 92(16) 93 - 94 95 - 96(12) 97 - 98 99
     */
-    void iohcOtherDevice2W::initializeValid() {
+    void iohcUtils2W::initializeValid() {
         size_t validKey = 0;
         auto valid = std::vector<uint8_t>(255);
         std::iota(valid.begin(), valid.end(), 0);
@@ -480,8 +480,8 @@ namespace IOHC {
     /**
     * @brief Dump the scan result to the console for debugging purposes.
     */
-    void iohcOtherDevice2W::scanDump() {
-        printf("*********************** Scan result ***********************\n");
+    void iohcUtils2W::scanDump() {
+        ets_printf("*********************** Scan result ***********************\n");
 
         uint8_t count = 0;
 
@@ -492,32 +492,32 @@ namespace IOHC {
                 // Prints the first and second of the token.
                 // Prints the argument string representation of the argument.
                 if (it.second == 0x3C)
-                    printf("%2.2x=AUTH ", it.first, it.second);
+                    ets_printf("%2.2x=AUTH ", it.first, it.second);
                     // Prints the string representation of the argument.
                     // Prints the string representation of the argument.
                 else if (it.second == 0x80)
-                    printf("%2.2x=NRDY ", it.first, it.second);
+                    ets_printf("%2.2x=NRDY ", it.first, it.second);
                 else
-                    printf("%2.2x=%2.2x\t", it.first, it.second);
+                    ets_printf("%2.2x=%2.2x\t", it.first, it.second);
                 count++;
                 // Prints the number of bytes to the console.
                 // Prints the number of bytes to the console.
-                if (count % 16 == 0) printf("\n");
+                if (count % 16 == 0) ets_printf("\n");
             }
         }
 
         // Prints the number of bytes to the console.
-        if (count % 16 != 0) printf("\n");
+        if (count % 16 != 0) ets_printf("\n");
 
-        printf("%u toCheck \n", count);
+        ets_printf("%u toCheck \n", count);
     }
 
-    bool iohcOtherDevice2W::load() {
+    bool iohcUtils2W::load() {
         _radioInstance = iohcRadio::getInstance();
         if (LittleFS.exists(OTHER_2W_FILE))
-            Serial.printf("Loading Other 2W devices settings from %s\n", OTHER_2W_FILE);
+            ets_printf("Loading Other 2W devices settings from %s\n", OTHER_2W_FILE);
         else {
-            Serial.printf("*2W Other devices not available\n");
+            ets_printf("*2W Other devices not available\n");
             return false;
         }
 
@@ -556,7 +556,7 @@ namespace IOHC {
      * @return true
      * @return false
      */
-    bool iohcOtherDevice2W::save() {
+    bool iohcUtils2W::save() {
         fs::File f = LittleFS.open(OTHER_2W_FILE, "w");
 
         //DynamicJsonDocument doc(256);

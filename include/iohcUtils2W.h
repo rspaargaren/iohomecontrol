@@ -44,10 +44,10 @@ namespace IOHC {
         checkCmd,
     };
 
-    class iohcOtherDevice2W : public iohcDevice {
+    class iohcUtils2W : public iohcDevice {
     public:
-        static iohcOtherDevice2W *getInstance();
-        ~iohcOtherDevice2W() override = default;
+        static iohcUtils2W *getInstance();
+        ~iohcUtils2W() override = default;
 
         // Put that in json
         address gateway/*[3]*/ = {0xba, 0x11, 0xad};
@@ -70,8 +70,8 @@ namespace IOHC {
         static void forgePacket(iohcPacket *packet, const std::vector<uint8_t> &vector, size_t typn);
 
     private:
-        iohcOtherDevice2W();
-        static iohcOtherDevice2W *_iohcOtherDevice2W;
+        iohcUtils2W();
+        static iohcUtils2W *_iohcOtherDevice2W;
 
     protected:
         //            unsigned long relStamp;

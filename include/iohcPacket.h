@@ -17,6 +17,7 @@
 #ifndef IOHC_PACKET_H
 #define IOHC_PACKET_H
 
+#include <array>
 #include <vector>
 #include <string>
 
@@ -34,6 +35,8 @@
 
 namespace IOHC {
     using address = uint8_t[3];
+
+    typedef std::array<uint8_t, 3> Address;
 
     struct CB1 {
         uint8_t MsgLen: 5; //1
