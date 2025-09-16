@@ -64,7 +64,7 @@ namespace Cmd {
             IOHC::iohcCozyDevice2W::getInstance()->cmd(IOHC::DeviceButton::setTemp, cmd /*cmd->at(1).c_str()*/);
         });
         Cmd::addHandler("setMode", "auto prog manual off - FF to get actual mode", [](Tokens *cmd)-> void {
-                            IOHC::iohcCozyDevice2W::getInstance()->cmd(IOHC::DeviceButton::setMode, cmd /*cmd->at(1).c_str()*/);
+             IOHC::iohcCozyDevice2W::getInstance()->cmd(IOHC::DeviceButton::setMode, cmd /*cmd->at(1).c_str()*/);
         });
         Cmd::addHandler("setPresence", "on off", [](Tokens *cmd)-> void {
             IOHC::iohcCozyDevice2W::getInstance()->cmd(IOHC::DeviceButton::setPresence, cmd /*cmd->at(1).c_str()*/);
