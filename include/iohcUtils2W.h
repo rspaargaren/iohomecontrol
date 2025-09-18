@@ -22,7 +22,7 @@
 #include <iohcDevice.h>
 #include <tokens.h>
 
-#define OTHER_2W_FILE  "/Other2W.json"
+#define OTHER_2W_FILE  "/Utils2W.json"
 
 /*
     Singleton class with a full implementation of a COZYTOUCH/KIZBOX/CONEXOON controller

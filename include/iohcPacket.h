@@ -23,6 +23,9 @@
 
 #include <board-config.h>
 #include <cstring>
+#include <esp_timer.h>
+
+#include "esp32-hal-gpio.h"
 
 #if defined(RADIO_SX127X)
     #include <SX1276Helpers.h>
@@ -218,7 +221,18 @@ namespace IOHC {
     */
     class iohcPacket {
     public:
-        iohcPacket() = default;
+        iohcPacket() {
+            digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
+            IOHC::relStamp = esp_timer_get_time();
+            this->payload.packet.header.CtrlByte1.asStruct.MsgLen = sizeof(_header) - 1;
+            this->payload.packet.header.CtrlByte2.asByte = 0;
+
+            this->frequency = CHANNEL2;
+            this->repeatTime = 25;
+            this->repeat = 0;
+            this->lock = false;
+        };
+
         ~iohcPacket() = default;
 
         Payload payload{};

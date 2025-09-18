@@ -69,14 +69,14 @@ namespace IOHC {
     }
 
     void iohcRemote1W::forgePacket(iohcPacket* packet, uint16_t typn) {
-        IOHC::relStamp = esp_timer_get_time();
-        digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
+        // IOHC::relStamp = esp_timer_get_time();
+        // digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
 
-        packet->payload.packet.header.CtrlByte1.asStruct.MsgLen = sizeof(_header) - 1;
+        // packet->payload.packet.header.CtrlByte1.asStruct.MsgLen = sizeof(_header) - 1;
         packet->payload.packet.header.CtrlByte1.asStruct.Protocol = 1;
         packet->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
         packet->payload.packet.header.CtrlByte1.asStruct.EndFrame = 1;
-        packet->payload.packet.header.CtrlByte2.asByte = 0;
+        // packet->payload.packet.header.CtrlByte2.asByte = 0;
         packet->payload.packet.header.CtrlByte2.asStruct.LPM = 1; // Low Power Mode
         // Broadcast Target
         uint16_t bcast = (typn << 6) + 0b111111; 
@@ -84,10 +84,10 @@ namespace IOHC {
         packet->payload.packet.header.target[1] = bcast >> 8;
         packet->payload.packet.header.target[2] = bcast & 0x00ff;
 
-        packet->frequency = CHANNEL2;
-        packet->repeatTime = 40; //40ms
+        // packet->frequency = CHANNEL2;
+        // packet->repeatTime = 40; //40ms
         packet->repeat = 4;
-        packet->lock = false;
+        // packet->lock = false;
         
     }
 

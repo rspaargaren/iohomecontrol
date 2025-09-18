@@ -39,25 +39,25 @@ namespace IOHC {
     * @param toSend
     */
     void iohcCozyDevice2W::forgePacket(iohcPacket *packet, const std::vector<unsigned char> &toSend) {
-        digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
-        IOHC::relStamp = esp_timer_get_time();
+        // digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
+        // IOHC::relStamp = esp_timer_get_time();
 
         // Common Flags
         // 8 if protocol version is 0 else 10
-        packet->payload.packet.header.CtrlByte1.asStruct.MsgLen = sizeof(_header) - 1;
+        // packet->payload.packet.header.CtrlByte1.asStruct.MsgLen = sizeof(_header) - 1;
         packet->payload.packet.header.CtrlByte1.asStruct.Protocol = 0;
         packet->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
         packet->payload.packet.header.CtrlByte1.asStruct.EndFrame = 0;
-        packet->payload.packet.header.CtrlByte2.asByte = 0;
+        // packet->payload.packet.header.CtrlByte2.asByte = 0;
 
         packet->payload.packet.header.CtrlByte1.asByte += toSend.size();
         memcpy(packet->payload.buffer + 9, toSend.data(), toSend.size());
         packet->buffer_length = toSend.size() + 9;
-
-        packet->frequency = CHANNEL2;
-        packet->repeatTime = 25;
-        packet->repeat = 0;
-        packet->lock = false;
+        //
+        // packet->frequency = CHANNEL2;
+        // packet->repeatTime = 25;
+        // packet->repeat = 0;
+        // packet->lock = false;
     }
 
     /**
@@ -76,7 +76,7 @@ namespace IOHC {
     /// Emulates device button press
     void iohcCozyDevice2W::cmd(DeviceButton cmd, Tokens *data) {
         if (!_radioInstance) {
-            Serial.println("NO RADIO INSTANCE");
+            ets_printf("NO RADIO INSTANCE\n");
             _radioInstance = IOHC::iohcRadio::getInstance();
         }
 
@@ -84,8 +84,7 @@ namespace IOHC {
             case DeviceButton::associate: {
                 std::vector<uint8_t> toSend = {};
 
-                packets2send.clear();
-                auto* packet = new iohcPacket;
+                auto* packet = new iohcPacket();
                 forgePacket(packet, toSend);
 
                 packet->payload.packet.header.cmd = iohcDevice::SEND_ASK_CHALLENGE_0x31;
@@ -106,8 +105,7 @@ namespace IOHC {
             case DeviceButton::powerOn: {
                 std::vector<uint8_t> toSend = {0x0C, 0x60, 0x01, 0x2C};
 
-                packets2send.clear();
-                auto* packet = new iohcPacket;
+                auto* packet = new iohcPacket();
                 forgePacket(packet, toSend);
 
                 packet->payload.packet.header.cmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
@@ -135,8 +133,7 @@ namespace IOHC {
                 if (data->size() == 2) addr = 0;
                 else addr = std::stoi(data->at(2));
 
-                packets2send.clear();
-                auto* packet = new iohcPacket;
+                auto* packet = new iohcPacket();
                 forgePacket(packet, toSend);
 
                 packet->payload.packet.header.cmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
@@ -173,21 +170,21 @@ namespace IOHC {
 
                 size_t dest = 0;
 
-                packets2send.clear();
                 for (const auto &addr: addresses) {
-                    packets2send.push_back(new iohcPacket);
-                    forgePacket(packets2send.back(), toSend);
+                    auto* packet = new iohcPacket();
+                    forgePacket(packet, toSend);
 
-                    packets2send.back()->payload.packet.header.cmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
+                    packet->payload.packet.header.cmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
                     memorizeSend.memorizedData = toSend;
                     memorizeSend.memorizedCmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
 
-                    packets2send.back()->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
-                    memcpy(packets2send.back()->payload.packet.header.source, gateway, 3);
-                    memcpy(packets2send.back()->payload.packet.header.target,
+                    packet->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
+                    memcpy(packet->payload.packet.header.source, gateway, 3);
+                    memcpy(packet->payload.packet.header.target,
                            addresses.at(dest/*addr*/).data()/* 0 Master_to*/, 3);
 
                     dest++;
+                    packets2send.push_back(packet);
                 }
                 packets2send[1]->delayed = 250;
                 digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
@@ -203,19 +200,20 @@ namespace IOHC {
                 if (strcasecmp(dat, "on") == 0) toSend[4] = 0x01;
                 if (strcasecmp(dat, "off") == 0) toSend[4] = 0x00;
 
-                packets2send.clear();
-                packets2send.push_back(new iohcPacket);
-                forgePacket(packets2send.back(), toSend);
+                auto* packet = new iohcPacket();
+                // packets2send.push_back(new iohcPacket);
+                forgePacket(packet, toSend);
 
-                packets2send.back()->payload.packet.header.cmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
+                packet->payload.packet.header.cmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
                 memorizeSend.memorizedData = toSend;
                 memorizeSend.memorizedCmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
 
-                packets2send.back()->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
+                packet->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
 
-                memcpy(packets2send.back()->payload.packet.header.source, gateway, 3);
-                memcpy(packets2send.back()->payload.packet.header.target, master_to, 3);
+                memcpy(packet->payload.packet.header.source, gateway, 3);
+                memcpy(packet->payload.packet.header.target, master_to, 3);
 
+                packets2send.push_back(packet);
                 digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
                 _radioInstance->send(packets2send);
                 break;
@@ -231,20 +229,21 @@ namespace IOHC {
                 if (data->size() == 2) addr = 0;
                 else addr = std::stoi(data->at(2));
 
-                packets2send.clear();
-                packets2send.push_back(new iohcPacket);
-                forgePacket(packets2send.back(), toSend);
+                auto* packet = new iohcPacket();
+                // packets2send.push_back(new iohcPacket);
+                forgePacket(packet, toSend);
 
-                packets2send.back()->payload.packet.header.cmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
+                packet->payload.packet.header.cmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
                 memorizeSend.memorizedData = toSend;
                 memorizeSend.memorizedCmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
 
-                packets2send.back()->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
+                packet->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
 
-                memcpy(packets2send.back()->payload.packet.header.source, gateway, 3);
-                memcpy(packets2send.back()->payload.packet.header.target, addresses.at(addr).data()/* 0 Master_to*/, 3);
+                memcpy(packet->payload.packet.header.source, gateway, 3);
+                memcpy(packet->payload.packet.header.target, addresses.at(addr).data()/* 0 Master_to*/, 3);
 
-                packets2send.back()->delayed = 50;
+                packet->delayed = 50;
+                packets2send.push_back(packet);
 
                 digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
                 _radioInstance->send(packets2send);
@@ -255,18 +254,19 @@ namespace IOHC {
                 std::vector<uint8_t> toSend = {0x0c, 0x60, 0x01, 0x30};
                 //, 0x2b, 0x05, 0x00, 0x0f, 0x04, 0x0c, 0xe7, 0x07};
 
-                packets2send.clear();
-                packets2send.push_back(new iohcPacket);
-                forgePacket(packets2send.back(), toSend);
+                auto* packet = new iohcPacket();
+                // packets2send.push_back(new iohcPacket);
+                forgePacket(packet, toSend);
 
-                packets2send.back()->payload.packet.header.cmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
+                packet->payload.packet.header.cmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
                 memorizeSend.memorizedData = toSend;
                 memorizeSend.memorizedCmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
 
-                packets2send.back()->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
+                packet->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
 
-                memcpy(packets2send.back()->payload.packet.header.source, gateway, 3);
-                memcpy(packets2send.back()->payload.packet.header.target, master_to, 3);
+                memcpy(packet->payload.packet.header.source, gateway, 3);
+                memcpy(packet->payload.packet.header.target, master_to, 3);
+                packets2send.push_back(packet);
 
                 digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
                 _radioInstance->send(packets2send);
@@ -288,9 +288,9 @@ namespace IOHC {
         _radioInstance = iohcRadio::getInstance();
         // Load Cozy 2W device settings from file
         if (LittleFS.exists(COZY_2W_FILE))
-            Serial.printf("Loading Cozy 2W devices settings from %s\n", COZY_2W_FILE);
+            ets_printf("Loading Cozy 2W devices settings from %s\n", COZY_2W_FILE);
         else {
-            Serial.printf("*2W Cozy devices not available\n");
+            ets_printf("*2W Cozy devices not available\n");
             return false;
         }
 
@@ -319,7 +319,7 @@ namespace IOHC {
             //     _manufacturer = jobj["manufacturer_id"].as<uint8_t>();
             devices.push_back(d);
         }
-        Serial.printf("Loaded %d x 2W devices\n", devices.size()); // _type.size());
+        ets_printf("Loaded %d x 2W devices\n", devices.size()); // _type.size());
 
         return true;
     }
