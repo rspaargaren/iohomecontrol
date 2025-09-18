@@ -25,7 +25,7 @@
 #include <cstring>
 
 #if defined(RADIO_SX127X)
-#include <SX1276Helpers.h>
+    #include <SX1276Helpers.h>
 #endif
 
 #define RESET_AFTER_LAST_MSG_US         15000
@@ -34,8 +34,9 @@
 #define IOHC_OUTBOUND_MAX_PACKETS       20      // Maximum Outbound packets
 
 namespace IOHC {
+    class iohcDevice;
+    // Simplify this
     using address = uint8_t[3];
-
     typedef std::array<uint8_t, 3> Address;
 
     struct CB1 {
