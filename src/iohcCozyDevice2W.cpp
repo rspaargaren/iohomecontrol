@@ -39,12 +39,9 @@ namespace IOHC {
     * @param toSend
     */
     void iohcCozyDevice2W::forgePacket(iohcPacket *packet, const std::vector<unsigned char> &toSend) {
-        // digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
-        // IOHC::relStamp = esp_timer_get_time();
+        IOHC::relStamp = esp_timer_get_time();
 
         // Common Flags
-        // 8 if protocol version is 0 else 10
-        // packet->payload.packet.header.CtrlByte1.asStruct.MsgLen = sizeof(_header) - 1;
         packet->payload.packet.header.CtrlByte1.asStruct.Protocol = 0;
         packet->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
         packet->payload.packet.header.CtrlByte1.asStruct.EndFrame = 0;
@@ -53,11 +50,7 @@ namespace IOHC {
         packet->payload.packet.header.CtrlByte1.asByte += toSend.size();
         memcpy(packet->payload.buffer + 9, toSend.data(), toSend.size());
         packet->buffer_length = toSend.size() + 9;
-        //
-        // packet->frequency = CHANNEL2;
-        // packet->repeatTime = 25;
-        // packet->repeat = 0;
-        // packet->lock = false;
+
     }
 
     /**

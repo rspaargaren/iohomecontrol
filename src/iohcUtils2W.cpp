@@ -41,10 +41,7 @@ namespace IOHC {
     address fake_gateway = {0xba, 0x11, 0xad};
 
     void iohcUtils2W::forgePacket(iohcPacket *packet, const std::vector<uint8_t> &toSend, size_t typn = 0) {
-        // digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
-        // IOHC::relStamp = esp_timer_get_time();
-
-        // packet->payload.packet.header.CtrlByte1.asStruct.MsgLen = sizeof(_header) - 1;
+        IOHC::relStamp = esp_timer_get_time();
 
         packet->payload.packet.header.cmd = 0x2A; //0x28; //typn;
         // Common Flags
@@ -63,11 +60,6 @@ namespace IOHC {
         packet->payload.packet.header.CtrlByte1.asByte += toSend.size();
         memcpy(packet->payload.buffer + 9, toSend.data(), toSend.size());
         packet->buffer_length = toSend.size() + 9;
-
-        // packet->frequency = CHANNEL2;
-        // packet->repeatTime = 50;
-        // packet->repeat = 0;
-        // packet->lock = false;
     }
 
     void iohcUtils2W::cmd(Other2WButton cmd, Tokens *data) {

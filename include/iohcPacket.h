@@ -223,7 +223,9 @@ namespace IOHC {
     public:
         iohcPacket() {
             digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
-            IOHC::relStamp = esp_timer_get_time();
+
+            // Common Flags
+            // size is 8 if protocol version is 0 else 10
             this->payload.packet.header.CtrlByte1.asStruct.MsgLen = sizeof(_header) - 1;
             this->payload.packet.header.CtrlByte2.asByte = 0;
 
