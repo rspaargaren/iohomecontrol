@@ -109,6 +109,8 @@ namespace IOHC {
         uint8_t data[2];
         uint8_t sequence[2];
         uint8_t hmac[6];
+        void setAcei(uint8_t as_byte) { acei.asByte = as_byte; }
+
     };
 
     struct _p0x00_14 {
@@ -119,6 +121,7 @@ namespace IOHC {
         uint8_t fp2;
         uint8_t sequence[2];
         uint8_t hmac[6];
+        void setAcei(uint8_t as_byte) { acei.asByte = as_byte; }
     };
 
     struct _p0x01_13 {
@@ -129,6 +132,7 @@ namespace IOHC {
         uint8_t fp2;
         uint8_t sequence[2];
         uint8_t hmac[6];
+        void setAcei(uint8_t as_byte) { acei.asByte = as_byte; }
     };
 
     struct _p0x20_15 {
@@ -140,6 +144,7 @@ namespace IOHC {
         uint8_t fp3;
         uint8_t sequence[2];
         uint8_t hmac[6];
+        void setAcei(uint8_t as_byte) { acei.asByte = as_byte; }
     };
 
     struct _p0x20_13 {
@@ -149,6 +154,7 @@ namespace IOHC {
         uint8_t fp1;
         uint8_t sequence[2];
         uint8_t hmac[6];
+        void setAcei(uint8_t as_byte) { acei.asByte = as_byte; }
     };
 
     struct _p0x20_16 {
@@ -160,6 +166,7 @@ namespace IOHC {
         uint8_t data[2];
         uint8_t sequence[2];
         uint8_t hmac[6];
+        void setAcei(uint8_t as_byte) { acei.asByte = as_byte; }
     };
 
     struct _p0x2b {
@@ -205,6 +212,7 @@ namespace IOHC {
     typedef union payload {
         uint8_t buffer[MAX_FRAME_LEN];
         _packet packet;
+
     } Payload;
 
     /* keep the size of variable lenght of data */

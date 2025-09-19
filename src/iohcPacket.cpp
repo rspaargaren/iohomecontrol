@@ -222,6 +222,15 @@ namespace IOHC {
                 ets_printf(" %s", msg_data.c_str());
                 /*Private Atlantic/Sauter/Thermor*/
                 if (this->payload.packet.header.cmd == 0x20) {}
+                if (this->payload.packet.header.cmd == 0x04) {
+                    // Split msg_data by 4, 4, 4, 4, 6, 6 array parts
+                    ets_printf(" %s %s %s %s %s %s",
+                        msg_data.substr(0, 2).c_str(), msg_data.substr(2, 2).c_str(),
+                        msg_data.substr(4,4).c_str(),
+                        msg_data.substr(8, 4).c_str(),
+                        msg_data.substr(16, 6).c_str(), msg_data.substr(22, 2).c_str()
+                        );
+                }
             }
         }
 
