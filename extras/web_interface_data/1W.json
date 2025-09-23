@@ -1,0 +1,7 @@
+{
+    "b60d1a":{"key":"49563873417a63334e7a636b52644853","sequence":"2576","type":[0,0],"manufacturer_id":2,"description":"IZY1","name":"Zolder","travel_time":25,"paired":true},
+    "35b455":{"key":"6ed922b098e900000000000000000000","sequence":"1045","type":[0,0],"manufacturer_id":2,"description":"IZY2","name":"keuken","travel_time":25,"paired":true},
+    "00003f":{"key":"0161d40080c8000010484e5dab4475d4","sequence":"1069","type":[0,0],"manufacturer_id":2,"description":"DYNA","name":"DYNA","travel_time":25,"paired":false},
+    "e00001":{"key":"7ab132c95f843da7116ed03b9cf20845","sequence":"00fa","type":[0,0],"manufacturer_id":2,"description":"SUNS","name":"keuken2","travel_time":25,"paired":true},
+    "e00002":{"key":"bba24bbb61508fc78c5ad0e57ff66210","sequence":"02e6","type":[0,0],"manufacturer_id":2,"description":"SUNG","name":"SUNG","travel_time":25,"paired":false}
+}
