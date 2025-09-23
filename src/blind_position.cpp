@@ -12,21 +12,27 @@ namespace IOHC {
 
     void BlindPosition::startOpening() {
         update();
-        Serial.printf("[BlindPosition] start opening (pos=%.1f%%)\n", position);
+#if defined(DEBUG)
+        ets_printf("[BlindPosition] start opening (pos=%.1f%%)\n", position);
+#endif
         state = State::Opening;
         lastUpdateUs = esp_timer_get_time();
     }
 
     void BlindPosition::startClosing() {
         update();
-        Serial.printf("[BlindPosition] start closing (pos=%.1f%%)\n", position);
+#if defined(DEBUG)
+        ets_printf("[BlindPosition] start closing (pos=%.1f%%)\n", position);
+#endif
         state = State::Closing;
         lastUpdateUs = esp_timer_get_time();
     }
 
     void BlindPosition::stop() {
         update();
-        Serial.printf("[BlindPosition] stop (pos=%.1f%%)\n", position);
+#if defined(DEBUG)
+        ets_printf("[BlindPosition] stop (pos=%.1f%%)\n", position);
+#endif
         state = State::Idle;
     }
 
@@ -58,7 +64,9 @@ namespace IOHC {
         position = std::clamp(position, 0.0f, 100.0f);
 
         lastUpdateUs = now;
+#if defined(DEBUG)
         Serial.printf("[BlindPosition] update (state=%d pos=%.1f%%)\n", static_cast<int>(state), position);
+#endif
     }
 
     float BlindPosition::getPosition() const { return position; }
