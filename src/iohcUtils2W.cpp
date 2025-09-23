@@ -523,7 +523,7 @@ for (const auto &d: devices) {
         for (JsonPair kv : doc.as<JsonObject>()) {
             auto deviceObj = kv.value().as<JsonObject>();
 
-            // La clé est le dst
+            // Key is dst (2W gateway associated with a simple 1W)
             std::string dstStr = kv.key().c_str();
             std::string nodeStr = deviceObj["node"].as<std::string>();
 
