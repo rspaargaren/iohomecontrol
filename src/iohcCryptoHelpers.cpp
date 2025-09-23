@@ -15,8 +15,10 @@
  */
 
 #include <iohcCryptoHelpers.h>
-#include <crypto2Wutils.h> 
-/*
+#include <crypto2Wutils.h>
+#include <rom/ets_sys.h>
+
+/**
     Helper function to convert a string containing hex numbers to a bytes sequence; one byte every two characters
 */
 uint8_t hexStringToBytes(const std::string hexString, uint8_t *byteString) {
@@ -47,10 +49,7 @@ namespace iohcCrypto {
     std::string transfer_key = "34c3466ed88f4e8e16aa473949884373";
 
 
-#if defined(ESP8266)
-    AES128 aes128;
-    CTR<AES128> ctraes128;
-#elif defined(ESP32)
+#if defined(ESP32)
     mbedtls_aes_context aes;
 #endif
     
@@ -63,7 +62,7 @@ namespace iohcCrypto {
         return crc;
     }
 
-    /*
+    /**
     Returns the CRC value for the given data frame.
     Used for whole io-homecontrol frames integrity check
     */
@@ -76,7 +75,7 @@ namespace iohcCrypto {
         return crc;
     }
 
-    /*
+    /**
     Returns the CRC value for the given data frame.
     Used for whole io-homecontrol frames integrity check
     */
@@ -103,7 +102,7 @@ namespace iohcCrypto {
 
     std::vector<uint8_t> constructInitialValue(const std::vector<uint8_t>& frame_data, const uint8_t *challenge = nullptr, const uint8_t *sequence_number = nullptr) {
         if (!challenge && !sequence_number) {
-            printf("Cannot create initial value: no mode selected\n");
+            ets_printf("Cannot create initial value: no mode selected\n");
             return {};
         }
 
@@ -137,7 +136,7 @@ namespace iohcCrypto {
         return initial_value;
     }
 
-/*
+/**
     Calculate HMAC using as input:
     - Packet Sequence Number
     - Controller key in clear
@@ -151,10 +150,7 @@ namespace iohcCrypto {
 
         iv = constructInitialValue(frame_data, nullptr, seq_number);
 
-        #if defined(ESP8266)
-            aes128.setKey(controller_key, 16);
-            aes128.encryptBlock(hmac, iv.data());
-        #elif defined(ESP32)
+#if defined(ESP32)
             mbedtls_aes_setkey_enc( &aes, controller_key, 128 );
            
 //        for (uint8_t a=0; a<16; a++){
@@ -166,7 +162,7 @@ namespace iohcCrypto {
 
     }
 
-/*
+/**
     Encrypt (or decrypt if called with encrypted) the transmitted key using as input:
     - Node address
     - Key in clear (or encrypted to decrypt)
@@ -197,13 +193,7 @@ namespace iohcCrypto {
         for (int i = 0; i < 16; ++i)
             key[i] ^= captured[i];
     */
-        #if defined(ESP8266)
-    //  Use CTR encryption instead of AES. It includes xor with the key
-            ctraes128.setKey(btransfer, 16);
-            ctraes128.setIV(iv.data(), 16);
-            ctraes128.setCounterSize(4);
-            ctraes128.encrypt(key, key, 16);
-        #elif defined(ESP32)
+        #if defined(ESP32)
             size_t iv_offset = 0;
             mbedtls_aes_setkey_enc( &aes, (uint8_t *)btransfer, 128 );
             mbedtls_aes_crypt_cfb128(&aes, MBEDTLS_AES_ENCRYPT, 16, &iv_offset, iv.data(), (uint8_t *)key, captured);

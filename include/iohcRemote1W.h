@@ -70,7 +70,7 @@ namespace IOHC {
         bool save() override;
 //        void scanDump() override { }
 
-        static void forgePacket(iohcPacket* packet, uint16_t typn);
+        static void forge1WPacket(iohcPacket* packet, uint16_t typn);
 
         const std::vector<remote>& getRemotes() const;
         void updatePositions();

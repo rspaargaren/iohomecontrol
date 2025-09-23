@@ -17,7 +17,10 @@
 #include <cstdio>
 #include <cstring>
 #include <esp_attr.h>
+#include <iohcDevice.h>
 #include <iohcPacket.h>
+#include <iohcSystemTable.h>
+#include <iohcUtils2W.h>
 #include <iomanip>
 #include <sstream>
 #include <utils.h>
@@ -26,6 +29,8 @@
 namespace IOHC {
 
     void IRAM_ATTR iohcPacket::decode(bool verbosity) {
+
+        bool save2W =  false;
 
         if (packetStamp - relStamp > 500000L) {
             ets_printf("\n");
@@ -81,6 +86,24 @@ namespace IOHC {
             ets_printf(" %s", msg_data.c_str());
 
             switch (this->payload.packet.header.cmd) {
+                case iohcDevice::RECEIVED_DISCOVER_0x28:
+                    // ets_printf("DISCOVER_REMOTE_0x28");
+                case iohcDevice::RECEIVED_DISCOVER_REMOTE_0x2A: {
+                    ets_printf("DISCOVER_REMOTE_0x2A");
+                    ets_printf("\tWITH CHALLENGE KEY (12)");
+                    break;
+                }
+                case iohcDevice::RECEIVED_DISCOVER_ANSWER_0x29:
+                    // ets_printf("REMOTE_ANSWER_0x29");
+                case iohcDevice::RECEIVED_DISCOVER_REMOTE_ANSWER_0x2B: {
+                    // iohcSystemTable *sysTable = IOHC::iohcSystemTable::getInstance();
+                    ets_printf("DISCOVER_REMOTE_ANSWER_0x2B");
+                    // sysTable->addObject(this->payload.packet.header.source, this->payload.packet.msg.p0x2b.backbone,
+                    //                     this->payload.packet.msg.p0x2b.actuator, this->payload.packet.msg.p0x2b.manufacturer,
+                    //                     this->payload.packet.msg.p0x2b.info);
+                    break;
+                }
+
                 case 0x30: {
                     ets_printf("\tMANU %X DATA %X ", this->payload.packet.msg.p0x30.man_id, this->payload.packet.msg.p0x30.data);
                     ets_printf("\tKEY %s SEQ %s ", bitrow_to_hex_string(this->payload.packet.msg.p0x30.enc_key, 16).c_str(),
@@ -219,24 +242,57 @@ namespace IOHC {
             // 2W fields
             if (dataLen != 0) {
                 std::string msg_data = bitrow_to_hex_string(this->payload.buffer + 9, dataLen);
-                ets_printf(" %s", msg_data.c_str());
+                ets_printf(" %s ", msg_data.c_str());
                 /*Private Atlantic/Sauter/Thermor*/
                 if (this->payload.packet.header.cmd == 0x20) {}
-                if (this->payload.packet.header.cmd == 0x04) {
+                if (this->payload.packet.header.cmd == iohcDevice::RECEIVED_DISCOVER_0x28) {ets_printf("2W Pairing Asked Waiting for 0x29");}
+                if (this->payload.packet.header.cmd == iohcDevice::RECEIVED_DISCOVER_ANSWER_0x29) {ets_printf("2W Device want to be paired Waiting for 0x2C (or 0x38) ");
+                    std::vector<uint8_t> deviceAsked;
+                    deviceAsked.assign(this->payload.buffer + 9, this->payload.buffer + 18);
+                    for (unsigned char i: deviceAsked) ets_printf("%02X ", i);
+                }
+                if (this->payload.packet.header.cmd == iohcDevice::RECEIVED_DISCOVER_REMOTE_ANSWER_0x2B) {ets_printf("2W Remote want to be paired ");
+                    std::vector<uint8_t> deviceAsked;
+                    deviceAsked.assign(this->payload.buffer + 9, this->payload.buffer + 18);
+                    for (unsigned char i: deviceAsked) ets_printf("%02X ", i);
+                    // sysTable->addObject(iohc->payload.packet.header.source, iohc->payload.packet.msg.p0x2b.backbone,
+                    //                     iohc->payload.packet.msg.p0x2b.actuator, iohc->payload.packet.msg.p0x2b.manufacturer,
+                    //                     iohc->payload.packet.msg.p0x2b.info);
+                }
+                if (this->payload.packet.header.cmd == iohcDevice::RECEIVED_DISCOVER_ACTUATOR_0x2C) {ets_printf("2W Actuator Ack Asked Waiting for 0x2D");}
+                if (this->payload.packet.header.cmd == iohcDevice::RECEIVED_LAUNCH_KEY_TRANSFERT_0x38) {ets_printf("2W Key Transfert Asked after Command %2.2X Waiting for 0x32", this->payload.packet.header.cmd);}
+
+                if (this->payload.packet.header.cmd == iohcDevice::RECEIVED_GET_NAME_ANSWER_0x51) {
+                    std::string normalizedDescription = iohcUtils2W::extractAndNormalizeName(this->payload.buffer, 9, 16);
+                    ets_printf(normalizedDescription.c_str());
+                    // Target and source are inverted as it is a response
+                    auto device = iohcUtils2W::Device(this->payload.packet.header.target, this->payload.packet.header.source);
+                    device._description = normalizedDescription;
+                    save2W = iohcUtils2W::getInstance()->addOrUpdateDevice(device);
+                }
+
+                if (this->payload.packet.header.cmd == 0x04) { // answer of 0x00 or 0x03 maybe 0x01
                     // Split msg_data by 4, 4, 4, 4, 6, 6 array parts
-                    ets_printf(" %s %s %s %s %s %s",
+                    ets_printf("%s %s %s %s %s %s %s ",
                         msg_data.substr(0, 2).c_str(), msg_data.substr(2, 2).c_str(),
                         msg_data.substr(4,4).c_str(),
-                        msg_data.substr(8, 4).c_str(),
+                        msg_data.substr(8, 4).c_str(),msg_data.substr(12, 4).c_str(),
                         msg_data.substr(16, 6).c_str(), msg_data.substr(22, 2).c_str()
                         );
-                }
+                    // At least 2 types: simple state or extended state
+                    // simple state OPEN CLOSE etc... 0000 c8000 d200 etc...
+                    // extended state to learn ... 0c00 0a3f 0000
+                    // Target and source are inverted as it is a response
+                    auto device = iohcUtils2W::Device(this->payload.packet.header.target, this->payload.packet.header.source);
+                    hexStringToBytes(msg_data.substr(16, 6), device._associated);
+                    save2W = iohcUtils2W::getInstance()->addOrUpdateDevice(device);
+                    ets_printf(iohcUtils2W::getInstance()->getDescription(device).c_str());
+                    }
             }
         }
-
         ets_printf("\n");
-
         relStamp = packetStamp;
+        if (save2W) {iohcUtils2W::getInstance()->save();}
     }
 
     std::string iohcPacket::decodeToString(bool verbosity) {

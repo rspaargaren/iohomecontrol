@@ -38,7 +38,7 @@ namespace IOHC {
     * @param packet * The IOHC packet to forge
     * @param toSend
     */
-    void iohcCozyDevice2W::forgePacket(iohcPacket *packet, const std::vector<unsigned char> &toSend) {
+    void iohcCozyDevice2W::forge2WPacket(iohcPacket *packet, const std::vector<unsigned char> &toSend) {
         IOHC::relStamp = esp_timer_get_time();
 
         // Common Flags
@@ -78,7 +78,7 @@ namespace IOHC {
                 std::vector<uint8_t> toSend = {};
 
                 auto* packet = new iohcPacket();
-                forgePacket(packet, toSend);
+                forge2WPacket(packet, toSend);
 
                 packet->payload.packet.header.cmd = iohcDevice::SEND_ASK_CHALLENGE_0x31;
                 memorizeSend.memorizedData = toSend;
@@ -91,7 +91,6 @@ namespace IOHC {
                 memcpy(packet->payload.packet.header.target, master_to, 3);
 
                 packets2send.push_back(packet);
-                digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
                 _radioInstance->send(packets2send);
                 break;
             }
@@ -99,7 +98,7 @@ namespace IOHC {
                 std::vector<uint8_t> toSend = {0x0C, 0x60, 0x01, 0x2C};
 
                 auto* packet = new iohcPacket();
-                forgePacket(packet, toSend);
+                forge2WPacket(packet, toSend);
 
                 packet->payload.packet.header.cmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
                 memorizeSend.memorizedCmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
@@ -111,7 +110,6 @@ namespace IOHC {
                 memcpy(packet->payload.packet.header.target, master_to, 3);
 
                 packets2send.push_back(packet);
-                digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
                 _radioInstance->send(packets2send);
 
                 break;
@@ -127,7 +125,7 @@ namespace IOHC {
                 else addr = std::stoi(data->at(2));
 
                 auto* packet = new iohcPacket();
-                forgePacket(packet, toSend);
+                forge2WPacket(packet, toSend);
 
                 packet->payload.packet.header.cmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
                 memorizeSend.memorizedData = toSend;
@@ -141,7 +139,6 @@ namespace IOHC {
                 packet->delayed = 50;
 
                 packets2send.push_back(packet);
-                digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
                 _radioInstance->send(packets2send);
                 //                mqttClient.publish("iown/Frame", 0, false, message.c_str(), messageSize);
 
@@ -165,7 +162,7 @@ namespace IOHC {
 
                 for (const auto &addr: addresses) {
                     auto* packet = new iohcPacket();
-                    forgePacket(packet, toSend);
+                    forge2WPacket(packet, toSend);
 
                     packet->payload.packet.header.cmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
                     memorizeSend.memorizedData = toSend;
@@ -180,8 +177,6 @@ namespace IOHC {
                     packets2send.push_back(packet);
                 }
                 packets2send[1]->delayed = 250;
-                digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
-
                 _radioInstance->send(packets2send);
 
                 break;
@@ -195,7 +190,7 @@ namespace IOHC {
 
                 auto* packet = new iohcPacket();
                 // packets2send.push_back(new iohcPacket);
-                forgePacket(packet, toSend);
+                forge2WPacket(packet, toSend);
 
                 packet->payload.packet.header.cmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
                 memorizeSend.memorizedData = toSend;
@@ -207,7 +202,6 @@ namespace IOHC {
                 memcpy(packet->payload.packet.header.target, master_to, 3);
 
                 packets2send.push_back(packet);
-                digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
                 _radioInstance->send(packets2send);
                 break;
             }
@@ -224,7 +218,7 @@ namespace IOHC {
 
                 auto* packet = new iohcPacket();
                 // packets2send.push_back(new iohcPacket);
-                forgePacket(packet, toSend);
+                forge2WPacket(packet, toSend);
 
                 packet->payload.packet.header.cmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
                 memorizeSend.memorizedData = toSend;
@@ -236,9 +230,8 @@ namespace IOHC {
                 memcpy(packet->payload.packet.header.target, addresses.at(addr).data()/* 0 Master_to*/, 3);
 
                 packet->delayed = 50;
-                packets2send.push_back(packet);
 
-                digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
+                packets2send.push_back(packet);
                 _radioInstance->send(packets2send);
                 break;
             }
@@ -249,7 +242,7 @@ namespace IOHC {
 
                 auto* packet = new iohcPacket();
                 // packets2send.push_back(new iohcPacket);
-                forgePacket(packet, toSend);
+                forge2WPacket(packet, toSend);
 
                 packet->payload.packet.header.cmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
                 memorizeSend.memorizedData = toSend;
@@ -259,9 +252,8 @@ namespace IOHC {
 
                 memcpy(packet->payload.packet.header.source, gateway, 3);
                 memcpy(packet->payload.packet.header.target, master_to, 3);
-                packets2send.push_back(packet);
 
-                digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
+                packets2send.push_back(packet);
                 _radioInstance->send(packets2send);
 
                 break;
@@ -351,7 +343,7 @@ namespace IOHC {
             //                break;
             //        jobj["manufacturer_id"] = _manufacturer;
         }
-        serializeJsonPretty/*serializeJson*/(doc, f);
+        serializeJsonPretty(doc, f);
         f.close();
 
         return true;

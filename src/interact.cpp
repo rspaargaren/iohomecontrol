@@ -171,18 +171,20 @@ namespace Cmd {
             for (uint8_t i = 0; i < nextPacket; i++) msgRcvd(radioPackets[i]);
             sysTable->dump2W();
         });
+        */
         // Unnecessary just for test
-        Cmd::addHandler((char *) "discover28", (char *) "discover28", [](Tokens *cmd)-> void {
-            IOHC::iohcCozyDevice2W::getInstance()->cmd(IOHC::DeviceButton::discover28, nullptr);
+        Cmd::addHandler("discover28", "discover28", [](Tokens *cmd)-> void {
+            IOHC::iohcUtils2W::getInstance()->cmd(IOHC::Other2WButton::discover28, nullptr);
         });
-    */
+
         Cmd::addHandler("discover2A", "discover2A", [](Tokens *cmd)-> void {
             IOHC::iohcUtils2W::getInstance()->cmd(IOHC::Other2WButton::discover2A, nullptr);
         });
-    /*
-        Cmd::addHandler((char *) "fake0", (char *) "fake0", [](Tokens *cmd)-> void {
-            IOHC::iohcCozyDevice2W::getInstance()->cmd(IOHC::DeviceButton::fake0, nullptr);
+
+        Cmd::addHandler("fake0", "fake0", [](Tokens *cmd)-> void {
+            IOHC::iohcUtils2W::getInstance()->cmd(IOHC::Other2WButton::fake0, nullptr);
         });
+        /*
         Cmd::addHandler((char *) "ack", (char *) "ack33", [](Tokens *cmd)-> void {
             IOHC::iohcCozyDevice2W::getInstance()->cmd(IOHC::DeviceButton::ack, nullptr);
         });

@@ -133,21 +133,20 @@ iohcRadio::setRadioState(iohcRadio::_g_payload ? iohcRadio::RadioState::PAYLOAD 
  * The `start` function initializes the radio with specified parameters and sets it to receive mode.
  * 
  * @param num_freqs The `num_freqs` parameter in the `start` function represents the number of
- * frequencies to scan. It is of type `uint8_t`, which means it is an unsigned 8-bit integer. This
+ * frequencies to scan. It is of type `uint8_t`. This
  * parameter specifies how many frequencies the radio will scan during operation.
  * @param scan_freqs The `scan_freqs` parameter is an array of `uint32_t` values that represent the
  * frequencies to be scanned during the radio operation. The `start` function initializes the radio
  * with the provided frequencies for scanning.
- * @param scanTimeUs The `scanTimeUs` parameter in the `start` function of the `iohcRadio` class
+ * @param scanTimeUs The `scanTimeUs`
  * represents the time interval in microseconds for scanning frequencies. If a specific value is
  * provided for `scanTimeUs`, it will be used as the scan interval. Otherwise, the default scan
  * interval defined as
- * @param rxCallback The `rxCallback` parameter is of type `IohcPacketDelegate`, which is a delegate or
+ * @param rxCallback The `rxCallback`  `IohcPacketDelegate`, which is a delegate or
  * function pointer that will be called when a packet is received by the radio. It is set to `nullptr`
  * by default if not provided during the function call.
- * @param txCallback The `txCallback` parameter in the `start` function of the `iohcRadio` class is of
- * type `IohcPacketDelegate`. It is a callback function that will be called when a packet is
- * transmitted by the radio. This callback function can be provided by the user of the `
+ * @param txCallback The `txCallback` `IohcPacketDelegate`. It is a callback function that will be called when a packet is
+ * transmitted by the radio. This callback function can be provided by the user
  */
     void iohcRadio::start(uint8_t num_freqs, uint32_t *scan_freqs, uint32_t scanTimeUs,
                           CallbackFunction rxCallback = nullptr, CallbackFunction txCallback = nullptr) {
@@ -172,10 +171,6 @@ iohcRadio::setRadioState(iohcRadio::_g_payload ? iohcRadio::RadioState::PAYLOAD 
  * @param radio The `radio` parameter in the `iohcRadio::tickerCounter` function is a pointer to an
  * instance of the `iohcRadio` class. This pointer is used to access and modify the properties and
  * methods of the `iohcRadio` object within the function. The function uses this pointer
- * 
- * @return In the provided code snippet, the function `tickerCounter` is returning different values
- * based on the conditions met within the function. Here is a breakdown of the possible return
- * scenarios:
  */
     void IRAM_ATTR iohcRadio::tickerCounter(iohcRadio *radio) {
         // Not need to put in IRAM as we reuse task for µs instead ISR
@@ -504,12 +499,12 @@ iohcRadio::setRadioState(iohcRadio::_g_payload ? iohcRadio::RadioState::PAYLOAD 
     }
 
 /**
- * The `sent` function in the `iohcRadio` class checks if a callback function `txCB` is set and calls
+ * The `sent` function checks if a callback function `txCB` is set and calls
  * it with a packet as a parameter, returning the result.
  * 
  * @param packet The `packet` parameter is a pointer to an object of type `iohcPacket`.
  * 
- * @return The `sent` function is returning a boolean value, which is determined by the result of
+ * @return  boolean , which is determined by the result of
  * calling the `txCB` function with the `packet` parameter. If `txCB` is not null, the return value
  * will be the result of calling `txCB(packet)`, otherwise it will be `false`.
  */
@@ -521,11 +516,10 @@ iohcRadio::setRadioState(iohcRadio::_g_payload ? iohcRadio::RadioState::PAYLOAD 
 
     //    static uint8_t RF96lnaMap[] = { 0, 0, 6, 12, 24, 36, 48, 48 };
 /**
- * The `iohcRadio::receive` function in C++ toggles an LED, reads radio data, processes it, and
+ * The `iohcRadio::receive` function toggles an LED, reads radio data, processes it, and
  * triggers a callback function.
  * 
- * @param stats The `stats` parameter in the `iohcRadio::receive` function is a boolean parameter that
- * is used to determine whether to gather additional statistics during the radio reception process. If
+ * @param stats The `stats` boolean used to determine whether to gather additional statistics during the radio reception process. If
  * `stats` is set to `true`, the function will collect and process additional information such as RSSI
  * (Received Signal
  * 

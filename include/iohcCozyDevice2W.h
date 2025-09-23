@@ -69,7 +69,7 @@ namespace IOHC {
         void cmd(DeviceButton cmd, Tokens *data);
         bool load() override;
         bool save() override;
-        static void forgePacket(iohcPacket *packet, const std::vector<uint8_t> &vector);
+        static void forge2WPacket(iohcPacket *packet, const std::vector<uint8_t> &vector);
 
     private:
         iohcCozyDevice2W();

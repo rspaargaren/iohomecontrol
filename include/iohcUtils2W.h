@@ -17,9 +17,11 @@
 #ifndef OTHER_2W_DEVICE_H
 #define OTHER_2W_DEVICE_H
 
+#include <algorithm>
 #include <string>
 #include <vector>
 #include <iohcDevice.h>
+#include <iohcSystemTable.h>
 #include <tokens.h>
 
 #define OTHER_2W_FILE  "/Utils2W.json"
@@ -45,9 +47,29 @@ namespace IOHC {
     };
 
     class iohcUtils2W : public iohcDevice {
+
     public:
         static iohcUtils2W *getInstance();
         ~iohcUtils2W() override = default;
+
+        static std::string extractAndNormalizeName(const uint8_t* buffer, int offset, int length) {
+            std::string result;
+            result.reserve(length);
+
+            for (int i = 0; i < length; i++) {
+                uint8_t byte = buffer[offset + i];
+
+                if (byte == 0) {
+                    continue;
+                } else if (byte >= 32 && byte <= 126) {
+                    result.push_back(std::toupper(static_cast<char>(byte)));
+                } else {
+                    result.push_back('_');
+                }
+            }
+
+            return result.empty() ? "UNKNOWN" : result;
+        }
 
         // Put that in json
         address gateway/*[3]*/ = {0xba, 0x11, 0xad};
@@ -62,32 +84,53 @@ namespace IOHC {
         void cmd(Other2WButton cmd, Tokens *data);
         bool load() override;
         bool save() override;
+
+        // bool save() override;
         void initializeValid();
         void scanDump();
         std::map<uint8_t, int> mapValid;
 //        void scanDump() override {}
 
-        static void forgePacket(iohcPacket *packet, const std::vector<uint8_t> &vector, size_t typn);
+        static void forgeAnyWPacket(iohcPacket *packet, const std::vector<uint8_t> &vector, size_t typn);
+
+
+        std::vector<Device> devices;
+        std::string getDescription(const Device &device)    {
+            auto it = std::ranges::find(devices, device);
+            if (it != devices.end()) return it->_description;
+            return "";
+        }
+        bool addOrUpdateDevice(const Device &device) {
+            auto it = std::ranges::find(devices, device);
+            if (it != devices.end()) {
+                bool modified = false;
+                if (it->_description != device._description) {
+                    it->_description = device._description;
+                    modified = true;
+                }
+                if (memcmp(device._associated, device._node, sizeof(address)) != 0) {
+                    memcpy(it->_associated, device._associated, sizeof(address));
+                    modified = true;
+                }
+                if (it->_type != device._type) {
+                    it->_type = device._type;
+                    modified = true;
+                }
+                return modified;
+            } else {
+                devices.push_back(device);
+                return true;
+            }
+        }
 
     private:
         iohcUtils2W();
         static iohcUtils2W *_iohcOtherDevice2W;
 
     protected:
-        //            unsigned long relStamp;
-        //            uint8_t source_originator[3] = {0};
-        address _node{};
-        address _dst{};
-        std::string _type;
-        //            uint16_t _sequence;
-        //            uint8_t _key[16];
-        //            std::vector<uint16_t> _type;
-        //            uint8_t _manufacturer;
 
-        //            IOHC::iohcPacket *packets2send[2]; //[25];
-        // std::array<iohcPacket*, 25> packets2send{};
         std::vector<iohcPacket *> packets2send{};
-        //            IOHC::iohcRadio *_radioInstance;
+
     };
 }
 #endif

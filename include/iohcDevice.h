@@ -63,6 +63,43 @@ namespace IOHC {
             RECEIVED_STATUS_0xFE = 0xfe, SEND_STATUS_0xFE = 0xfe,
         };
 
+        typedef struct _dev {
+            address _node{};
+            address _dst{};
+            std::string _type;
+            std::string _description;
+            address _associated{};
+
+            _dev() = default;
+
+            _dev(address source, address target) {
+                memcpy(_node, source, sizeof(address));
+                memcpy(_dst, target, sizeof(address));
+                _type = "";
+                _description = "";
+            }
+
+            friend bool operator==(const _dev &lhs, const _dev &rhs) {
+                return memcmp(lhs._node, rhs._node, sizeof(address)) == 0 && memcmp(lhs._dst, rhs._dst, sizeof(address)) == 0;
+            }
+
+            _dev(const _dev& other) {
+                memcpy(_node, other._node, sizeof(address));
+                memcpy(_dst, other._dst, sizeof(address));
+                _description = other._description;
+                memcpy(_associated, other._associated, sizeof(address));
+            }
+            _dev& operator=(const _dev& other) {
+                if (this != &other) {
+                    memcpy(_node, other._node, sizeof(address));
+                    memcpy(_dst, other._dst, sizeof(address));
+                    _description = other._description;
+                    memcpy(_associated, other._associated, sizeof(address));
+                }
+                return *this;
+            }
+        } Device;
+
     protected:
         bool Fake = false;
         bool Home = false;

@@ -68,7 +68,7 @@ namespace IOHC {
         return _iohcRemote1W;
     }
 
-    void iohcRemote1W::forgePacket(iohcPacket* packet, uint16_t typn) {
+    void iohcRemote1W::forge1WPacket(iohcPacket* packet, uint16_t typn) {
         IOHC::relStamp = esp_timer_get_time();
 
         packet->payload.packet.header.CtrlByte1.asStruct.Protocol = 1;
@@ -141,7 +141,7 @@ namespace IOHC {
             case RemoteButton::Pair: {
                 // 0x2e: 0x1120 + target broadcast + source + 0x2e00 + sequence + hmac
                 auto* packet = new iohcPacket();
-                forgePacket(packet, r.type[0]);
+                forge1WPacket(packet, r.type[0]);
 
                 // Update Packet length
                 packet->payload.packet.header.CtrlByte1.asStruct.MsgLen += sizeof(_p0x2e);
@@ -169,8 +169,6 @@ namespace IOHC {
                 packet->buffer_length = packet->payload.packet.header.CtrlByte1.asStruct.MsgLen + 1;
 
                 packets2send.push_back(packet);
-
-                digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
                 _radioInstance->send(packets2send);
 #if defined(SSD1306_DISPLAY)
                 display1WAction(r.node, remoteButtonToString(cmd), "TX", r.name.c_str());
@@ -184,7 +182,7 @@ namespace IOHC {
             case RemoteButton::Remove: {
                 // 0x39: 0x1c00 + target broadcast + source + 0x3900 + sequence + hmac
                 auto* packet = new iohcPacket();
-                forgePacket(packet, r.type[0]);
+                forge1WPacket(packet, r.type[0]);
 
                 // Update Packet length
                 packet->payload.packet.header.CtrlByte1.asStruct.MsgLen += sizeof(_p0x2e);
@@ -212,10 +210,7 @@ namespace IOHC {
                 packet->buffer_length = packet->payload.packet.header.CtrlByte1.asStruct.MsgLen + 1;
 
                 packets2send.push_back(packet);
-            // delete packet;
-                digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
-//                }
-            _radioInstance->send(packets2send);
+                _radioInstance->send(packets2send);
 
 #if defined(SSD1306_DISPLAY)
                 display1WAction(r.node, remoteButtonToString(cmd), "TX", r.name.c_str());
@@ -228,39 +223,36 @@ namespace IOHC {
 
             case RemoteButton::Add: {
                 // 0x30: 0x1100 + target broadcast + source + 0x3000 + ???
-                    auto* packet = new iohcPacket();
-                    forgePacket(packet, r.type[0]);
-                    // Update Packet length
-                    packet->payload.packet.header.CtrlByte1.asStruct.MsgLen += sizeof(_p0x30);
+                auto* packet = new iohcPacket();
+                forge1WPacket(packet, r.type[0]);
+                // Update Packet length
+                packet->payload.packet.header.CtrlByte1.asStruct.MsgLen += sizeof(_p0x30);
 
-                    // Source (me)
-                    for (size_t i = 0; i < sizeof(address); i++)
-                        packet->payload.packet.header.source[i] = r.node[i];
-                    //Command
-                    packet->payload.packet.header.cmd = 0x30;
+                // Source (me)
+                for (size_t i = 0; i < sizeof(address); i++)
+                    packet->payload.packet.header.source[i] = r.node[i];
+                //Command
+                packet->payload.packet.header.cmd = 0x30;
 
-                    // Encrypted key
-                    uint8_t encKey[16];
-                    memcpy(encKey, r.key, 16);
-                    iohcCrypto::encrypt_1W_key(r.node, encKey);
-                    memcpy(packet->payload.packet.msg.p0x30.enc_key, encKey, 16);
+                // Encrypted key
+                uint8_t encKey[16];
+                memcpy(encKey, r.key, 16);
+                iohcCrypto::encrypt_1W_key(r.node, encKey);
+                memcpy(packet->payload.packet.msg.p0x30.enc_key, encKey, 16);
 
-                    // Manufacturer
-                    packet->payload.packet.msg.p0x30.man_id = r.manufacturer;
-                    // Data
-                    packet->payload.packet.msg.p0x30.data = 0x01;
-                    // Sequence
-                    packet->payload.packet.msg.p0x30.sequence[0] = r.sequence >> 8;
-                    packet->payload.packet.msg.p0x30.sequence[1] = r.sequence & 0x00ff;
-                    r.sequence += 1;
-                    nvs_write_sequence(r.node, r.sequence);
+                // Manufacturer
+                packet->payload.packet.msg.p0x30.man_id = r.manufacturer;
+                // Data
+                packet->payload.packet.msg.p0x30.data = 0x01;
+                // Sequence
+                packet->payload.packet.msg.p0x30.sequence[0] = r.sequence >> 8;
+                packet->payload.packet.msg.p0x30.sequence[1] = r.sequence & 0x00ff;
+                r.sequence += 1;
+                nvs_write_sequence(r.node, r.sequence);
 
-                    packet->buffer_length = packet->payload.packet.header.CtrlByte1.asStruct.MsgLen + 1;
+                packet->buffer_length = packet->payload.packet.header.CtrlByte1.asStruct.MsgLen + 1;
 
-                    packets2send.push_back(packet);
-
-                    digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
-
+                packets2send.push_back(packet);
                 _radioInstance->send(packets2send);
 #if defined(SSD1306_DISPLAY)
                 display1WAction(r.node, remoteButtonToString(cmd), "TX", r.name.c_str());
@@ -272,7 +264,7 @@ namespace IOHC {
            default: {
                 // 0x00: 0x1600 + target broadcast + source + 0x00 + Originator + ACEI + Main Param + FP1 + FP2 + sequence + hmac
                 auto* packet = new iohcPacket();
-                forgePacket(packet, r.type[0]);
+                forge1WPacket(packet, r.type[0]);
                     // Source (me)
                     for (size_t i = 0; i < sizeof(address); i++)
                         packet->payload.packet.header.source[i] = r.node[i];
@@ -280,7 +272,8 @@ namespace IOHC {
                     packet->payload.packet.header.cmd = 0x00;
                     packet->payload.packet.msg.p0x00_14.origin = 0x01; // Command Source Originator is: 0x01 User
                     uint8_t acei = (r.type[1] == 0) ? 0x43 : 0x67; //0x43; // 0x43 for type 0x00 (telecommande), 0x67 for type 0x01 (interrupteur)
-                    setAcei(packet->payload.packet.msg.p0x00_14.acei, acei);
+                    // setAcei(packet->payload.packet.msg.p0x00_14.acei, acei);
+                    packet->payload.packet.msg.p0x00_14.setAcei(acei);
                     switch (cmd) {
                     // Switch for Main Parameter of cmd 0x00: Open/Close/Stop/Ventilation
                     case RemoteButton::Open:
@@ -438,21 +431,6 @@ Every 9 : 10:31:38.367 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  DATA(1
                     default: // If reaching default here, then cmd is not recognized, then return
                         break; //return;
                 }
-                    /*
-                    if (r.type == 6) { // Vert
-                        //typen
-                        packet->payload.packet.msg.p0x00_14.fp1 = 0x80;
-                        packet->payload.packet.msg.p0x00_14.fp2 = 0xD3;
-                        // Packet length
-                        packet->payload.packet.header.CtrlByte1.asStruct.MsgLen += sizeof(_p0x00_14);
-                    }
-                    */
-                    // if (r.type == 6) { // Jaune
-                    //     packet->payload.packet.msg.p0x00.fp1 = 0x80;
-                    //     packet->payload.packet.msg.p0x00.fp2 = 0xC8;
-                    //     // Packet length
-                    //     packet->payload.packet.header.CtrlByte1.asStruct.MsgLen += sizeof(_p0x00);
-                    // }
                     // hmac
                     uint8_t hmac[16];
                     // frame = std::vector(&packet->payload.packet.header.cmd, &packet->payload.packet.header.cmd + 7);
@@ -521,12 +499,11 @@ Every 9 : 10:31:38.367 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  DATA(1
                     packet->buffer_length = packet->payload.packet.header.CtrlByte1.asStruct.MsgLen + 1;
 
                     packets2send.push_back(packet);
-                    digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
                 }
 
                 // Create 1W 'echo' packets for the associated gateway with cmd 0x20 (size 16 bytes)
                     auto echoPacket = new iohcPacket();
-                    forgePacket(echoPacket, r.type[0]);
+                    forge1WPacket(echoPacket, r.type[0]);
                     echoPacket->payload.packet.header.CtrlByte2.asStruct.LPM = 0;
 
                     // Source (me)

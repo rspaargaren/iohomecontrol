@@ -22,11 +22,7 @@
 #include <tuple>
 #include <vector>
 
-#if defined(ESP8266)
-    #include <Crypto.h>
-    #include <AES.h>
-    #include <CTR.h>
-#elif defined(ESP32)
+#if defined(ESP32)
     #include "mbedtls/aes.h"        // AES functions
 #endif
 

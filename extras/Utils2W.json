@@ -1,3 +1,104 @@
 {
-    "ba11ad":{"type": "gateway", "dst": "ballad"}
+  "054e17": {
+    "node": "0842e3",
+    "type": "",
+    "description": "SALON COTE RUE",
+    "associated": "000000"
+  },
+  "94786e": {
+    "node": "269411",
+    "type": "",
+    "description": "",
+    "associated": "000000"
+  },
+  "904c09": {
+    "node": "0842e3",
+    "type": "",
+    "description": "",
+    "associated": "000000"
+  },
+  "da2ee6": {
+    "node": "0842e3",
+    "type": "",
+    "description": "SALLE _ MANGER ",
+    "associated": "000000"
+  },
+  "14e00e": {
+    "node": "0842e3",
+    "type": "",
+    "description": "CUISINE",
+    "associated": "000000"
+  },
+  "1c6858": {
+    "node": "0842e3",
+    "type": "",
+    "description": "CHAMBRE _TAGE GA",
+    "associated": "000000"
+  },
+  "dfe03f": {
+    "node": "269411",
+    "type": "",
+    "description": "",
+    "associated": "000000"
+  },
+  "4344e3": {
+    "node": "269411",
+    "type": "",
+    "description": "",
+    "associated": "000000"
+  },
+  "a846f6": {
+    "node": "269411",
+    "type": "",
+    "description": "",
+    "associated": "28844e"
+  },
+  "315824": {
+    "node": "0842e3",
+    "type": "",
+    "description": "SALON COTE ",
+    "associated": "000000"
+  },
+  "b3a198": {
+    "node": "269411",
+    "type": "",
+    "description": "",
+    "associated": "a06461"
+  },
+  "415684": {
+    "node": "0842e3",
+    "type": "",
+    "description": "",
+    "associated": "415684"
+  },
+  "fe90ee": {
+    "node": "0842e3",
+    "type": "",
+    "description": "CHAMBRE _TAGE DR",
+    "associated": "000000"
+  },
+  "d58341": {
+    "node": "0842e3",
+    "type": "",
+    "description": "SALLE DE BAIN CH",
+    "associated": "000000"
+  },
+  "e67334": {
+    "node": "269411",
+    "type": "",
+    "description": "",
+    "associated": "78f37b"
+  },
+  "2dbe8d": {
+    "node": "0842e3",
+    "type": "",
+    "description": "CHAMBRE  INES ",
+    "associated": "000000"
+  },
+  "20e52e": {
+    "node": "0842e3",
+    "type": "",
+    "description": "CHAMBRE PARENTAL",
+    "associated": "000000"
+  }
 }

@@ -89,5 +89,31 @@
         "name": "Screen T1",
         "travel_time": 10000,
         "paired": false
-    }
+    },
+  "AD5F00": {
+    "key": "f3a1d67c4b8209eb5d7cf041ea9638b2",
+    "sequence": "5200",
+    "type": [
+      0,
+      0
+    ],
+    "manufacturer_id": 2,
+    "description": "GARAGE",
+    "name": "openstopclose garage",
+    "travel_time": 10000,
+    "paired": false
+  },
+  "9A5CA0": {
+    "key": "f3a1d67c4b8209eb5d7cf041ea9638b2",
+    "sequence": "2c50",
+    "type": [
+      0,
+      1
+    ],
+    "manufacturer_id": 2,
+    "description": "PORTAIL",
+    "name": "Portail Door",
+    "travel_time": 10000,
+    "paired": false
+  }
 }
