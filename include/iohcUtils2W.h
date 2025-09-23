@@ -96,12 +96,11 @@ namespace IOHC {
 
         std::vector<Device> devices;
         std::string getDescription(const Device &device)    {
-            auto it = std::ranges::find(devices, device);
-            if (it != devices.end()) return it->_description;
+            if (const auto it = std::ranges::find(devices, device); it != devices.end()) return it->_description;
             return "";
         }
         bool addOrUpdateDevice(const Device &device) {
-            auto it = std::ranges::find(devices, device);
+            const auto it = std::ranges::find(devices, device);
             if (it != devices.end()) {
                 bool modified = false;
                 if (it->_description != device._description) {

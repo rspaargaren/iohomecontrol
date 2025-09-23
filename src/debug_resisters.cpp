@@ -14,10 +14,10 @@
    limitations under the License.
  */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
 #include <inttypes.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define SX127x_OSCILLATOR_FREQUENCY 32000000.0f
 
