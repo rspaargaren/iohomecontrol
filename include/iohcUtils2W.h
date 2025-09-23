@@ -116,10 +116,9 @@ namespace IOHC {
                     modified = true;
                 }
                 return modified;
-            } else {
-                devices.push_back(device);
-                return true;
             }
+            devices.push_back(device);
+            return true;
         }
 
     private:
