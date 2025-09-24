@@ -2,7 +2,9 @@
 
 # IO-Homecontrol ESP32 Project
 
-Based on the wonderful work of [Velocet/iown-homecontrol](https://github.com/Velocet/iown-homecontrol)
+Based on the wonderful work of:
+[Velocet/iown-homecontrol](https://github.com/Velocet/iown-homecontrol)  
+[cridp/iown-homecontrol-esp32sx1276](https://github.com/cridp/iown-homecontrol-esp32sx1276)
 
 [☕ Support the project on BuyMeACoffee](https://buymeacoffee.com/dyna_mite)
 
