@@ -200,47 +200,49 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Fetch and display remotes
-    async function fetchAndDisplayRemotes() {
+   async function fetchAndDisplayRemotes() {
         try {
             const response = await fetch('/api/remotes');
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             const remotes = await response.json();
 
             const tbody = document.querySelector('#remote-table tbody');
-            tbody.innerHTML = '';
+            tbody.textContent = ''; // leeg
 
-            if (remotes.length === 0) {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `<td colspan="3">No remotes available.</td>`;
-                tbody.appendChild(tr);
-                return;
+            if (!remotes.length) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td colspan="4">No remotes available.</td>`;
+            tbody.appendChild(tr);
+            return;
             }
 
+            const frag = document.createDocumentFragment();
             remotes.forEach(remote => {
-                const tr = document.createElement('tr');
+            const tr = document.createElement('tr'); // <-- nieuw tr per item
 
-                // Show linked device names if available; fall back to raw id/name
-                const linkedDevices = (remote.devices && remote.devices.length > 0)
-                    ? remote.devices.map(d => {
-                        const dev = devicesCache.find(v => v.id === d || v.name === d || v.description === d);
-                        return dev ? dev.name : d;
-                    }).join(', ')
-                    : '0 devices';
+            const linkedDevices = (remote.devices && remote.devices.length)
+                ? remote.devices.map(d => {
+                    const dev = (devicesCache || []).find(v => v.id === d || v.name === d || v.description === d);
+                    return dev ? dev.name : d;
+                }).join(', ')
+                : '0 devices';
 
-                tr.innerHTML = `
-                    <td><div class="remote-id">${remote.id}</div></td>
-                    <td>${remote.name}</td>
-                    <td>${linkedDevices}</td>
-                    <td>
-                    <button class="btn edit" onclick="editRemote('${remote.id}', '${remote.name}')">Edit</button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
+            tr.innerHTML = `
+                <td><div class="remote-id">${remote.id}</div></td>
+                <td>${remote.name}</td>
+                <td>${linkedDevices}</td>
+                <td>
+                <button class="btn edit bg" onclick="editRemote('${remote.id}','${remote.name}')">Edit</button>
+                </td>
+            `;
+            frag.appendChild(tr);
             });
+            tbody.appendChild(frag);
         } catch (error) {
             console.error('Error fetching remotes:', error);
         }
     }
+
     
     // Function to fetch devices and populate the lists
     async function fetchAndDisplayDevices() {
@@ -316,12 +318,16 @@ document.addEventListener('DOMContentLoaded', function() {
                             'Description: ' + (device.description || ''),
                             'Position: ' + device.position + '%',
                             'Paired: ' + (device.paired ? 'Yes' : 'No'),
-                        ], {
+                        ], [""], {
+                        showSave: true,
                         showInput: true,
                         showTiming: true,
                         btnShowDelete: true,
                         defaultValue: device.name,
                         defaultTiming: device.travel_time,
+                        showBoolean: true,
+                        booleanLabel: 'Active',
+                        defaultBoolean: device.active,  // bv. uit je data
                         pairLabel: 'Add / Remove the device to the physical screen',
                         deleteInfo: 'Only use when the device is not linked to a physical screen.',
                         onSave: async (newName, newTiming) => {
@@ -547,7 +553,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Device positions are updated via WebSocket
 
     // popup open
-    function openPopup(title, label, items = [], options = {}) {
+    function openPopup(title, label, items = [], Content = [], options = {}) {
         const labelInput = document.getElementById('label-input');
         const labelTiming = document.getElementById('label-timing');
         const inputTiming = document.getElementById('popup-input-timing');
@@ -562,10 +568,14 @@ document.addEventListener('DOMContentLoaded', function() {
         const cancelBtn = document.getElementById('popup-cancel');
         const input = document.getElementById('popup-input');
         const saveBtn = document.getElementById('popup-save');
+        const boolRow = document.getElementById('popup-boolean-row');
+        const boolInput = document.getElementById('popup-boolean');
+        const boolLabel = document.getElementById('popup-boolean-label');
+        const contentText = document.getElementById('popup-content');
+        const leftContent = document.getElementById('popup-content-left');
 
         document.getElementById('popup-title').textContent = title;
         labelInput.textContent = label;
-
         const showDevicePopup = options && options.showDevicePopup;
         devicePopupLabel.style.display = showDevicePopup ? 'block' : 'none';
         devicePopup.style.display = showDevicePopup ? 'block' : 'none';
@@ -578,12 +588,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 devicePopup.appendChild(opt);
             });
         }
-
+        const showBoolean = !!options.showBoolean;
+        boolRow.style.display = showBoolean ? 'flex' : 'none';
+        if (showBoolean) {
+            boolInput.checked = !!options.defaultBoolean;
+        }
         const showInput = options && options.showInput;
         input.style.display = showInput ? 'block' : 'none';
         labelInput.style.display = showInput ? 'block' : 'none';
         input.value = options.defaultValue || '';
-
+        const showSave = options && options.showSave;
+        saveBtn.style.display = showSave ? 'block' : 'none';
         const showTiming = options && options.showTiming;
         labelTiming.style.display = showTiming ? 'block' : 'none';
         inputTiming.style.display = showTiming ? 'block' : 'none';
@@ -597,7 +612,10 @@ document.addEventListener('DOMContentLoaded', function() {
         cancelBtn.style.display = btnShowCancel ? 'block' : 'none';
         // items is een array van strings
         const content = items.map(i => `<p>${i}</p>`).join('');
-        document.getElementById('popup-content').innerHTML = content;
+        contentText.innerHTML = content;
+        const contentLeft = Content.map(i => `<p>${i}</p>`).join('');
+        leftContent.innerHTML = contentLeft;
+
         // pair & unpair // link & unlink
         const pairBtnN = options.pairBtnName || 'Pair';
         const unpairBtnN = options.unpairBtnName || 'Unpair';
@@ -702,12 +720,13 @@ document.addEventListener('DOMContentLoaded', function() {
         openPopup('Edit Remote', "Adjust the name/devices:", [
             'remote id: ' + remoteId,
             'name: ' + remoteName,
-        ], {
+        ], [""], {
             showInput: true,
             showDevicePopup: true,
             btnShowDelete: true,
+            showSave: true,
             defaultValue: remoteName,
-            pairLabel: 'link / Unlink the device to the physical screen',
+            pairLabel: 'link / Unlink the remote',
             pairBtnName: 'Link',
             unpairBtnName: 'Unlink',
             onPair: async (deviceId) => {
@@ -795,13 +814,67 @@ document.addEventListener('DOMContentLoaded', function() {
       if (savedTheme === 'dark') {
         body.classList.add('dark-mode');
       }
-      
+      const helpDeviceBtn = document.getElementById('help-device');
+      helpDeviceBtn.addEventListener('click', () => {
+        openPopup('Help', "help device", [
+                            'Nederlands',
+                            'Stap 1: Devices → (+) ',
+                            'Maak een nieuw screen aan.',
+                            'Stap 2: Open het wieltje (Edit) ',
+                            'Ga naar de instellingen van dat screen.',
+                            'Stap 3: Zet de fysieke remote in pair mode',
+                            'Het screen gaat kort op en neer.',
+                            'Stap 4: In Edit → Pair',
+                            'Klik Pair in de webpagina. Het screen gaat opnieuw op en neer.',
+                            'Stap 5: → Gekoppeld.',
+                        ], [
+                            'English',
+                            'Step 1: Devices → (+) ',
+                            'Create a new screen.',
+                            'Step 2: Open the gear (Edit) ',
+                            'Go to that screen\'s settings.',
+                            'Step 3: Put the physical remote in pairing mode',
+                            'The screen will briefly move up and down.',
+                            'Step 4: In Edit → Pair',
+                            'Click Pair in the web page. The screen will move up and down again.',
+                            'Step 5: → Paired.',
+                        ],  {
+                           showSave: false,
+                       });
+      });
+      const helpRemoteBtn = document.getElementById('help-remote');
+      helpRemoteBtn.addEventListener('click', () => {
+        openPopup('Help', "help remote", [
+                            'Nederlands',
+                            'Stap 1: Remotes → (+) ',
+                            'Maak een nieuwe remote aan.',
+                            'Stap 2: Controleer ID',
+                            'De ID moet overeenkomen met die van de fysieke remote.',
+                            '(Is standaard ingevuld op basis van het laatste command.)',
+                            'Stap 3: Klik op Edit (pop-up)',
+                            'Link hier de eerder aangemaakte screen aan deze remote.',
+                            'Stap 4: → Klaar.',
+                        ],[
+                            'English',
+                            'Step 1: Remotes → (+) ',
+                            'Create a new remote.',
+                            'Step 2: Check the ID',
+                            'The ID must match that of the physical remote.',
+                            '(It is pre-filled based on the last command.)',
+                            'Step 3: Click Edit (pop-up)',
+                            'Link the previously created screen to this remote here.',
+                            'Step 4: → Done.',
+                        ], {
+                           showSave: false,
+                       });
+      });
       // popup for adding devices
       const addpopup = document.getElementById('add-popup');
       addpopup.addEventListener('click', () => {
          openPopup('Add Device', "new device", [
             'here add your device',
-           ], {
+           ], [""], {
+           showSave: true,
            showInput: true,
            btnShowDelete: false,
            btnShowCancel: false,
@@ -832,7 +905,8 @@ document.addEventListener('DOMContentLoaded', function() {
       remotePopup.addEventListener('click', () => {
          openPopup('Add Remote', 'Remote ID:', [
             'here add your remote',
-         ], {
+         ], [""], {
+           showSave: true,
            showInput: true,
            showTiming: true,
            btnShowDelete: false,

@@ -28,6 +28,7 @@
 
                     <div class="title">
                         <h2>Devices</h2>
+                        <div class="btn help" id="help-device"></div>
                         <div class="btn add" id="add-popup"></div>
                     </div>
 
@@ -42,7 +43,9 @@
             <div class="right">
                 <section id="status-section">
                     <div class="title">
-                        <h2>remote <div class="btn add" id="remote-popup"></div></h2>
+                        <h2>remote</h2>
+                        <div class="btn help" id="help-remote"></div>
+                        <div class="btn add" id="remote-popup"></div>
                     </div>
                     <div class="card">
                         <table id="remote-table">
@@ -122,14 +125,14 @@
                         <div class="devices-line">
                             <input type="file" id="devices-file" accept=".json"> 
                             <button id="upload-devices">Upload Devices</button>
+                            <button id="download-devices">Download Devices</button>
                         </div>
-                        <button id="download-devices">Download Devices</button>
                         <label for="remotes-file">Remotes:</label>
                         <div class="remotes-line">
                             <input type="file" id="remotes-file" accept=".json">
                             <button id="upload-remotes">Upload Remotes</button>
+                            <button id="download-remotes">Download Remotes</button>
                         </div>
-                        <button id="download-remotes">Download Remotes</button>
                     </div>
                 </section>
             </div>
@@ -183,10 +186,15 @@
             </div>
             <div class="card-popup">
                 <div id="left">
+                    <p id="popup-content-left">  </p>
                     <label for="popup-input" id="label-input">device:</label>
                     <input type="text" id="popup-input" placeholder="Typ hier..." autocomplete="off">
                     <label for="popup-input-timing" id="label-timing">timing:</label>
                     <input type="text" id="popup-input-timing" placeholder="Typ hier..." autocomplete="off">
+                    <label id="popup-boolean-row" style="display:none; gap:8px; align-items:center;">
+                        <span id="popup-boolean-label">solar energy</span>
+                        <input type="checkbox" id="popup-boolean">
+                    </label>
                     <label for="select-device" class="device-popup-label">device-select:</label>
                     <select id="device-select" class="device-popup">
                         <!-- Options will be populated by JavaScript -->
