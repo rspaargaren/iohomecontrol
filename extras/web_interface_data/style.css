@@ -15,7 +15,7 @@
     --color-input: #a2a2a2; /* Light gray for input fields */
     --color-text: #000; /* Black text for light mode */
     --color-header-text: #fff;  /* White text for header */
-    --popup-background: #fcfbfb;
+    --popup-background: #fcfbfb91;
 }
 .dark-mode {
     --color-accent: #6a4e67;
@@ -197,6 +197,20 @@ th {
 .btn.close {
   background: url("img/close.svg") no-repeat;
 }
+.btn.help {
+  background: url("img/help.svg") no-repeat;
+}
+.title .help {
+    right: 50px;
+}
+#remote-table .btn.edit.bg {
+  top: -2px;
+  left: 0;
+  right: 0;
+  border: 0;
+  background-color: var(--color-accent2);
+  padding: 14px;
+}
 button {
   background-color: var(--color-accent3);
   color: var(--color-header-text);
@@ -255,6 +269,7 @@ footer {
     align-items: center;
     justify-content: center;
     z-index: 1000;
+    backdrop-filter: blur(0.7rem);
 }
 .popup-container{
   min-width: 350px;
@@ -262,7 +277,7 @@ footer {
   color: var(--color-text);
 }
 .popup-container > .card-popup {
-  background: #fcfbfb91;
+  background: var(--popup-background);
   padding: 16px;
   border-radius: 0 0px var(--radius) var(--radius);
 }
