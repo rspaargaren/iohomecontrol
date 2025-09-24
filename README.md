@@ -4,7 +4,7 @@ Based on the wonderful work of [Velocet/iown-homecontrol](https://github.com/Vel
 
 [☕ Support the project on BuyMeACoffee](https://buymeacoffee.com/dyna_mite)
 
-<img src="https://github.com/user-attachments/assets/f6b606a1-0eca-4fd6-a509-d5d1136b2d31" alt="smlogo" width="250"/>
+<img src="https://github.com/user-attachments/assets/f6b606a1-0eca-4fd6-a509-d5d1136b2d31" alt="smlogo" width="150"/>
 
 ---
 
