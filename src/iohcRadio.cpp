@@ -343,6 +343,9 @@ void iohcRadio::send(std::vector<iohcPacket *> &iohcTx) {
     Radio::clearFlags();
     Radio::writeBytes(REG_FIFO, iohc->payload.buffer, iohc->buffer_length);
     Radio::setTx();
+    //packetStamp = esp_timer_get_time();
+    //iohc->decode(true); //false);
+    //IOHC::lastSendCmd = iohc->payload.packet.header.cmd;
 
     ets_printf("TX: Sent first packet at %llu us\n", esp_timer_get_time());
 
@@ -382,8 +385,7 @@ void iohcRadio::onTxTicker(void *arg) {
 
     // ✅ TXDONE received
     radio->txComplete = false;
-    ets_printf("TX: TXDONE flag set, ready to send repeat or next packet.\n");
-    ESP_LOGD("RADIO", "TX: TXDONE flag set, LOGD.\n");
+    ESP_LOGD("RADIO", "TXDONE flag set, ready to send repeat or next packet.\n");
 
     // 🔁 Repeat logic
     if (radio->iohc->repeat > 0) {
@@ -408,6 +410,7 @@ void iohcRadio::onTxTicker(void *arg) {
         radio->setRadioState(RadioState::RX);
         return;
     } else {
+        //Radio::setRx();
         radio->setRadioState(RadioState::TX); // Stay TX until done
     }
 
@@ -417,6 +420,9 @@ void iohcRadio::onTxTicker(void *arg) {
     Radio::clearFlags();
     Radio::writeBytes(REG_FIFO, radio->iohc->payload.buffer, radio->iohc->buffer_length);
     Radio::setTx();
+    //packetStamp = esp_timer_get_time();
+    //radio->iohc->decode(true); //false);
+    //IOHC::lastSendCmd = radio->iohc->payload.packet.header.cmd;
 
     ets_printf("TX: Sent packet %d/%d at %llu us\n",
                radio->txCounter + 1,
