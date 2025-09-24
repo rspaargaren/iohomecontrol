@@ -1,5 +1,7 @@
 Based on the wonderfull work of [Velocet/iown-homecontrol](https://github.com/Velocet/iown-homecontrol)
 
+https://buymeacoffee.com/dyna_mite
+
 ![smlogo](https://github.com/user-attachments/assets/f6b606a1-0eca-4fd6-a509-d5d1136b2d31)
 
 ### **Disclaimer**  
