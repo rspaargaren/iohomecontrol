@@ -9,8 +9,7 @@ Based on the wonderful work of [Velocet/iown-homecontrol](https://github.com/Vel
 ---
 
 ### 📖 Documentation & Wiki
-- [🇳🇱 Help (Dutch)](./Help.md)  
-- [🇬🇧 Help (English)](./Help_EN_Custom.md)  
+[- Duthc & English help ](https://github.com/rspaargaren/iohomecontrol/wiki)
 
 ---
 
