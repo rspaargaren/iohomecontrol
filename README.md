@@ -1,15 +1,16 @@
+<img src="https://github.com/user-attachments/assets/f6b606a1-0eca-4fd6-a509-d5d1136b2d31" alt="smlogo" width="50"/>
 # IO-Homecontrol ESP32 Project
 
 Based on the wonderful work of [Velocet/iown-homecontrol](https://github.com/Velocet/iown-homecontrol)
 
 [☕ Support the project on BuyMeACoffee](https://buymeacoffee.com/dyna_mite)
 
-<img src="https://github.com/user-attachments/assets/f6b606a1-0eca-4fd6-a509-d5d1136b2d31" alt="smlogo" width="150"/>
+
 
 ---
 
 ### 📖 Documentation & Wiki
-[- Duthc & English help ](https://github.com/rspaargaren/iohomecontrol/wiki)
+[- Dutch & English help ](https://github.com/rspaargaren/iohomecontrol/wiki)
 
 ---
 
