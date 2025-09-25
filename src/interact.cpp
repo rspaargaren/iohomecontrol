@@ -17,7 +17,7 @@
 #include <interact.h>
 #include <iohcCozyDevice2W.h>
 // #include <iohcCryptoHelpers.h>
-#include <iohcUtils2W.h>
+#include <iohcOther2W.h>
 #include <iohcRemote1W.h>
 // #include <oled_display.h>
 // #include <wifi_helper.h>
@@ -80,11 +80,11 @@ namespace Cmd {
         });
         Cmd::addHandler("custom", "test unknown commands", [](Tokens *cmd)-> void {
             /*scanMode = true;*/
-            IOHC::iohcUtils2W::getInstance()->cmd(IOHC::Other2WButton::custom, cmd /*cmd->at(1).c_str()*/);
+            IOHC::iohcOther2W::getInstance()->cmd(IOHC::Other2WButton::custom, cmd /*cmd->at(1).c_str()*/);
         });
         Cmd::addHandler("custom60", "test 0x60 commands", [](Tokens *cmd)-> void {
             /*scanMode = true;*/
-            IOHC::iohcUtils2W::getInstance()->cmd(IOHC::Other2WButton::custom60, cmd /*cmd->at(1).c_str()*/);
+            IOHC::iohcOther2W::getInstance()->cmd(IOHC::Other2WButton::custom60, cmd /*cmd->at(1).c_str()*/);
         });
         // 1W
         Cmd::addHandler("pair", "1W put device in pair mode", [](Tokens *cmd)-> void {
@@ -125,18 +125,18 @@ namespace Cmd {
         });
         // Other 2W
         Cmd::addHandler("discovery", "Send discovery on air", [](Tokens *cmd)-> void {
-            IOHC::iohcUtils2W::getInstance()->cmd(IOHC::Other2WButton::discovery, nullptr);
+            IOHC::iohcOther2W::getInstance()->cmd(IOHC::Other2WButton::discovery, nullptr);
         });
         Cmd::addHandler("getName", "Name Of A Device", [](Tokens *cmd)-> void {
-            IOHC::iohcUtils2W::getInstance()->cmd(IOHC::Other2WButton::getName, cmd);
+            IOHC::iohcOther2W::getInstance()->cmd(IOHC::Other2WButton::getName, cmd);
         });
         Cmd::addHandler("scanMode", "scanMode", [](Tokens *cmd)-> void {
             scanMode = true;
-            IOHC::iohcUtils2W::getInstance()->cmd(IOHC::Other2WButton::checkCmd, nullptr);
+            IOHC::iohcOther2W::getInstance()->cmd(IOHC::Other2WButton::checkCmd, nullptr);
         });
         Cmd::addHandler("scanDump", "Dump Scan Results", [](Tokens *cmd)-> void {
             scanMode = false;
-            IOHC::iohcUtils2W::getInstance()->scanDump();
+            IOHC::iohcOther2W::getInstance()->scanDump();
         });
         Cmd::addHandler("verbose", "Toggle verbose output on packets list", [](Tokens *cmd)-> void { verbosity = !verbosity;
         });
@@ -174,15 +174,15 @@ namespace Cmd {
         */
         // Unnecessary just for test
         Cmd::addHandler("discover28", "discover28", [](Tokens *cmd)-> void {
-            IOHC::iohcUtils2W::getInstance()->cmd(IOHC::Other2WButton::discover28, nullptr);
+            IOHC::iohcOther2W::getInstance()->cmd(IOHC::Other2WButton::discover28, nullptr);
         });
 
         Cmd::addHandler("discover2A", "discover2A", [](Tokens *cmd)-> void {
-            IOHC::iohcUtils2W::getInstance()->cmd(IOHC::Other2WButton::discover2A, nullptr);
+            IOHC::iohcOther2W::getInstance()->cmd(IOHC::Other2WButton::discover2A, nullptr);
         });
 
         Cmd::addHandler("fake0", "fake0", [](Tokens *cmd)-> void {
-            IOHC::iohcUtils2W::getInstance()->cmd(IOHC::Other2WButton::fake0, nullptr);
+            IOHC::iohcOther2W::getInstance()->cmd(IOHC::Other2WButton::fake0, nullptr);
         });
         /*
         Cmd::addHandler((char *) "ack", (char *) "ack33", [](Tokens *cmd)-> void {
