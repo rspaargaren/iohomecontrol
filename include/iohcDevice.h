@@ -76,7 +76,7 @@ namespace IOHC {
                 memcpy(_node, source, sizeof(address));
                 memcpy(_dst, target, sizeof(address));
                 _type = "";
-                _description = "";
+                _description = "NONAME";
             }
 
             friend bool operator==(const _dev &lhs, const _dev &rhs) {

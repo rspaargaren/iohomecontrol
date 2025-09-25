@@ -15,7 +15,7 @@
  */
 
 #include <iohcDevice.h>
-#include <iohcUtils2W.h>
+#include <iohcOther2W.h>
 #include <LittleFS.h>
 #include <ArduinoJson.h>
 #include <iohcCryptoHelpers.h>
@@ -25,13 +25,13 @@
 #include <numeric>
 
 namespace IOHC {
-    iohcUtils2W *iohcUtils2W::_iohcOtherDevice2W = nullptr;
+    iohcOther2W *iohcOther2W::_iohcOtherDevice2W = nullptr;
 
-    iohcUtils2W::iohcUtils2W() = default;
+    iohcOther2W::iohcOther2W() = default;
 
-    iohcUtils2W *iohcUtils2W::getInstance() {
+    iohcOther2W *iohcOther2W::getInstance() {
         if (!_iohcOtherDevice2W) {
-            _iohcOtherDevice2W = new iohcUtils2W();
+            _iohcOtherDevice2W = new iohcOther2W();
             _iohcOtherDevice2W->load();
             _iohcOtherDevice2W->initializeValid();
         }
@@ -40,7 +40,7 @@ namespace IOHC {
 
     address fake_gateway = {0xba, 0x11, 0xad};
 
-    void iohcUtils2W::forgeAnyWPacket(iohcPacket *packet, const std::vector<uint8_t> &toSend, size_t typn = 0) {
+    void iohcOther2W::forgeAnyWPacket(iohcPacket *packet, const std::vector<uint8_t> &toSend, size_t typn = 0) {
         IOHC::relStamp = esp_timer_get_time();
 
         packet->payload.packet.header.cmd = 0x2A; //0x28; //typn;
@@ -62,7 +62,7 @@ namespace IOHC {
         packet->buffer_length = toSend.size() + 9;
     }
 
-    void iohcUtils2W::cmd(Other2WButton cmd, Tokens *data) {
+    void iohcOther2W::cmd(Other2WButton cmd, Tokens *data) {
         if (!_radioInstance) {
             ets_printf("NO RADIO INSTANCE\n");
             _radioInstance = iohcRadio::getInstance();
@@ -285,40 +285,26 @@ for (const auto &d: devices) {
 
                 std::vector<uint8_t> toSend ={0x03, 0x00, 0x00}; //{0x03, 0xe7, 0x32, 0x00, 0x00, 0x00};
                  //  Not good for Cmd 0x01 Answer FE 0x10
-
-                address gateway = {0xba, 0x11, 0xad}; //{0x08, 0x42, 0xe3};
-                address GW2 = {0x26, 0x94,0x11}; address GW1 = {0x08, 0x42, 0xe3}; //data->at(1).c_str(); //
-
-                // Those are the local reals discovered device, can be huge, and must but put in 2W.json
-                address guessed[21] = {
-                    {0x2D, 0xBE, 0x8D}, {0xDA, 0x2E, 0xE6}, {0x31, 0x58, 0x24}, {0x20, 0xE5, 0x2E}, {0x14, 0xe0, 0x0e},
-                    {0x05, 0x4E, 0x17}, {0x1C, 0x68, 0x58}, {0x90, 0x4c, 0x09}, {0xfe, 0x90, 0xee}, {0x41, 0x56, 0x84},
-                    {0x08, 0x42, 0xe3},
-                    // GW2
-                    {0x26, 0x94,0x11}, {0x43, 0x44, 0xe3}, {0x94, 0x78,0x6e}, {0x58, 0xe4, 0x00}, {0xe6, 0x73, 0x34}, {0xa8, 0x46, 0xf6},
-                    {0x47, 0x77, 0x06}, {0x48, 0x79, 0x02}, {0x8C, 0xCB, 0x30}, {0x8C, 0xCB, 0x31}
-                };
-
-//                packets2send.clear();
+                
                 size_t i = 0;
-                for (i = 0; i < 21; i++) {
+                for (const auto &d: devices) { //for (i = 0; i < 21; i++) {
                     packets2send.push_back(new iohcPacket);
                     forgeAnyWPacket(packets2send.back(), toSend);
 
-                    packets2send.back()->payload.packet.header.cmd = 0x00;
+                    packets2send.back()->payload.packet.header.cmd = 0x03;
                     memorizeOther2W.memorizedData = toSend;
                     memorizeOther2W.memorizedCmd = 0x00;
                     IOHC::lastSendCmd = 0x00;
 
                     packets2send.back()->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
 
-                    packets2send.back()->payload.packet.header.CtrlByte2.asStruct.LPM = 1;
+                    // packets2send.back()->payload.packet.header.CtrlByte2.asStruct.LPM = 1;
                     // packets2send.back()->payload.packet.header.CtrlByte2.asStruct.Unk1 = 1;
 
-                    memcpy(packets2send.back()->payload.packet.header.source, GW2/*gateway*/, 3);
-                    memcpy(packets2send.back()->payload.packet.header.target, guessed[i], 3);
+                    memcpy(packets2send.back()->payload.packet.header.source, d._node, 3);
+                    memcpy(packets2send.back()->payload.packet.header.target, d._dst, 3);
 
-                    packets2send.back()->delayed = 250; // Give enough time for the answer
+                    packets2send.back()->delayed = 150; // Give enough time for the answer
                 }
 
                 _radioInstance->send(packets2send);
@@ -442,7 +428,7 @@ for (const auto &d: devices) {
      00 04 - 01 04 - 03 04 - 0a 0D - 0c 0D - 19 1a - 1e fe - 20 21 - 23 24 - 28 29 - 2a(12) 2b - 2c 2d - 2e 2f - 31 3c - 32(16) 33 - 36 37 - 38(6) 32 - 39 fe - 3c(6) 3d - 46(9) 47 - 48(9) 49 - 4a(18) 4b
      50 51 - 52(16) 53 - 54 55 - 56 57 - 60(21) .. - 64(2) 65 - 6e(9) fe - 6f(9) .. - 71 72 - 73(3) .. - 80 81 - 82(21) .. - 84  85 - 86 87 - 88 89 - 8a(18) 8c - 8b(1) 8c - 8e .. - 90 91 - 92(16) 93 - 94 95 - 96(12) 97 - 98 99
      EE 03 ??*/
-    void iohcUtils2W::initializeValid() {
+    void iohcOther2W::initializeValid() {
         size_t validKey = 0;
         auto valid = std::vector<uint8_t>(255);
         std::iota(valid.begin(), valid.end(), 0);
@@ -469,7 +455,7 @@ for (const auto &d: devices) {
     /**
     * @brief Dump the scan result to the console for debugging purposes.
     */
-    void iohcUtils2W::scanDump() {
+    void iohcOther2W::scanDump() {
         ets_printf("*********************** Scan result ***********************\n");
 
         uint8_t count = 0;
@@ -505,7 +491,7 @@ for (const auto &d: devices) {
     * @brief Load Cozy 2W settings from file and store in _radioInstance.
     * @return True if successful false otherwise. This is a blocking call
     */
-    bool iohcUtils2W::load() {
+    bool iohcOther2W::load() {
         _radioInstance = iohcRadio::getInstance();
         // Load Cozy 2W device settings from file
         if (LittleFS.exists(OTHER_2W_FILE))
@@ -544,7 +530,7 @@ for (const auto &d: devices) {
         return true;
     }
 
-    bool iohcUtils2W::save() {
+    bool iohcOther2W::save() {
         fs::File f = LittleFS.open(OTHER_2W_FILE, "w");
 
         JsonDocument doc;

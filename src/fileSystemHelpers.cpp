@@ -33,10 +33,9 @@ void printFileInfo(const char* dirName, const char* filePath, uint8_t level) {
   File file = LittleFS.open((String(dirName) + String(filePath)).c_str(), "r");
   if (!file.isDirectory()) {
     std::string depth((level), '\t');
-    Serial.printf("%s", depth.c_str());
-    Serial.print(filePath);
-    Serial.print("\t\t");
-    Serial.println(file.size());
+    ets_printf("%s", depth.c_str());
+    ets_printf(filePath);
+    ets_printf("\t\t%d\n",file.size());
   }
   file.close();
 }
@@ -60,8 +59,8 @@ void traverseDirectory(const char* dirName, uint8_t level) {
   while (fileName = root.openNextFile()) {
     if(fileName.isDirectory()){
       std::string depth((level), '\t');
-      Serial.printf("%s", depth.c_str());
-      Serial.printf("%s\n", fileName.name());
+      ets_printf("%s", depth.c_str());
+      ets_printf("%s\n", fileName.name());
       traverseDirectory((String(dirName) + "/" + fileName).c_str(), level+1);
     } else {
       printFileInfo(dirName, fileName.name(), level);
@@ -85,12 +84,12 @@ void listFS() {
  */
 void cat(const char *fname) {
     if (!LittleFS.exists(fname)) {
-      Serial.printf("File %s does not exists\n\n", fname);
+      ets_printf("File %s does not exists\n\n", fname);
       return;
     }
     File file = LittleFS.open(fname, "r");
     String record = file.readString();
-    Serial.printf("%s\n", record.c_str());
+    ets_printf("%s\n", record.c_str());
     file.close();
 }
 
@@ -104,7 +103,7 @@ void cat(const char *fname) {
  */
 void rm(const char *fname) {
     if (!LittleFS.exists(fname)) {
-      Serial.printf("File %s does not exists\n\n", fname);
+      ets_printf("File %s does not exists\n\n", fname);
       return;
     }
     LittleFS.remove(fname);

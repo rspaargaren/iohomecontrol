@@ -20,7 +20,7 @@
 #include <iohcDevice.h>
 #include <iohcPacket.h>
 #include <iohcSystemTable.h>
-#include <iohcUtils2W.h>
+#include <iohcOther2W.h>
 #include <iomanip>
 #include <sstream>
 #include <utils.h>
@@ -262,13 +262,19 @@ namespace IOHC {
                 if (this->payload.packet.header.cmd == iohcDevice::RECEIVED_DISCOVER_ACTUATOR_0x2C) {ets_printf("2W Actuator Ack Asked Waiting for 0x2D");}
                 if (this->payload.packet.header.cmd == iohcDevice::RECEIVED_LAUNCH_KEY_TRANSFERT_0x38) {ets_printf("2W Key Transfert Asked after Command %2.2X Waiting for 0x32", this->payload.packet.header.cmd);}
 
-                if (this->payload.packet.header.cmd == iohcDevice::RECEIVED_GET_NAME_ANSWER_0x51) {
-                    std::string normalizedDescription = iohcUtils2W::extractAndNormalizeName(this->payload.buffer, 9, 16);
+                // get set name
+                if (this->payload.packet.header.cmd == iohcDevice::RECEIVED_GET_NAME_ANSWER_0x51 || this->payload.packet.header.cmd == 0x52) {
+                    std::string normalizedDescription = iohcOther2W::extractAndNormalizeName(this->payload.buffer, 9, 16);
                     ets_printf(normalizedDescription.c_str());
-                    // Target and source are inverted as it is a response
-                    auto device = iohcUtils2W::Device(this->payload.packet.header.target, this->payload.packet.header.source);
+                    iohcDevice::_dev device;
+                    if (this->payload.packet.header.cmd == 0x52) {
+                        device = iohcOther2W::Device(this->payload.packet.header.source, this->payload.packet.header.target);
+                    } else {
+                        // Target and source are inverted as it is a response
+                        device = iohcOther2W::Device(this->payload.packet.header.target, this->payload.packet.header.source);
+                    }
                     device._description = normalizedDescription;
-                    save2W = iohcUtils2W::getInstance()->addOrUpdateDevice(device);
+                    save2W = iohcOther2W::getInstance()->addOrUpdateDevice(device);
                 }
 
                 if (this->payload.packet.header.cmd == 0x04) { // answer of 0x00 or 0x03 maybe 0x01
@@ -280,19 +286,19 @@ namespace IOHC {
                         msg_data.substr(16, 6).c_str(), msg_data.substr(22, 2).c_str()
                         );
                     // At least 2 types: simple state or extended state
-                    // simple state OPEN CLOSE etc... 0000 c8000 d200 etc...
-                    // extended state to learn ... 0c00 0a3f 0000
+                    // simple state OPEN CLOSE etc... c800 c800 0000
+                    // extended state to learn ... 0c00 0a3f 0000 - 6000 6011 0000 - 7000 7011 0000
                     // Target and source are inverted as it is a response
-                    auto device = iohcUtils2W::Device(this->payload.packet.header.target, this->payload.packet.header.source);
+                    auto device = iohcOther2W::Device(this->payload.packet.header.target, this->payload.packet.header.source);
                     hexStringToBytes(msg_data.substr(16, 6), device._associated);
-                    save2W = iohcUtils2W::getInstance()->addOrUpdateDevice(device);
-                    ets_printf(iohcUtils2W::getInstance()->getDescription(device).c_str());
+                    save2W = iohcOther2W::getInstance()->addOrUpdateDevice(device);
+                    ets_printf(iohcOther2W::getInstance()->getDescription(device).c_str());
                     }
             }
         }
         ets_printf("\n");
         relStamp = packetStamp;
-        if (save2W) {iohcUtils2W::getInstance()->save();}
+        if (save2W) {iohcOther2W::getInstance()->save();}
     }
 
     std::string iohcPacket::decodeToString(bool verbosity) {

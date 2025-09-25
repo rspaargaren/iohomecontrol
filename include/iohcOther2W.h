@@ -24,7 +24,7 @@
 #include <iohcSystemTable.h>
 #include <tokens.h>
 
-#define OTHER_2W_FILE  "/Utils2W.json"
+#define OTHER_2W_FILE  "/Other2W.json"
 
 /*
     Singleton class with a full implementation of a COZYTOUCH/KIZBOX/CONEXOON controller
@@ -46,11 +46,11 @@ namespace IOHC {
         checkCmd,
     };
 
-    class iohcUtils2W : public iohcDevice {
+    class iohcOther2W : public iohcDevice {
 
     public:
-        static iohcUtils2W *getInstance();
-        ~iohcUtils2W() override = default;
+        static iohcOther2W *getInstance();
+        ~iohcOther2W() override = default;
 
         static std::string extractAndNormalizeName(const uint8_t* buffer, int offset, int length) {
             std::string result;
@@ -71,7 +71,7 @@ namespace IOHC {
             return result.empty() ? "UNKNOWN" : result;
         }
 
-        // Put that in json
+        // Put that in JSON
         address gateway/*[3]*/ = {0xba, 0x11, 0xad};
         address master_from/*[3]*/ = {0x47, 0x77, 0x06}; // It's the new heater kitchen Address From
         address master_to/*[3]*/ = {0x48, 0x79, 0x02}; // It's the new heater kitchen Address To
@@ -96,17 +96,20 @@ namespace IOHC {
 
         std::vector<Device> devices;
         std::string getDescription(const Device &device)    {
-            if (const auto it = std::ranges::find(devices, device); it != devices.end()) return it->_description;
+            const auto it = std::ranges::find(devices, device);
+            if ( it != devices.end())
+                return it->_description;
             return "";
         }
         bool addOrUpdateDevice(const Device &device) {
             const auto it = std::ranges::find(devices, device);
             if (it != devices.end()) {
                 bool modified = false;
-                if (it->_description != device._description) {
+                if (it->_description != device._description && device._description != "NONAME") {
                     it->_description = device._description;
                     modified = true;
                 }
+                // Si c'est la gateway, on n'enregistre pas, on ne souhaite que la telecommande 1W associée
                 if (memcmp(device._associated, device._node, sizeof(address)) != 0) {
                     memcpy(it->_associated, device._associated, sizeof(address));
                     modified = true;
@@ -122,8 +125,8 @@ namespace IOHC {
         }
 
     private:
-        iohcUtils2W();
-        static iohcUtils2W *_iohcOtherDevice2W;
+        iohcOther2W();
+        static iohcOther2W *_iohcOtherDevice2W;
 
     protected:
 
