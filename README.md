@@ -3,8 +3,11 @@
 # IO-Homecontrol ESP32 Project
 
 Based on the wonderful work of:
+
 [Velocet/iown-homecontrol](https://github.com/Velocet/iown-homecontrol)  
 [cridp/iown-homecontrol-esp32sx1276](https://github.com/cridp/iown-homecontrol-esp32sx1276)
+
+Please be advised that the modification to this code have mainly be focussing on the 1W communication with the screen. Certain modification have made the 2W part of the code "unstable". Please notice if the code is used as a furhter base.
 
 [☕ Support the project on BuyMeACoffee](https://buymeacoffee.com/dyna_mite)
 
