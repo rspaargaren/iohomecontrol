@@ -126,6 +126,13 @@ void updateDisplayStatus() {
         display.println("-");
     }
     display.setCursor(0, 20);
+    display.print("HTTP: ");
+    if (wifiStatus == ConnState::Connected) {
+        display.println("MIOPENIO.LOCAL");
+    } else {
+        display.println("-");
+    }
+    display.setCursor(0, 30);
     display.print("MQTT: ");
     switch (mqttStatus) {
         case ConnState::Connected:

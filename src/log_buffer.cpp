@@ -2,6 +2,14 @@
 #include <vector>
 #include <Arduino.h>
 #include <log_buffer.h>
+#include <user_config.h>
+
+#if defined(WEBSERVER)
+#include <web_server_handler.h>
+#endif
+#if defined(SYSLOG)
+#include <syslog_helper.h>
+#endif
 
 namespace {
     std::deque<String> logDeque;
@@ -13,6 +21,12 @@ void addLogMessage(const String &msg) {
         logDeque.pop_front();
     }
     logDeque.push_back(msg);
+#if defined(WEBSERVER)
+    //broadcastLog(msg);
+#endif
+#if defined(SYSLOG)
+    sendSyslog(msg);
+#endif
 }
 
 std::vector<String> getLogMessages() {

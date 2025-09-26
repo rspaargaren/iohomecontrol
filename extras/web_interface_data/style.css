@@ -15,6 +15,7 @@
     --color-input: #a2a2a2; /* Light gray for input fields */
     --color-text: #000; /* Black text for light mode */
     --color-header-text: #fff;  /* White text for header */
+    --popup-background: #fcfbfb91;
 }
 .dark-mode {
     --color-accent: #6a4e67;
@@ -27,6 +28,7 @@
     --color-input: #757575d1; /* Semi-transparent gray for dark mode */
     --color-text: #fff; /* White text for dark mode */
     --color-header-text: #fff;  /* White text for header in dark mode */
+    --popup-background: #939292c7;
 }
 body {
     font-family: Arial, sans-serif;
@@ -50,6 +52,9 @@ header img.logo {
   height: auto;
 }
 main {
+  min-height: calc(90dvh);
+}
+main > div, .card-popup {
     padding: 0;
     display: grid;
     color: var(--color-text);
@@ -57,13 +62,25 @@ main {
 main > div {
     margin: 10px;
 }
-
+nav{
+    display: flex;
+}
+nav .items {
+    padding: 12px 8px;
+    border-radius: var(--radius);
+    transition: background 0.3s;
+}
+nav .items:hover {
+    background: var(--color-accent3);
+}
 .card {
   background-color: var(--color-card);
   padding: 1em;
   border-radius: 0 0 var(--radius) var(--radius);
   box-shadow: 0 0 10px rgba(0,0,0,0.1);
   margin-bottom: 1em;
+  display: flex;
+  flex-direction: column;
 }
 .title {
   background-color: var(--color-accent);
@@ -78,6 +95,14 @@ main > div {
   position: absolute;
   right: 10px;
   top: 0;
+}
+.title .btn {
+  top: 2px;
+}
+#settings {
+  background: url("img/settings.svg") no-repeat;
+  height: 40px;
+  width: 40px;
 }
 #toggle-theme {
   background: url("img/dark_mode.svg") no-repeat;
@@ -100,13 +125,14 @@ ul#device-list li {
   margin: 5px;
   padding: 5px;
   border-radius: var(--radius);
-  color: var(--color-text);
-  width: 118px;
+  color: #fff;
+  width: calc(93% / 2);
   display: flex;
   flex-direction: column;
   justify-content: center;
   border: 1px solid var(--color7);
   position: relative;
+  transition: background 0.5s ease;
 }
 ul#device-list li .btn {
   margin: 1px auto;
@@ -115,6 +141,28 @@ ul#device-list span {
   padding: 5px 10px;
   text-align: center;
   margin: auto;
+  color: #fff;
+}
+table {
+  border-collapse: collapse;
+}
+td {
+  position: relative;
+  padding: 10px 8px;
+}
+tr {
+  border-bottom: solid 1px #fff;
+}
+th {
+  padding: 10px 8px;
+  text-align: left;
+}
+.remote-id {
+  background: var(--color-accent2);
+  border-radius: var(--radius);
+  padding: 2px 10px;
+  width: fit-content;
+  color: #fff;
 }
 .btn {
   height: 40px;
@@ -130,11 +178,16 @@ ul#device-list span {
 .btn.down {
   background: url("img/down.svg") no-repeat;
 }
+.btn.bg {
+  background-color: var(--color-accent2);
+  margin: 9px;
+}
 .btn.edit {
-  background: url("img/settings.svg") no-repeat;
+  background: url("img/settings.svg") center no-repeat;
+    background-color: rgba(0, 0, 0, 0);
   position: absolute;
-  bottom: 0;
-  right: 0;
+  bottom: 6px;
+  right: 6px;
   height: 25px;
   width: 25px;
 }
@@ -143,6 +196,20 @@ ul#device-list span {
 }
 .btn.close {
   background: url("img/close.svg") no-repeat;
+}
+.btn.help {
+  background: url("img/help.svg") no-repeat;
+}
+.title .help {
+    right: 50px;
+}
+#remote-table .btn.edit.bg {
+  top: -2px;
+  left: 0;
+  right: 0;
+  border: 0;
+  background-color: var(--color-accent2);
+  padding: 14px;
 }
 button {
   background-color: var(--color-accent3);
@@ -160,7 +227,7 @@ button {
 button:hover {
     background-color: var(--color-accent2);
 }
-input[type="text"], select {
+input, select {
     padding: 8px;
     margin: 5px 0 10px 0;
     display: inline-block;
@@ -185,14 +252,14 @@ input[type="text"], select {
   width: calc(100% - 187px);
 }
 footer {
-    text-align: center;
-    padding: 1em 0;
-    background-color: var(--color-accent2);
-    color: var(--color-header-text);
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
+  text-align: center;
+  padding: 1em 0;
+  background-color: var(--color-accent2);
+  color: var(--color-header-text);
+  position: relative;
+  bottom: 0;
+  left: 0;
+  width: 100%;
 }
 #popup {
     display: none;
@@ -202,6 +269,7 @@ footer {
     align-items: center;
     justify-content: center;
     z-index: 1000;
+    backdrop-filter: blur(0.7rem);
 }
 .popup-container{
   min-width: 350px;
@@ -209,26 +277,40 @@ footer {
   color: var(--color-text);
 }
 .popup-container > .card-popup {
-  background: #939292c7;
+  background: var(--popup-background);
   padding: 16px;
   border-radius: 0 0px var(--radius) var(--radius);
 }
 #popup-title {
-    font-size: 18px;
-    margin-bottom: 10px;
+  font-size: 22px;
+  margin: 2px 0;
 }
 #popup-text {
-
-  /*height: 100px;*/
-
   padding-bottom: 15px;
+}
+.popup-buttons {
+  display: flex;
 }
 #popup.open {
   display: flex;
   flex-direction: column;
 }
+header h1 {
+  display: none;
+}
+.inline-confirm { margin-top:8px; font-size:.9em; }
+.inline-confirm .warning { color:#b00020; font-weight:600; display:block; margin-bottom:6px; }
+.btn.danger { background:#d9534f; color:#fff; }
+.btn.ghost  { background:#eee; }
 @media (min-width: 1280px) {
-    main {
+    main > div, .card-popup {
         grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+    header h1 {
+      display: block;
+    }
+    ul#device-list li {
+      width: calc(93% / 6);
     }
 }

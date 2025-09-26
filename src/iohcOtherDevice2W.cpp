@@ -91,7 +91,7 @@ namespace IOHC {
                         discovery, packets2send.back()/*[j]*/->payload.buffer);
                     forgePacket(packets2send.back()/*[j]*//*->payload.buffer[4]*/, toSend, bec);
                     bec += 0x01;
-                    // packets2send.back()/*[j]*/->repeatTime = 225;
+                    packets2send.back()->repeatTime = 250; // Slow down discovery loop
                 }
 
                 digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
@@ -235,6 +235,7 @@ namespace IOHC {
                 break;
             }
             case Other2WButton::discover2A: {
+                //(20) 2W S 1 E 1 [LPM]    FROM EF3712 TO 00003B CMD 2A +0.000         DATA(12)  a0b438d25f27286fedd2ad1f
                 // 00003b 5cd68f 2a  9332d618de2a0fa6250e2c7e
                 //                std::vector<uint8_t>  toSend = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10, 0x11, 0x12};
 
@@ -247,11 +248,13 @@ namespace IOHC {
 
                 address from = {0x08, 0x42, 0xe3};
                 address real = {0x5c, 0xd6, 0x8f};
+                address realcopy = { 0xEF,0x37,0x12};
+               
                 address broadcast_3b = {0x00, 0x00, 0x3b};
                 address broadcast_3f = {0x00, 0x00, 0x3f};
 
 //                packets2send.clear();
-                for (size_t i = 0; i < 30; i++) {
+                for (size_t i = 0; i < 2; i++) {
                     packets2send.push_back(new iohcPacket);
 
                     if (i > 20) {
@@ -270,7 +273,10 @@ namespace IOHC {
                         std::vector<uint8_t> toSend = {
                             0x93, 0x32, 0xd6, 0x18, 0xde, 0x2a, 0x0f, 0xa6, 0x25, 0x0e, 0x2c, 0x7e
                         };
-                        forgePacket(packets2send.back(), toSend);
+                        std::vector<uint8_t> toSend2 = {
+                            0xa0, 0xb4, 0x38, 0xd2, 0x5f, 0x27, 0x28, 0x6f, 0xed, 0xd2, 0xad, 0x1f
+                        };
+                        forgePacket(packets2send.back(), toSend2);
                         packets2send.back()->payload.packet.header.cmd = iohcDevice::SEND_DISCOVER_REMOTE_0x2A;
                         memcpy(packets2send.back()->payload.packet.header.target, broadcast_3b, 3);
                     }
@@ -285,9 +291,10 @@ namespace IOHC {
                     packets2send.back()->payload.packet.header.CtrlByte2.asStruct.LPM = 1;
                     packets2send.back()->payload.packet.header.CtrlByte2.asStruct.Prio = 1;
 
-                    memcpy(packets2send.back()->payload.packet.header.source, /*from*/real/*gateway*/, 3);
+                    memcpy(packets2send.back()->payload.packet.header.source, /*from*/realcopy/*gateway*/, 3);
 
                     packets2send.back()->delayed = 250; // Give enough time for the answer
+                    packets2send.back()->repeatTime = 250; // Slow down discover loop
                 }
                 digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
 

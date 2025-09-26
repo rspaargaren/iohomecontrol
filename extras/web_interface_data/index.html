@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,88 +8,225 @@
     <link rel="icon" href="img/logo.png">
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
     <header>
         <img src="img/logo.png" alt="MiOpen.IO Logo" class="logo">
         <h1>Device Control</h1>
+        <nav>
+            <a onclick="showPage('devices')" class="items">Devices</a>
+            <a onclick="showPage('help')" class="items">Help</a>
+            <a onclick="showPage('settings')" class="items">Settings</a>
+        </nav>
         <div id="toggle-theme"></div>
     </header>
 
     <main>
-        <div class="left">
-            <section id="device-list-section">
+        <div id="devices-page">
+            <div class="left">
+                <section id="device-list-section">
 
-                <div class="title"><h2>Devices</h2><div class="btn add" id="add-popup"></div></div>
-
-                <div class="card">
-                    <ul id="device-list">
-                        <!-- Device items will be populated by JavaScript -->
-                        <!-- Example: <li>Device Name <button>On</button> <button>Off</button></li> -->
-                    </ul>
-                </div>
-            </section>
-            <section id="device-list-section">
-                <div class="title"><h2>test</h2></div>
-                <div class="card">
-                    <input type="text" id="mqtt-user" placeholder="MQTT User">
-                    <input type="text" id="mqtt-server" placeholder="MQTT Server">
-                    <input type="password" id="mqtt-password" placeholder="MQTT Password">
-                    <input type="text" id="mqtt-discovery" placeholder="Discovery Topic">
-                    <button id="mqtt-update">Update</button>
-                </div>
-            </section>
-        </div>
-        <div class="right">
-            <section id="status-section">
-                <div class="title"><h2>Status / Log </h2>  
-                    <select id="select-log">
-                        <option value="all">All</option>
-                        <option value="info">Info</option>
-                        <option value="warning">Warning</option>
-                        <option value="error">Error</option>
-                    </select>
-                </div>
-                <div class="card">
-                    <label for="device-select">Select Device:</label>
-                    <select id="device-select">
-                        <!-- Options will be populated by JavaScript -->
-                    </select>
-
-                    <div id="status-messages">
-                        <!-- Status messages will be populated by JavaScript -->
+                    <div class="title">
+                        <h2>Devices</h2>
+                        <div class="btn help" id="help-device"></div>
+                        <div class="btn add" id="add-popup"></div>
                     </div>
-                    <div class="send-messages">
-                        <input type="text" id="command-input" placeholder="Typ hier..." autocomplete="off">
-                        <select id="suggestions" style="width:112px"></select>
-                        <button id="send-command-button" style="width:61px">Send</button>
+
+                    <div class="card">
+                        <ul id="device-list">
+                            <!-- Device items will be populated by JavaScript -->
+                            <!-- Example: <li>Device Name <button>On</button> <button>Off</button></li> -->
+                        </ul>
                     </div>
-                    
-                </div>
-            </section>
+                </section>
+            </div>
+            <div class="right">
+                <section id="status-section">
+                    <div class="title">
+                        <h2>remote</h2>
+                        <div class="btn help" id="help-remote"></div>
+                        <div class="btn add" id="remote-popup"></div>
+                    </div>
+                    <div class="card">
+                        <table id="remote-table">
+                            <thead>
+                                <tr>
+                                    <th>Remote ID</th>
+                                    <th>Remote Name</th>
+                                    <th>Linked Devices</th>
+                                    <th>Edit</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- rows komen hier -->
+                            </tbody>
+                        </table>
+
+                    </div>
+                </section>
+            </div>
         </div>
-           
+        <div id="help-page" style="display:none;">
+            <div class="left">
+                <section id="help-section">
+                    <div class="title">
+                        <h2>Help</h2>
+                    </div>
+                    <div class="card">
+                        <p>
+                            <strong>Stappen om een nieuw apparaat toe te voegen:</strong><br>
+                            Stap 1 nieuw device in de website<br>
+                            Stap 2 screen in pair mode zetten met de fysieke remote<br>
+                            Step 3 execute command add XXXX in the terminal or in the website, where XXXX is the ID<br>
+                            Stap 4 klaar…<br>
+                            Stap 3 wordt straks wat makkelijker<br>
+
+                            <strong>Steps to add a new device:</strong><br>
+                            Step 1 add new device in the website<br>
+                            Step 2 put the screen in pair mode with the physical remote<br>
+                            Stap 3 commando add XXXX uitvoeren op de terminal of in de website waar XXXX het ID is<br>
+                            Step 4 done…<br>
+                            Step 3 will become easier soon
+                        </p>
+                    </div>
+                </section>
+            </div>
+        </div>
+        <div id="settings-page" style="display:none;">
+            <div class="left">
+                <section id="mqtt-settings-section">
+                    <div class="title">
+                        <h2>MQTT settings</h2>
+                    </div>
+                    <div class="card">
+                        <label for="mqtt-user">User:</label>
+                        <input type="text" id="mqtt-user" placeholder="MQTT User">
+                        <label for="mqtt-server">Server:</label>
+                        <input type="text" id="mqtt-server" placeholder="MQTT Server">
+                        <label for="mqtt-password">Password:</label>
+                        <input type="password" id="mqtt-password" placeholder="MQTT Password">
+                        <label for="mqtt-discovery">Discovery Topic:</label>
+                        <input type="text" id="mqtt-discovery" placeholder="Discovery Topic">
+                        <button id="mqtt-update">Update</button>
+                    </div>
+                </section>
+                <section id="update-section">
+                    <div class="title">
+                        <h2>Update</h2>
+                    </div>
+                    <div class="card">
+                        <label for="firmware-file">Firmware:</label>
+                        <div class="firmware-line"><input type="file" id="firmware-file" accept=".bin">
+                        <button id="upload-firmware">Upload Firmware</button></div>
+                        <label for="filesystem-file">Filesystem:</label>
+                        <div class="filesystem-line"><input type="file" id="filesystem-file" accept=".bin">
+                        <button id="upload-filesystem">Upload Filesystem</button></div>
+                        <label for="devices-file">Devices:</label>
+                        <div class="devices-line">
+                            <input type="file" id="devices-file" accept=".json"> 
+                            <button id="upload-devices">Upload Devices</button>
+                            <button id="download-devices">Download Devices</button>
+                        </div>
+                        <label for="remotes-file">Remotes:</label>
+                        <div class="remotes-line">
+                            <input type="file" id="remotes-file" accept=".json">
+                            <button id="upload-remotes">Upload Remotes</button>
+                            <button id="download-remotes">Download Remotes</button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <div class="right">
+                <section id="status-section">
+                    <div class="title">
+                        <h2>Status / Log </h2>
+                        <select id="select-log">
+                            <option value="all">All</option>
+                            <option value="info">Info</option>
+                            <option value="warning">Warning</option>
+                            <option value="error">Error</option>
+                        </select>
+                    </div>
+                    <div class="card">
+                        <div class="device-selection">
+                            <label for="device-select">Select Device:</label>
+                            <select id="device-select">
+                                <!-- Options will be populated by JavaScript -->
+                            </select>
+                            <label for="last-address">Last Address:</label>
+                            <input type="text" id="last-address" readonly>
+                        </div>
+
+                        <div id="status-messages">
+                            <!-- Status messages will be populated by JavaScript -->
+                        </div>
+                        <div class="send-messages">
+                            <input type="text" id="command-input" placeholder="Typ hier..." autocomplete="off">
+                            <select id="suggestions" style="width:112px"></select>
+                            <button id="send-command-button" style="width:61px">Send</button>
+                        </div>
+
+                    </div>
+                </section>
+            </div>
+
+
     </main>
 
     <footer>
-        <p>ESP32 MiOpen.IO</p>
+        <p>© MiOpen.IO 2025 - 2026 | djbenbe & rspaargaren. All Rights Reserved. </p>
     </footer>
     <!-- Popup container (standaard verborgen) -->
     <div id="popup">
         <div class="popup-container">
-            <div class="title"><h2 id="popup-title">Popup Title</h2><div class="btn close" onclick="closePopup()">Sluiten</div></div>
+            <div class="title">
+                <h2 id="popup-title">Popup Title</h2>
+                <div class="btn close" onclick="closePopup()">Sluiten</div>
+            </div>
             <div class="card-popup">
-                <p id="popup-text">Tekst komt hier.</p>
-
-                <input type="text" id="popup-input" placeholder="Typ hier..." autocomplete="off">
-                <div class="popup-buttons">
-                    <button id="popup-confirm" class="confirm">Confirm</button>
-                    <button id="popup-cancel" class="cancel">Cancel</button>
+                <div id="left">
+                    <p id="popup-content-left">  </p>
+                    <label for="popup-input" id="label-input">device:</label>
+                    <input type="text" id="popup-input" placeholder="Typ hier..." autocomplete="off">
+                    <label for="popup-input-timing" id="label-timing">timing:</label>
+                    <input type="text" id="popup-input-timing" placeholder="Typ hier..." autocomplete="off">
+                    <label id="popup-boolean-row" style="display:none; gap:8px; align-items:center;">
+                        <span id="popup-boolean-label">solar energy</span>
+                        <input type="checkbox" id="popup-boolean">
+                    </label>
+                    <label for="select-device" class="device-popup-label">device-select:</label>
+                    <select id="device-select" class="device-popup">
+                        <!-- Options will be populated by JavaScript -->
+                    </select>  
+                    <button id="popup-save" class="save">Save</button>
+                    <p id="delete-info" style="display:none; color:red; font-weight:bold;"></p>
+                    <p id="pair-label">Pair / Unpair the device to the physical screen</p>
+                    <div class="popup-buttons">
+                            <button id="popup-add" class="pair">pair</button>
+                            <button id="popup-remove" class="unpair">unpair</button>
+                            <button id="popup-delete" type="button" class="danger">Delete</button>
+                            <button id="popup-confirm" type="button">OK</button>
+                            <button id="popup-cancel"  type="button">Cancel</button>
+                    </div>
                 </div>
-                <button id="popup-remove" class="remove-device">delete</button>
-
+                <div id="right">
+                    <p id="popup-content">
+                        <!-- Dynamic content will be populated by JavaScript -->
+                    </p>
+                    
+                </div>                
             </div>
         </div>
     </div>
     <script src="script.js"></script>
+    <script>
+        function showPage(page) {
+            document.getElementById('devices-page').style.display = (page === 'devices') ? 'grid' : 'none';
+            document.getElementById('settings-page').style.display = (page === 'settings') ? 'grid' : 'none';
+            document.getElementById('help-page').style.display = (page === 'help') ? 'grid' : 'none';
+        }
+    </script>
 </body>
+
 </html>

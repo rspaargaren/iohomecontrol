@@ -41,6 +41,8 @@ namespace IOHC {
         Stop,
         Vent,
         ForceOpen,
+        Position,
+        Absolute,
         Mode1, Mode2, Mode3, Mode4
     };
 
@@ -55,17 +57,19 @@ namespace IOHC {
             bool paired{false};
             std::string description;
             std::string name;
-            uint32_t travelTime{}; // ms to fully open or close
+            uint32_t travelTime{}; // seconds to fully open or close
             BlindPosition positionTracker{};
             enum class Movement { Idle, Opening, Closing } movement{Movement::Idle};
             float lastPublishedPosition{-1.0f};
             std::string lastPublishedState{};
+            float targetPosition{-1.0f};
         };
 
         static iohcRemote1W* getInstance();
         ~iohcRemote1W() override = default;
 
         void cmd(RemoteButton cmd, Tokens* data);
+        void handleRemoteAction(RemoteButton cmd, const std::string &description);
         bool load() override;
         bool save() override;
 //        void scanDump() override { }

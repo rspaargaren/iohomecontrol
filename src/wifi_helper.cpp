@@ -42,18 +42,33 @@ void initWifi() {
 }
 
 void connectToWifi(TimerHandle_t /*timer*/) {
-    Serial.println("Connecting to Wi-Fi via WiFiManager...");
+    Serial.println("Connecting to Wi-Fi...");
     wifiStatus = ConnState::Connecting;
     updateDisplayStatus();
 
     WiFi.mode(WIFI_STA);
+    WiFi.setHostname("MIOPENIO");
+
+    unsigned long startTime = millis();
+    WiFi.begin();
+    wl_status_t result = static_cast<wl_status_t>(WiFi.waitForConnectResult(5000UL)); // ms
+
     WiFiManager wm;
     wm.setConnectTimeout(30);        // 10 sec voor verbinding met AP
     wm.setConfigPortalTimeout(180);  // 3 min captive portal open
 
-    bool res = wm.autoConnect("iohc-setup");
+    bool res = false;
+    if (result == WL_CONNECTED) {
+        res = true;
+    } else {
+        Serial.println("Stored WiFi credentials failed, launching WiFiManager portal");
+        res = wm.autoConnect("iohc-setup");
+    }
+
+    unsigned long duration = millis() - startTime;
+
     if (!res) {
-        Serial.println("WiFiManager failed to connect");
+        Serial.printf("WiFi connection failed after %lu ms\n", duration);
         wifiStatus = ConnState::Disconnected;
         updateDisplayStatus();
 
@@ -62,7 +77,8 @@ void connectToWifi(TimerHandle_t /*timer*/) {
             xTimerStart(wifiReconnectTimer, 0);
         }
     } else {
-        Serial.printf("Connected to WiFi. IP address: %s\n", WiFi.localIP().toString().c_str());
+        Serial.printf("Connected to WiFi in %lu ms. IP address: %s\n", duration,
+                      WiFi.localIP().toString().c_str());
         wifiStatus = ConnState::Connected;
         updateDisplayStatus();
 

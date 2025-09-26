@@ -80,24 +80,115 @@ This project now includes an experimental web interface to control IOHC devices.
 4. **Find ESP32 IP** – check Serial Monitor for IP.  
 5. **Access the Interface** – open browser at IP or `http://miopenio.local` if mDNS is supported.  
 
----
+
+1.  **Configure WiFi:**
+    *   On first boot the device starts an access point named `iohc-setup`.
+    *   Connect to this AP and follow the WiFiManager captive portal to enter
+        your WiFi credentials.
+
+2.  **Build and Upload Filesystem:**
+    *   The web interface files (`index.html`, `style.css`, `script.js`) are located in `extras/web_interface_data/`.
+    *   These files need to be uploaded to the ESP32's LittleFS filesystem.
+    *   Using PlatformIO:
+        *   First, build the filesystem image: `pio run --target buildfs` (or use the PlatformIO IDE option for building the filesystem image).
+        *   Then, upload the filesystem image: `pio run --target uploadfs` (or use the PlatformIO IDE option for uploading).
+    *   **Note:** You only need to rebuild and re-upload the filesystem image if you make changes to the files in `extras/web_interface_data/`.
+    *   **Device files:** Copy your device definition files (for example `extras/1W.json`) into the LittleFS root before building.
+        Without these files the `/api/devices` endpoint returns an empty list and the web interface will show no devices.
+
+3.  **Build and Upload Firmware:**
+    *   Build and upload the main firmware to your ESP32 as usual using PlatformIO (`pio run --target upload` or via the IDE).
+
+4.  **Find ESP32 IP Address:**
+    *   After uploading, open the Serial Monitor.
+    *   When the ESP32 connects to your WiFi network, it will print its IP address. Look for a line like: `Connected to WiFi. IP Address: XXX.XXX.X.XXX`.
+
+5.  **Access the Interface:**
+    *   Open a web browser on a device connected to the same WiFi network as your ESP32.
+    *   Navigate to the IP address you found in the Serial Monitor (e.g., `http://XXX.XXX.X.XXX`) or use `http://miopenio.local` if your network supports mDNS.
+
+### Usage
+
+The web interface allows you to:
+
+*   **View a list of devices:** The device list is currently populated with placeholder examples. (Future development will integrate this with actual detected/configured devices).
+*   **Send commands:** Select a device, type a command string (e.g., `setTemp 21.0`), and click "Send". (Command processing is currently a placeholder and will acknowledge receipt).
+*   **Live updates:** Logs and device positions are pushed to the browser via WebSockets.
+
+This feature is under development, and functionality will be expanded in the future.
+
 
 ## Home Assistant Discovery
 
 When MQTT is enabled (`#define MQTT` in `include/user_config.h`), the firmware publishes HA discovery messages for every blind.  
 
-Each blind publishes config to:  
-```
-homeassistant/cover/<id>/config
-```
+
+The `1W.json` file now accepts an optional `travel_time` field per device. This value represents the time in seconds a blind takes to move from fully closed to fully open. It allows the firmware to estimate the current position when no feedback is available. The estimated position is printed to the serial console and shown on the OLED display every second while the blind is moving. When a command is transmitted or received, this position feedback is appended below the action information on the display so that the original message remains visible.
+If these fields (`name` and `travel_time`) are missing, default values are applied using the device description and a 10 second travel time. These defaults are saved back to `1W.json` so subsequent boots load the updated values automatically.
+
+Each blind also publishes a Home Assistant number entity for the travel time. Adjusting this entity updates the `travel_time` value in `1W.json`, allowing calibration directly from the Home Assistant UI without editing files manually.
+
+Each entry can also contain a `paired` boolean that indicates if the blind is paired to a screen. If the field is missing, it is automatically added with a default value of `false` when the file is loaded. The flag is updated automatically when the `pair` or `remove` commands are used.
+
+Sequence numbers for each remote are stored both in `extras/1W.json` and in NVS.
+On boot the value from the file is compared to the one in NVS and the highest
+value is kept so sequence numbers continue uninterrupted even after filesystem
+uploads or resets.
+
 
 It supports `travel_time`, pairing state, and sequence numbers.  
 
 Example payload:  
 ```json
-{"name":"IZY1","command_topic":"iown/B60D1A/set","state_topic":"iown/B60D1A/state","position_topic":"iown/B60D1A/position","unique_id":"B60D1A","payload_open":"OPEN","payload_close":"CLOSE","payload_stop":"STOP","device_class":"blind","availability_topic":"iown/status"}
+{"name":"IZY1","command_topic":"iown/B60D1A/set","state_topic":"iown/B60D1A/state","position_topic":"iown/B60D1A/position","set_position_topic":"iown/B60D1A/position/set","unique_id":"B60D1A","payload_open":"OPEN","payload_close":"CLOSE","payload_stop":"STOP","device_class":"blind","availability_topic":"iown/status"}
 ```
 
----
+
+For each blind the firmware also publishes MQTT button entities that allow
+executing pairing or controller management commands directly from Home Assistant.
+The discovery topics are:
+
+- `homeassistant/button/<id>_pair/config`
+- `homeassistant/button/<id>_add/config`
+- `homeassistant/button/<id>_remove/config`
+
+Each blind along with its control buttons is exposed as an individual device in
+Home Assistant, so the gateway no longer groups all entities into a single
+device list.
+
+Sending `PRESS` to `iown/<id>/pair`, `iown/<id>/add` or `iown/<id>/remove`
+triggers the corresponding command on the blind.
+
+Configure your MQTT broker settings in `include/user_config.h` (`mqtt_server`, `mqtt_user`, `mqtt_password`, `mqtt_discovery_topic`). These values can also be changed at runtime via the `mqttIp`, `mqttUser`, `mqttPass` and `mqttDiscovery` commands. After boot and connection, Home Assistant should automatically discover the covers.
+
+If you don't have an OLED display connected, comment out the `DISPLAY` definition in `include/user_config.h` to disable all display related code.
+
+Once discovery is complete you can control a blind by publishing `OPEN`, `CLOSE`
+or `STOP` to `iown/<id>/set`, or a number between `0` (closed) and `100` (open) to
+`iown/<id>/position/set` to move the blind to a specific position. The firmware
+now uses the device's absolute positioning for these percentage commands, providing
+more accurate movement. For direct access to the raw absolute command where `0`
+means fully open and `100` fully closed, publish to `iown/<id>/absolute/set`.
+When an `OPEN` or `CLOSE` command is received, it immediately publishes the new
+state (`open` or `closed`) to `iown/<id>/state` so Home Assistant can update the
+cover status.
+
+While a blind is in motion the current position percentage is published every
+second to `iown/<id>/position`. The `state` topic is also updated with
+`OPENING`, `CLOSING` or `STOP` depending on the movement. When the blind stops
+moving, the state reverts to `OPEN`, `CLOSE` or `STOP` according to the final
+position.
+
+The gateway publishes `online` every minute to `iown/status` and has a Last Will
+configured to send `offline` on the same topic if it disconnects unexpectedly.
+Home Assistant uses this message to mark all covers as unavailable when the
+gateway goes offline.
+
 
 #### **License**
+
+Image [miopen.io](https://miopen.io) © 2025 by [djbenbe](https://creativecommons.org) is licensed under [CC BY-NC-ND 4.0](https://creativecommons.org/licenses/by-nc-nd/4.0/)
+<img src="https://mirrors.creativecommons.org/presskit/icons/cc.svg" alt="CC" style="width:0.2em; height:0.2em; margin-left:.2em;">
+<img src="https://mirrors.creativecommons.org/presskit/icons/by.svg" alt="BY" style="width:0.2em; height:0.2em;margin-left:.2em;">
+<img src="https://mirrors.creativecommons.org/presskit/icons/nc.svg" alt="NC" style="width:0.2em; height:0.2em; margin-left:.2em;">
+<img src="https://mirrors.creativecommons.org/presskit/icons/nd.svg" alt="ND" style="width:0.2em; height:0.2em; margin-left:.2em;">

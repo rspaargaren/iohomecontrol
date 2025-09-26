@@ -27,24 +27,31 @@ VARIOUS 1W (Use the description name in 1W.json as argument)
 - **open**      _1W open device_
 - **close**     _1W close device_
 - **stop**      _1W stop device_
+- **position**  _1W set position (0-100)_
+- **absolute**  _1W set absolute position (0-100)_
 - **vent**      _1W vent device_
 - **force**     _1W force device open_
 - **mode1**     _1W Mode1_
 - **mode2**     _1W Mode2_
 - **mode3**     _1W Mode3_
 - **mode4**     _1W Mode4_
-- **new1W**    _Add new 1W device_
+- **new1W**    _Add new 1W device (names may contain spaces)_
 - **del1W**    _Remove 1W device_
 - **edit1W**   _Edit 1W device name_
-- **time1W**   _Set 1W device travel time_
+- **time1W**   _Set 1W device travel time in seconds_
 - **list1W**   _List 1W devices_
 
 COMMON
+- **newRemote** _Create remote map entry (names may contain spaces)_
+- **linkRemote** _Link device to remote map entry_
+- **unlinkRemote** _Remove device from remote map entry_
+- **delRemote** _Remove remote map entry_
 - **verbose**   _Toggle verbose output on packets list_
 - **help**      _This command_
 - **ls**        _List filesystem_
 - **cat**       _Print file content_
 - **rm**        _Remove file_
+- **lastAddr**  _Show last received address_
 - **mqttIp**    _Set MQTT server IP_
 - **mqttUser**  _Set MQTT username_
 - **mqttPass**  _Set MQTT password_
