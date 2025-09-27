@@ -286,7 +286,7 @@ namespace IOHC {
                         msg_data.substr(16, 6).c_str(), msg_data.substr(22, 2).c_str()
                         );
                     // At least 2 types: simple state or extended state
-                    // simple state OPEN CLOSE etc... c800 c800 0000
+                    // simple state OPEN CLOSE etc... c800 c800 0000 - d100 0000 0000 - d200 3796
                     // extended state to learn ... 0c00 0a3f 0000 - 6000 6011 0000 - 7000 7011 0000
                     // Target and source are inverted as it is a response
                     auto device = iohcOther2W::Device(this->payload.packet.header.target, this->payload.packet.header.source);

@@ -20,24 +20,27 @@
 #include <board-config.h>
 
 // WiFi credentials are handled via WiFiManager
-#define WIFI_SSID "Freebox-79FBE3"
-#define WIFI_PASSWD "confugerat.-aucupis%-favebo&-carpentes!"
-inline const char *wifi_ssid = "Freebox-79FBE3";
-inline const char *wifi_passwd = "confugerat.-aucupis%-favebo&-carpentes!";
+#define WIFI_SSID ""
+#define WIFI_PASSWD ""
+inline const char *wifi_ssid = "";
+inline const char *wifi_passwd = "";
 
 //#define MQTT
 #define MQTT_SERVER "192.168.1.40"
 #define MQTT_USER "user"
 #define MQTT_PASSWD "passwd"
-//inline const char *mqtt_server = "192.168.1.40";
-//inline const char *mqtt_user = "user";
-//inline const char *mqtt_password = "passwd";
+inline const char *mqtt_server = "192.168.1.40";
+inline const char *mqtt_user = "user";
+inline const char *mqtt_password = "passwd";
 
 // Comment out the next line if no display is connected
-#define SSD1306_DISPLAY
+//#define SSD1306_DISPLAY
 
 // Comment out the next line to disable the built-in web server
-#define WEBSERVER
+//#define WEBSERVER
+
+//#define ECHONET
+#define UECHO
 
 #define HTTP_LISTEN_PORT    80
 #define HTTP_USERNAME       "admin"

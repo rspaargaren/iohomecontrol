@@ -29,7 +29,7 @@ ConnState wifiStatus = ConnState::Disconnected;
 void initWifi() {
     wifiReconnectTimer = xTimerCreate(
         "wifiTimer",
-        pdMS_TO_TICKS(10000),  // 10 seconds retry interval
+        pdMS_TO_TICKS(35000),  // 10 seconds retry interval
         pdFALSE,
         nullptr,
         reinterpret_cast<TimerCallbackFunction_t>(connectToWifi)
@@ -47,10 +47,14 @@ void connectToWifi() {
 
     WiFi.mode(WIFI_STA);
     WiFiManager wm;
-    wm.setConnectTimeout(30);        // 10 sec voor verbinding met AP
-    wm.setConfigPortalTimeout(180);  // 3 min captive portal open
+    wm.setConnectTimeout(22); // 10 sec pour la connexion à AP
+    wm.setConfigPortalTimeout(7); // 3 min captive portal open
+    //set custom ip for portal
+    //wm.setAPStaticIPConfig(IPAddress(192,168,1,4), IPAddress(192,168,1,254), IPAddress(255,255,255,0));
+    // wm.setSTAStaticIPConfig(IPAddress(192, 168, 1, 68), IPAddress(192, 168, 1, 254), IPAddress(255, 255, 255, 0),
+    //                         IPAddress(192, 168, 1, 254)); // optional DNS 4th argument
+    bool res = wm.autoConnect(); // "iohc-setup");
 
-    bool res = wm.autoConnect("iohc-setup");
     if (!res) {
         Serial.println("WiFiManager failed to connect");
         wifiStatus = ConnState::Disconnected;

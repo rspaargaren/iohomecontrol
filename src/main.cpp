@@ -21,7 +21,7 @@
 #include <interact.h>
 #include <iohcCozyDevice2W.h>
 #include <iohcCryptoHelpers.h>
-#include <iohcUtils2W.h>
+#include <iohcOther2W.h>
 #include <iohcRadio.h>
 #include <iohcRemote1W.h>
 #include <iohcRemoteMap.h>
@@ -70,7 +70,7 @@ uint8_t nextPacket = 0;
 IOHC::iohcSystemTable *sysTable;
 IOHC::iohcRemote1W *remote1W;
 IOHC::iohcCozyDevice2W *cozyDevice2W;
-IOHC::iohcUtils2W *otherDevice2W;
+IOHC::iohcOther2W *otherDevice2W;
 IOHC::iohcRemoteMap *remoteMap;
 
 uint32_t frequencies[] = FREQS2SCAN;
@@ -112,7 +112,7 @@ void setup() {
 
     remote1W = IOHC::iohcRemote1W::getInstance();
     cozyDevice2W = IOHC::iohcCozyDevice2W::getInstance();
-    otherDevice2W = IOHC::iohcUtils2W::getInstance();
+    otherDevice2W = IOHC::iohcOther2W::getInstance();
     remoteMap = IOHC::iohcRemoteMap::getInstance();
 
     //   AES_init_ctx(&ctx, transfert_key); // PreInit AES for cozy (1W use original version) TODO

@@ -222,28 +222,24 @@ for (const auto &d: devices) {
             }
             case Other2WButton::discover2A: {
                 // 00003b 5cd68f 2a  9332d618de2a0fa6250e2c7e
-                //                std::vector<uint8_t>  toSend = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10, 0x11, 0x12};
+                // std::vector<uint8_t>  toSend = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10, 0x11, 0x12};
 
-                // uint8_t broadcast[3];
-                // const char* dat = data->at(1).c_str();
-                // hexStringToBytes(dat, broadcast);
-                //                uint8_t broadcast[3];
-                address broadcast_1 = {0x00, 0xFF, 0xFB}; //data->at(1).c_str();
-                address broadcast_2 = {0x00, 0x0d, 0x3b};
+                address broadcast_1 = {0x00, 0xFF, 0xFB};
 
                 address from = {0x08, 0x42, 0xe3};
-                address real = {0x5c, 0xd6, 0x8f};
+                address real = {0x5c, 0xd6, 0x8f}; // Discovery Session from 2W KLR200 (5cd68f)
                 address broadcast_3b = {0x00, 0x00, 0x3b};
                 address broadcast_3f = {0x00, 0x00, 0x3f};
 
-//                packets2send.clear();
                 for (size_t i = 0; i < 30; i++) {
                     packets2send.push_back(new iohcPacket);
 
                     if (i > 20) {
-                        std::vector<uint8_t> toSend = {0x00};
+                        std::vector<uint8_t> toSend = {
+                            0x93, 0x32, 0xd6, 0x18, 0xde, 0x2a, 0x0f, 0xa6, 0x25, 0x0e, 0x2c, 0x7e
+                        };
                         forgeAnyWPacket(packets2send.back(), toSend);
-                        packets2send.back()->payload.packet.header.cmd = iohcDevice::SEND_UNKNOWN_0x2E;
+                        packets2send.back()->payload.packet.header.cmd = iohcDevice::SEND_DISCOVER_REMOTE_0x2A;
                         memcpy(packets2send.back()->payload.packet.header.target, broadcast_3f, 3);
                     }
                     if (i <= 20) {
@@ -253,25 +249,18 @@ for (const auto &d: devices) {
                         memcpy(packets2send.back()->payload.packet.header.target, broadcast_3b, 3);
                     }
                     if (i <= 10) {
-                        std::vector<uint8_t> toSend = {
-                            0x93, 0x32, 0xd6, 0x18, 0xde, 0x2a, 0x0f, 0xa6, 0x25, 0x0e, 0x2c, 0x7e
-                        };
+                        std::vector<uint8_t> toSend = {0x00};
                         forgeAnyWPacket(packets2send.back(), toSend);
-                        packets2send.back()->payload.packet.header.cmd = iohcDevice::SEND_DISCOVER_REMOTE_0x2A;
+                        packets2send.back()->payload.packet.header.cmd = iohcDevice::SEND_UNKNOWN_0x2E;
                         memcpy(packets2send.back()->payload.packet.header.target, broadcast_3b, 3);
                     }
-                    //                    packets2send.back()->payload.packet.header.cmd = iohcDevice::SEND_DISCOVER_REMOTE_0x2A;
-
-                    //                    memorizeSend.memorizedData = toSend; //.assign(toSend, toSend + 12);
-                    //                    memorizeSend.memorizedCmd = iohcDevice::SEND_DISCOVER_REMOTE_0x2A;
-
                     packets2send.back()->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
                     packets2send.back()->payload.packet.header.CtrlByte1.asStruct.EndFrame = 1;
 
                     packets2send.back()->payload.packet.header.CtrlByte2.asStruct.LPM = 1;
                     packets2send.back()->payload.packet.header.CtrlByte2.asStruct.Prio = 1;
 
-                    memcpy(packets2send.back()->payload.packet.header.source, /*from*/real/*gateway*/, 3);
+                    memcpy(packets2send.back()->payload.packet.header.source, real, 3);
 
                     packets2send.back()->delayed = 250; // Give enough time for the answer
                 }
@@ -287,7 +276,7 @@ for (const auto &d: devices) {
                  //  Not good for Cmd 0x01 Answer FE 0x10
                 
                 size_t i = 0;
-                for (const auto &d: devices) { //for (i = 0; i < 21; i++) {
+                for (const auto &d: devices) {
                     packets2send.push_back(new iohcPacket);
                     forgeAnyWPacket(packets2send.back(), toSend);
 
