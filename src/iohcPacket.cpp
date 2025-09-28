@@ -73,7 +73,7 @@ namespace IOHC {
         // if (verbosity) printf(" +%03.3f F%03.3f, %03.1fdBm %f %f\t", static_cast<float>(packetStamp - relStamp)/1000.0, static_cast<float>(this->frequency)/1000000.0, this->rssi, this->lna, this->afc);
         // if (verbosity) printf(" +%03.3f F%03.3f, %03.1fdBm %f\t", static_cast<float>(packetStamp - relStamp)/1000.0, static_cast<float>(this->frequency)/1000000.0, this->rssi, this->afc);
         // if (verbosity) printf(" +%03.3f\t%03.1fdBm\t", static_cast<float>(packetStamp - relStamp)/1000.0,  this->rssi);
-        // if (verbosity) printf(" +%03.3f F%03.3f\t", static_cast<float>(packetStamp - relStamp)/1000.0, static_cast<float>(this->frequency)/1000000.0);
+        //if (verbosity) printf(" +%03.3f F%03.3f\t", static_cast<float>(packetStamp - relStamp)/1000.0, static_cast<float>(this->frequency)/1000000.0);
         if (verbosity) ets_printf(" +%03d\t", static_cast<int>((packetStamp - relStamp)/1000.0));
         ets_printf(" %s ", _dir);
 
@@ -223,7 +223,7 @@ namespace IOHC {
                 }
 
                 default: {
-                    ets_printf("Undecoded %s", bitrow_to_hex_string(this->payload.buffer + 9, dataLen).c_str());
+                    ets_printf("1W Undecoded %s", bitrow_to_hex_string(this->payload.buffer + 9, dataLen).c_str());
 
                     // int msg_seq_nr = 0;
                     // msg_seq_nr = (this->payload.buffer[9 + data_length] << 8) | this->payload.buffer[9 + data_length + 1];
@@ -245,7 +245,6 @@ namespace IOHC {
                 ets_printf(" %s ", msg_data.c_str());
                 /*Private Atlantic/Sauter/Thermor*/
                 if (this->payload.packet.header.cmd == 0x20) {}
-                if (this->payload.packet.header.cmd == iohcDevice::RECEIVED_DISCOVER_0x28) {ets_printf("2W Pairing Asked Waiting for 0x29");}
                 if (this->payload.packet.header.cmd == iohcDevice::RECEIVED_DISCOVER_ANSWER_0x29) {ets_printf("2W Device want to be paired Waiting for 0x2C (or 0x38) ");
                     std::vector<uint8_t> deviceAsked;
                     deviceAsked.assign(this->payload.buffer + 9, this->payload.buffer + 18);
@@ -259,9 +258,6 @@ namespace IOHC {
                     //                     iohc->payload.packet.msg.p0x2b.actuator, iohc->payload.packet.msg.p0x2b.manufacturer,
                     //                     iohc->payload.packet.msg.p0x2b.info);
                 }
-                if (this->payload.packet.header.cmd == iohcDevice::RECEIVED_DISCOVER_ACTUATOR_0x2C) {ets_printf("2W Actuator Ack Asked Waiting for 0x2D");}
-                if (this->payload.packet.header.cmd == iohcDevice::RECEIVED_LAUNCH_KEY_TRANSFERT_0x38) {ets_printf("2W Key Transfert Asked after Command %2.2X Waiting for 0x32", this->payload.packet.header.cmd);}
-
                 // get set name
                 if (this->payload.packet.header.cmd == iohcDevice::RECEIVED_GET_NAME_ANSWER_0x51 || this->payload.packet.header.cmd == 0x52) {
                     std::string normalizedDescription = iohcOther2W::extractAndNormalizeName(this->payload.buffer, 9, 16);
@@ -276,7 +272,6 @@ namespace IOHC {
                     device._description = normalizedDescription;
                     save2W = iohcOther2W::getInstance()->addOrUpdateDevice(device);
                 }
-
                 if (this->payload.packet.header.cmd == 0x04) { // answer of 0x00 or 0x03 maybe 0x01
                     // Split msg_data by 4, 4, 4, 4, 6, 6 array parts
                     ets_printf("%s %s %s %s %s %s %s ",
@@ -293,7 +288,14 @@ namespace IOHC {
                     hexStringToBytes(msg_data.substr(16, 6), device._associated);
                     save2W = iohcOther2W::getInstance()->addOrUpdateDevice(device);
                     ets_printf(iohcOther2W::getInstance()->getDescription(device).c_str());
-                    }
+                }
+                if (this->payload.packet.header.cmd == 0x37) {ets_printf("This is my address ");}
+                if (this->payload.packet.header.cmd == 0x0D) {ets_printf("This is my data... ");}
+            } else {
+                if (this->payload.packet.header.cmd == iohcDevice::RECEIVED_DISCOVER_0x28) {ets_printf("2W Pairing Asked Waiting for 0x29");}
+                if (this->payload.packet.header.cmd == iohcDevice::RECEIVED_DISCOVER_ACTUATOR_0x2C) {ets_printf("2W Actuator Ack Asked Waiting for 0x2D");}
+                if (this->payload.packet.header.cmd == iohcDevice::RECEIVED_LAUNCH_KEY_TRANSFERT_0x38) {ets_printf("2W Key Transfert Asked after Command %2.2X Waiting for 0x32", this->payload.packet.header.cmd);}
+
             }
         }
         ets_printf("\n");
