@@ -103,12 +103,12 @@
 #define CHANNEL2  868950000 //1W 2W
 #define CHANNEL3  869850000 //2W
 
-#define FREQS2SCAN              {CHANNEL2, CHANNEL1, CHANNEL3}
-#define MAX_FREQS                1       // Number of Frequencies to scan through Fast Hopping set to 1 to disable FHSS
+#define FREQS2SCAN              {CHANNEL2, CHANNEL3, CHANNEL1}
+#define MAX_FREQS                3       // Number of Frequencies to scan through Fast Hopping set to 1 to disable FHSS
 
-// #if defined(HELTEC)
+//#if defined(HELTEC)
 #define SCAN_LED                  BOARD_LED_PIN //              22
-// #endif
+//#endif
 #define RX_LED                        SCAN_LED
 
 #endif
