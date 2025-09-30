@@ -3,7 +3,7 @@
     "node": "0842e3",
     "type": "",
     "description": "SALON COTE RUE",
-    "associated": "000000"
+    "associated": "1c5b65"
   },
   "94786e": {
     "node": "269411",
@@ -14,26 +14,26 @@
   "904c09": {
     "node": "0842e3",
     "type": "",
-    "description": "",
-    "associated": "000000"
+    "description": "BUREAU",
+    "associated": "e2eac6"
   },
   "da2ee6": {
     "node": "0842e3",
     "type": "",
-    "description": "",
-    "associated": "000000"
+    "description": "SALLE _ MANGER ",
+    "associated": "9a5065"
   },
   "14e00e": {
     "node": "0842e3",
     "type": "",
     "description": "CUISINE",
-    "associated": "000000"
+    "associated": "9a5065"
   },
   "1c6858": {
     "node": "0842e3",
     "type": "",
     "description": "CHAMBRE _TAGE GA",
-    "associated": "000000"
+    "associated": "a470d7"
   },
   "dfe03f": {
     "node": "269411",
@@ -57,7 +57,7 @@
     "node": "0842e3",
     "type": "",
     "description": "SALON COTE ",
-    "associated": "000000"
+    "associated": "937b80"
   },
   "b3a198": {
     "node": "269411",
@@ -68,20 +68,20 @@
   "415684": {
     "node": "0842e3",
     "type": "",
-    "description": "",
+    "description": "PORTE DE GARAGE ",
     "associated": "415684"
   },
   "fe90ee": {
     "node": "0842e3",
     "type": "",
-    "description": "",
-    "associated": "000000"
+    "description": "CHAMBRE _TAGE DR",
+    "associated": "dac38d"
   },
   "d58341": {
     "node": "0842e3",
     "type": "",
     "description": "SALLE DE BAIN CH",
-    "associated": "000000"
+    "associated": "9a5065"
   },
   "e67334": {
     "node": "269411",
@@ -93,12 +93,12 @@
     "node": "0842e3",
     "type": "",
     "description": "CHAMBRE  INES ",
-    "associated": "000000"
+    "associated": "79c1eb"
   },
   "20e52e": {
     "node": "0842e3",
     "type": "",
     "description": "CHAMBRE PARENTAL",
-    "associated": "000000"
+    "associated": "b489be"
   }
 }

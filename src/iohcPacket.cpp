@@ -26,6 +26,8 @@
 #include <utils.h>
 #include <rom/ets_sys.h>
 
+#include "interact.h"
+
 namespace IOHC {
 
     void IRAM_ATTR iohcPacket::decode(bool verbosity) {
@@ -86,16 +88,16 @@ namespace IOHC {
             ets_printf(" %s", msg_data.c_str());
 
             switch (this->payload.packet.header.cmd) {
-                case iohcDevice::RECEIVED_DISCOVER_0x28:
+                case iohcDevice::DISCOVER_0x28:
                     // ets_printf("DISCOVER_REMOTE_0x28");
-                case iohcDevice::RECEIVED_DISCOVER_REMOTE_0x2A: {
+                case iohcDevice::DISCOVER_REMOTE_0x2A: {
                     ets_printf("DISCOVER_REMOTE_0x2A");
                     ets_printf("\tWITH CHALLENGE KEY (12)");
                     break;
                 }
-                case iohcDevice::RECEIVED_DISCOVER_ANSWER_0x29:
+                case iohcDevice::DISCOVER_ANSWER_0x29:
                     // ets_printf("REMOTE_ANSWER_0x29");
-                case iohcDevice::RECEIVED_DISCOVER_REMOTE_ANSWER_0x2B: {
+                case iohcDevice::DISCOVER_REMOTE_ANSWER_0x2B: {
                     // iohcSystemTable *sysTable = IOHC::iohcSystemTable::getInstance();
                     ets_printf("DISCOVER_REMOTE_ANSWER_0x2B");
                     // sysTable->addObject(this->payload.packet.header.source, this->payload.packet.msg.p0x2b.backbone,
@@ -245,12 +247,12 @@ namespace IOHC {
                 ets_printf(" %s ", msg_data.c_str());
                 /*Private Atlantic/Sauter/Thermor*/
                 if (this->payload.packet.header.cmd == 0x20) {}
-                if (this->payload.packet.header.cmd == iohcDevice::RECEIVED_DISCOVER_ANSWER_0x29) {ets_printf("2W Device want to be paired Waiting for 0x2C (or 0x38) ");
+                if (this->payload.packet.header.cmd == iohcDevice::DISCOVER_ANSWER_0x29) {ets_printf("2W Device want to be paired Waiting for 0x2C (or 0x38) ");
                     std::vector<uint8_t> deviceAsked;
                     deviceAsked.assign(this->payload.buffer + 9, this->payload.buffer + 18);
                     for (unsigned char i: deviceAsked) ets_printf("%02X ", i);
                 }
-                if (this->payload.packet.header.cmd == iohcDevice::RECEIVED_DISCOVER_REMOTE_ANSWER_0x2B) {ets_printf("2W Remote want to be paired ");
+                if (this->payload.packet.header.cmd == iohcDevice::DISCOVER_REMOTE_ANSWER_0x2B) {ets_printf("2W Remote want to be paired ");
                     std::vector<uint8_t> deviceAsked;
                     deviceAsked.assign(this->payload.buffer + 9, this->payload.buffer + 18);
                     for (unsigned char i: deviceAsked) ets_printf("%02X ", i);
@@ -259,7 +261,8 @@ namespace IOHC {
                     //                     iohc->payload.packet.msg.p0x2b.info);
                 }
                 // get set name
-                if (this->payload.packet.header.cmd == iohcDevice::RECEIVED_GET_NAME_ANSWER_0x51 || this->payload.packet.header.cmd == 0x52) {
+                if (this->payload.packet.header.cmd == iohcDevice::GET_NAME_ANSWER_0x51
+                    || (this->payload.packet.header.cmd == 0x52 && !Cmd::scanMode)) {
                     std::string normalizedDescription = iohcOther2W::extractAndNormalizeName(this->payload.buffer, 9, 16);
                     ets_printf(normalizedDescription.c_str());
                     iohcDevice::_dev device;
@@ -276,9 +279,9 @@ namespace IOHC {
                     // Split msg_data by 4, 4, 4, 4, 6, 6 array parts
                     ets_printf("%s %s %s %s %s %s %s ",
                         msg_data.substr(0, 2).c_str(), msg_data.substr(2, 2).c_str(),
-                        msg_data.substr(4,4).c_str(),
-                        msg_data.substr(8, 4).c_str(),msg_data.substr(12, 4).c_str(),
-                        msg_data.substr(16, 6).c_str(), msg_data.substr(22, 2).c_str()
+                        msg_data.substr(4,4).c_str(), // Asked state
+                        msg_data.substr(8, 4).c_str(),msg_data.substr(12, 4).c_str(), // Actual states
+                        msg_data.substr(16, 6).c_str(), msg_data.substr(22, 2).c_str() // From
                         );
                     // At least 2 types: simple state or extended state
                     // simple state OPEN CLOSE etc... c800 c800 0000 - d100 0000 0000 - d200 3796
@@ -291,10 +294,14 @@ namespace IOHC {
                 }
                 if (this->payload.packet.header.cmd == 0x37) {ets_printf("This is my address ");}
                 if (this->payload.packet.header.cmd == 0x0D) {ets_printf("This is my data... ");}
+                if (this->payload.packet.header.cmd == 0x55) {ets_printf("general info 1 %s ", iohcOther2W::extractAndNormalizeName(this->payload.buffer, 9, 14).c_str());}
+                if (this->payload.packet.header.cmd == 0x57) {ets_printf("general info 2 %s ", iohcOther2W::extractAndNormalizeName(this->payload.buffer, 9, 16).c_str());}
+                // if (this->payload.packet.header.cmd == 0x59) {ets_printf("general info 3 %s ", iohcOther2W::extractAndNormalizeName(this->payload.buffer, 9, 16).c_str());}
+
             } else {
-                if (this->payload.packet.header.cmd == iohcDevice::RECEIVED_DISCOVER_0x28) {ets_printf("2W Pairing Asked Waiting for 0x29");}
-                if (this->payload.packet.header.cmd == iohcDevice::RECEIVED_DISCOVER_ACTUATOR_0x2C) {ets_printf("2W Actuator Ack Asked Waiting for 0x2D");}
-                if (this->payload.packet.header.cmd == iohcDevice::RECEIVED_LAUNCH_KEY_TRANSFERT_0x38) {ets_printf("2W Key Transfert Asked after Command %2.2X Waiting for 0x32", this->payload.packet.header.cmd);}
+                if (this->payload.packet.header.cmd == iohcDevice::DISCOVER_0x28) {ets_printf("2W Pairing Asked Waiting for 0x29");}
+                if (this->payload.packet.header.cmd == iohcDevice::DISCOVER_ACTUATOR_0x2C) {ets_printf("2W Actuator Ack Asked Waiting for 0x2D");}
+                if (this->payload.packet.header.cmd == iohcDevice::LAUNCH_KEY_TRANSFERT_0x38) {ets_printf("2W Key Transfert Asked after Command %2.2X Waiting for 0x32", this->payload.packet.header.cmd);}
 
             }
         }

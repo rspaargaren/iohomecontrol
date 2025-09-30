@@ -30,9 +30,9 @@
 #if defined(RADIO_SX127X)
         #include <SX1276Helpers.h>
 #endif
-#if defined(RADIO_SX126X)
-        #include <SX126xHelpers.h>
-#endif
+// #if defined(RADIO_SX126X)
+//         #include <SX126xHelpers.h>
+// #endif
 #if defined(ESP32)
     #include <TickerUsESP32.h>
 #endif
@@ -74,11 +74,10 @@ namespace IOHC {
 
             volatile static bool _g_preamble;
             volatile static bool _g_payload;
-            volatile static bool f_lock;
+            volatile static bool f_lock_hop;
             static void tickerCounter(iohcRadio *radio);
             static TaskHandle_t txTaskHandle; // TX Task handle
             static volatile bool txComplete;
-            //static void setPreambleLength(uint16_t preambleLen);
 
         private:
             iohcRadio();

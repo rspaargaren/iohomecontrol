@@ -88,7 +88,7 @@ namespace IOHC {
         // bool save() override;
         void initializeValid();
         void scanDump();
-        std::map<uint8_t, int> mapValid;
+        std::unordered_map<uint8_t, int> mapValid;
 //        void scanDump() override {}
 
         static void forgeAnyWPacket(iohcPacket *packet, const std::vector<uint8_t> &vector, size_t typn);

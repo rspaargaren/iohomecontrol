@@ -500,7 +500,7 @@ Every 9 : 10:31:38.367 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  DATA(1
 
                     packets2send.push_back(packet);
                 }
-
+/*
                 // Create 1W 'echo' packets for the associated gateway with cmd 0x20 (size 16 bytes)
                     auto echoPacket = new iohcPacket();
                     forge1WPacket(echoPacket, r.type[0]);
@@ -536,7 +536,7 @@ uint8_t fp1 = (r.type[1] == 0) ? 0x0B : 0x02;
 
                     r.sequence += 1;
                     nvs_write_sequence(r.node, r.sequence);
-
+*/
                 // Send all packets
                 _radioInstance->send(packets2send);
 #if defined(SSD1306_DISPLAY)

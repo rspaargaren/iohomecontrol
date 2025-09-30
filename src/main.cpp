@@ -103,7 +103,7 @@ void setup() {
     radioInstance = IOHC::iohcRadio::getInstance();
 #if !defined(MQTT)
 // If MQTT is not defined, txCallback is null
-    radioInstance->start(MAX_FREQS, frequencies, 0, msgRcvd, nullptr); //msgArchive); //, msgRcvd);
+    radioInstance->start(MAX_FREQS, frequencies, 0/*5000*/, msgRcvd, nullptr); //msgArchive); //, msgRcvd);
 #else
     radioInstance->start(MAX_FREQS, frequencies, 0, msgRcvd, publishMsg);
 #endif
@@ -173,7 +173,7 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
 
     switch (iohc->payload.packet.header.cmd) {
 
-        case iohcDevice::RECEIVED_DISCOVER_0x28: {
+        case iohcDevice::DISCOVER_0x28: {
             // ets_printf("2W Pairing Asked Waiting for 0x29\n");
             if (!Cmd::pairMode) break;
 
@@ -183,7 +183,7 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
             auto* packet = new iohcPacket();
             forgePacket(packet, toSend);
 
-            packet->payload.packet.header.cmd = IOHC::iohcDevice::SEND_DISCOVER_ANSWER_0x29;
+            packet->payload.packet.header.cmd = IOHC::iohcDevice::DISCOVER_ANSWER_0x29;
  
             /* Swap */
             memcpy(packet->payload.packet.header.source, cozyDevice2W->gateway, 3);
@@ -197,7 +197,7 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
 
             break;
         }
-        case iohcDevice::RECEIVED_DISCOVER_ANSWER_0x29: {
+        case iohcDevice::DISCOVER_ANSWER_0x29: {
             // ets_printf("2W Device want to be paired Waiting for 0x2C\n");
             //
             // std::vector<uint8_t> deviceAsked;
@@ -210,7 +210,7 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
             if (!Cmd::pairMode) break;
 
             // printf("Sending 0x38 \n");
-            ets_printf("Sending SEND_DISCOVER_ACTUATOR_0x2C \n");
+            ets_printf("Sending DISCOVER_ACTUATOR_0x2C \n");
 
             // std::vector<uint8_t> toSend = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06}; // 38
             std::vector<uint8_t> toSend = {}; // SEND_DISCOVER_ACTUATOR_0x2C
@@ -219,7 +219,7 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
             forgePacket(packet, toSend);
 
             // packet->payload.packet.header.cmd = 0x38;
-            packet->payload.packet.header.cmd = iohcDevice::SEND_DISCOVER_ACTUATOR_0x2C;
+            packet->payload.packet.header.cmd = iohcDevice::DISCOVER_ACTUATOR_0x2C;
             // cozyDevice2W->memorizeSend.memorizedData = toSend;
             // cozyDevice2W->memorizeSend.memorizedCmd = SEND_DISCOVER_ACTUATOR_0x2C;
 
@@ -234,13 +234,13 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
 
             break;
         }
-        case iohcDevice::RECEIVED_DISCOVER_REMOTE_ANSWER_0x2B: {
+        case iohcDevice::DISCOVER_REMOTE_ANSWER_0x2B: {
             // sysTable->addObject(iohc->payload.packet.header.source, iohc->payload.packet.msg.p0x2b.backbone,
             //                     iohc->payload.packet.msg.p0x2b.actuator, iohc->payload.packet.msg.p0x2b.manufacturer,
             //                     iohc->payload.packet.msg.p0x2b.info);
             break;
         }
-        case iohcDevice::RECEIVED_DISCOVER_ACTUATOR_0x2C: {
+        case iohcDevice::DISCOVER_ACTUATOR_0x2C: {
             // ets_printf("2W Actuator Ack Asked Waiting for 0x2D\n");
             if (!Cmd::pairMode) break;
 
@@ -249,7 +249,7 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
             auto *packet = new iohcPacket();
             forgePacket(packet, toSend);
 
-            packet->payload.packet.header.cmd = IOHC::iohcDevice::SEND_DISCOVER_ACTUATOR_ACK_0x2D;
+            packet->payload.packet.header.cmd = IOHC::iohcDevice::DISCOVER_ACTUATOR_ACK_0x2D;
 
             /* Swap */
             memcpy(packet->payload.packet.header.source, iohc->payload.packet.header.target, 3);
@@ -263,7 +263,7 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
 
             break;
         }
-        case iohcDevice::RECEIVED_LAUNCH_KEY_TRANSFERT_0x38: {
+        case iohcDevice::LAUNCH_KEY_TRANSFERT_0x38: {
             // ets_printf("2W Key Transfert Asked after Command %2.2X Waiting for 0x32\n", iohc->payload.packet.header.cmd);
             //
             std::vector<uint8_t> key_transfert;
@@ -274,7 +274,7 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
             }
             ets_printf("\n");
 
-            std::vector<uint8_t> data = {IOHC::iohcDevice::SEND_ASK_CHALLENGE_0x31}; //0x38
+            std::vector<uint8_t> data = {IOHC::iohcDevice::ASK_CHALLENGE_0x31}; //0x38
             unsigned char initial_value[16];
             constructInitialValue(data, initial_value, data.size(), key_transfert, nullptr);
             ets_printf("2) Initial value used for key encryption: ");
@@ -303,8 +303,8 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
             auto* packet = new iohcPacket();
             forgePacket(packet, toSend);
 
-            packet->payload.packet.header.cmd = IOHC::iohcDevice::SEND_KEY_TRANSFERT_0x32;
-            cozyDevice2W->memorizeSend.memorizedCmd = IOHC::iohcDevice::SEND_KEY_TRANSFERT_0x32;
+            packet->payload.packet.header.cmd = IOHC::iohcDevice::KEY_TRANSFERT_0x32;
+            cozyDevice2W->memorizeSend.memorizedCmd = IOHC::iohcDevice::KEY_TRANSFERT_0x32;
 
             /* Swap */
             memcpy(packet->payload.packet.header.source, iohc->payload.packet.header.target, 3);
@@ -317,12 +317,12 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
 
             break;
         }
-        case iohcDevice::RECEIVED_WRITE_PRIVATE_0x20:  {
+        case iohcDevice::WRITE_PRIVATE_0x20:  {
             cozyDevice2W->memorizeSend.memorizedCmd = iohc->payload.packet.header.cmd;
             IOHC::lastSendCmd = iohc->payload.packet.header.cmd;
             break;
         }
-        case iohcDevice::RECEIVED_PRIVATE_ACK_0x21: {
+        case iohcDevice::PRIVATE_ACK_0x21: {
 #if defined (MQTT)
             // Answer of 0x20, publish the confirmed command
             // doc["type"] = "Cozy";
@@ -336,13 +336,13 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
 #endif
             break;
         }
-        case iohcDevice::RECEIVED_CHALLENGE_REQUEST_0x3C: {
+        case iohcDevice::CHALLENGE_REQUEST_0x3C: {
             // Answer only to our fake gateway, not to others real devices
             if (cozyDevice2W->isFake(iohc->payload.packet.header.source, iohc->payload.packet.header.target)) {
                 doc["type"] = "Gateway";
 
                 if (Cmd::scanMode) {
-                    otherDevice2W->mapValid[IOHC::lastSendCmd] = iohcDevice::RECEIVED_CHALLENGE_REQUEST_0x3C;
+                    otherDevice2W->mapValid[IOHC::lastSendCmd] = iohcDevice::CHALLENGE_REQUEST_0x3C;
                     break;
                 }
 
@@ -365,18 +365,18 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
                 // AES_ECB_encrypt(&ctx, initial_value);
                 uint8_t dataLen = 6;
 
-                if (cozyDevice2W->memorizeSend.memorizedCmd == IOHC::iohcDevice::RECEIVED_ASK_CHALLENGE_0x31) {
-                    packet/*s2send.back()*/->payload.packet.header.cmd = IOHC::iohcDevice::SEND_KEY_TRANSFERT_0x32;
+                if (cozyDevice2W->memorizeSend.memorizedCmd == IOHC::iohcDevice::ASK_CHALLENGE_0x31) {
+                    packet/*s2send.back()*/->payload.packet.header.cmd = IOHC::iohcDevice::KEY_TRANSFERT_0x32;
                     dataLen = 16;
-                    /*std::vector<uint8_t>*/ IVdata = {IOHC::iohcDevice::RECEIVED_ASK_CHALLENGE_0x31};
+                    /*std::vector<uint8_t>*/ IVdata = {IOHC::iohcDevice::ASK_CHALLENGE_0x31};
                     constructInitialValue(IVdata, initial_value, 1, challengeAsked, nullptr);
                     AES_ECB_encrypt(&ctx, initial_value);
                     for (int i = 0; i < dataLen; i++)
                         initial_value[i] = initial_value[i] ^ transfert_key[i];
-                    cozyDevice2W->memorizeSend.memorizedCmd = IOHC::iohcDevice::SEND_KEY_TRANSFERT_0x32;
+                    cozyDevice2W->memorizeSend.memorizedCmd = IOHC::iohcDevice::KEY_TRANSFERT_0x32;
                     cozyDevice2W->memorizeSend.memorizedData.assign(initial_value, initial_value + 16);
                 } else {
-                    packet/*s2send.back()*/->payload.packet.header.cmd = IOHC::iohcDevice::SEND_CHALLENGE_ANSWER_0x3D;
+                    packet/*s2send.back()*/->payload.packet.header.cmd = IOHC::iohcDevice::CHALLENGE_ANSWER_0x3D;
                     dataLen = 6;
                     /*std::vector<uint8_t>*/ IVdata = cozyDevice2W->memorizeSend.memorizedData;
                     IVdata.insert(IVdata.begin(), cozyDevice2W->memorizeSend.memorizedCmd);
@@ -411,7 +411,7 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
             }
             break;
         }
-        case iohcDevice::RECEIVED_GET_NAME_0x50: {
+        case iohcDevice::GET_NAME_0x50: {
             if (cozyDevice2W->isFake(iohc->payload.packet.header.source, iohc->payload.packet.header.target)) {
             // MY_GATEWAY 4d595f47415445574159
             std::vector<uint8_t> toSend = {0x4d, 0x59, 0x5f, 0x47, 0x41, 0x54, 0x45, 0x57, 0x41, 0x59};
@@ -436,13 +436,8 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
             }
             break;
         }
-        case iohcDevice::RECEIVED_GET_NAME_ANSWER_0x51: {
-            // std::vector<uint8_t> nameReceived;
-            // nameReceived.assign(iohc->payload.buffer + 9, iohc->payload.buffer + 25);
-            // for (char byte: nameReceived) {
-            //     ets_printf("%c", std::toupper(byte));
-            // }
-            // ets_printf("\n");
+        case iohcDevice::GET_NAME_ANSWER_0x51: {
+            // in iohcPacket
             break;
         }
         case 0X00:
@@ -490,7 +485,7 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
         }
         case 0x04:
         case 0x0D:
-        case iohcDevice::RECEIVED_DISCOVER_ACTUATOR_ACK_0x2D:
+        case iohcDevice::DISCOVER_ACTUATOR_ACK_0x2D:
         case 0x4B:
         case 0x55:
         case 0x57:
@@ -502,7 +497,7 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
             // }
         break;
     }
-        case iohcDevice::RECEIVED_STATUS_0xFE: {
+        case iohcDevice::STATUS_0xFE: {
             if (Cmd::scanMode) {
                 otherDevice2W->memorizeOther2W = {};
                 // ets_printf(" Unknown %X Cmd %X ", iohc->payload.buffer[9], IOHC::lastSendCmd);
@@ -537,13 +532,14 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
             ets_printf("\n");
             break;
         }
-        case iohcDevice::RECEIVED_CHALLENGE_ANSWER_0x3D:
+        case iohcDevice::CHALLENGE_ANSWER_0x3D:
         case 0x48:
         case 0x49:
         case 0x4A:
         case 0X05:
         case 0x19:
-            break;
+        case 0x0C: // Can answer with 0x0d (7bytes): 05 aa1c 0000  or 05 aa0a 0000
+        case 0x37: break;
         default:
             ets_printf("Received Unknown command %02X ", iohc->payload.packet.header.cmd);
             return false;

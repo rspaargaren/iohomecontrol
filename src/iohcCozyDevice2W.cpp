@@ -80,9 +80,9 @@ namespace IOHC {
                 auto* packet = new iohcPacket();
                 forge2WPacket(packet, toSend);
 
-                packet->payload.packet.header.cmd = iohcDevice::SEND_ASK_CHALLENGE_0x31;
+                packet->payload.packet.header.cmd = iohcDevice::ASK_CHALLENGE_0x31;
                 memorizeSend.memorizedData = toSend;
-                memorizeSend.memorizedCmd = iohcDevice::SEND_ASK_CHALLENGE_0x31;
+                memorizeSend.memorizedCmd = iohcDevice::ASK_CHALLENGE_0x31;
 
                 packet->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
                 packet->payload.packet.header.CtrlByte1.asStruct.EndFrame = 1;
@@ -100,8 +100,8 @@ namespace IOHC {
                 auto* packet = new iohcPacket();
                 forge2WPacket(packet, toSend);
 
-                packet->payload.packet.header.cmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
-                memorizeSend.memorizedCmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
+                packet->payload.packet.header.cmd = iohcDevice::WRITE_PRIVATE_0x20;
+                memorizeSend.memorizedCmd = iohcDevice::WRITE_PRIVATE_0x20;
                 memorizeSend.memorizedData = toSend;
 
                 packet->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
@@ -127,9 +127,9 @@ namespace IOHC {
                 auto* packet = new iohcPacket();
                 forge2WPacket(packet, toSend);
 
-                packet->payload.packet.header.cmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
+                packet->payload.packet.header.cmd = iohcDevice::WRITE_PRIVATE_0x20;
                 memorizeSend.memorizedData = toSend;
-                memorizeSend.memorizedCmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
+                memorizeSend.memorizedCmd = iohcDevice::WRITE_PRIVATE_0x20;
 
                 packet->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
 
@@ -164,9 +164,9 @@ namespace IOHC {
                     auto* packet = new iohcPacket();
                     forge2WPacket(packet, toSend);
 
-                    packet->payload.packet.header.cmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
+                    packet->payload.packet.header.cmd = iohcDevice::WRITE_PRIVATE_0x20;
                     memorizeSend.memorizedData = toSend;
-                    memorizeSend.memorizedCmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
+                    memorizeSend.memorizedCmd = iohcDevice::WRITE_PRIVATE_0x20;
 
                     packet->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
                     memcpy(packet->payload.packet.header.source, gateway, 3);
@@ -192,9 +192,9 @@ namespace IOHC {
                 // packets2send.push_back(new iohcPacket);
                 forge2WPacket(packet, toSend);
 
-                packet->payload.packet.header.cmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
+                packet->payload.packet.header.cmd = iohcDevice::WRITE_PRIVATE_0x20;
                 memorizeSend.memorizedData = toSend;
-                memorizeSend.memorizedCmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
+                memorizeSend.memorizedCmd = iohcDevice::WRITE_PRIVATE_0x20;
 
                 packet->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
 
@@ -220,9 +220,9 @@ namespace IOHC {
                 // packets2send.push_back(new iohcPacket);
                 forge2WPacket(packet, toSend);
 
-                packet->payload.packet.header.cmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
+                packet->payload.packet.header.cmd = iohcDevice::WRITE_PRIVATE_0x20;
                 memorizeSend.memorizedData = toSend;
-                memorizeSend.memorizedCmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
+                memorizeSend.memorizedCmd = iohcDevice::WRITE_PRIVATE_0x20;
 
                 packet->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
 
@@ -244,9 +244,9 @@ namespace IOHC {
                 // packets2send.push_back(new iohcPacket);
                 forge2WPacket(packet, toSend);
 
-                packet->payload.packet.header.cmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
+                packet->payload.packet.header.cmd = iohcDevice::WRITE_PRIVATE_0x20;
                 memorizeSend.memorizedData = toSend;
-                memorizeSend.memorizedCmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
+                memorizeSend.memorizedCmd = iohcDevice::WRITE_PRIVATE_0x20;
 
                 packet->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
 

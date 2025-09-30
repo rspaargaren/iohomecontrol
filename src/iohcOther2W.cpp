@@ -98,15 +98,10 @@ namespace IOHC {
 
                 for (const auto &d: devices) {
 
-                    // address target;
-                    // target[0] = d._node[0]; //static_cast<uint8_t>(value >> 16);
-                    // target[1] = d._node[1]; //static_cast<uint8_t>(value >> 8);
-                    // target[2] = d._node[2]; //static_cast<uint8_t>(value);
-
                     auto packet = new iohcPacket;
 
                     forgeAnyWPacket(packet, toSend, 0);
-                    packet->payload.packet.header.cmd = SEND_GET_NAME_0x50;
+                    packet->payload.packet.header.cmd = GET_NAME_0x50;
 
                     packet->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
 
@@ -142,7 +137,7 @@ namespace IOHC {
                     packets2send.push_back(new iohcPacket);
                     forgeAnyWPacket(packets2send.back(), toSend);
 
-                    packets2send.back()->payload.packet.header.cmd = 0x00; //SEND_WRITE_PRIVATE_0x20;
+                    packets2send.back()->payload.packet.header.cmd = 0x00; //WRITE_PRIVATE_0x20;
                     memorizeOther2W.memorizedData = toSend;
                     memorizeOther2W.memorizedCmd = 0x00; //SEND_WRITE_PRIVATE_0x20;
 
@@ -174,9 +169,9 @@ namespace IOHC {
                 packets2send.push_back(new iohcPacket);
                 forgeAnyWPacket(packets2send.back(), toSend);
 
-                packets2send.back()->payload.packet.header.cmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
+                packets2send.back()->payload.packet.header.cmd = iohcDevice::WRITE_PRIVATE_0x20;
                 memorizeOther2W.memorizedData = toSend;
-                memorizeOther2W.memorizedCmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
+                memorizeOther2W.memorizedCmd = iohcDevice::WRITE_PRIVATE_0x20;
 
                 packets2send.back()->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
 
@@ -212,7 +207,7 @@ namespace IOHC {
 
                     packets2send.back()->payload.packet.header.cmd = command[i]; //iohcDevice::SEND_DISCOVER_0x28;
                     memorizeOther2W.memorizedData = toSend;
-                    memorizeOther2W.memorizedCmd = iohcDevice::SEND_DISCOVER_0x28;
+                    memorizeOther2W.memorizedCmd = iohcDevice::DISCOVER_0x28;
 
                     packets2send.back()->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
                     packets2send.back()->payload.packet.header.CtrlByte1.asStruct.EndFrame = 1;
@@ -225,11 +220,13 @@ namespace IOHC {
                     // format b00000000 xxxxxxxx 111111
                     uint16_t bcast = (type<<6) + 0b111011;
                     broadcast[0] = (bcast >> 16) & 0xFF;  // Partie haute (sera 0, car bcast est sur 16 bits)
-                    broadcast[1] = (bcast >> 8) & 0xFF;   // Octet du milieu
+                    broadcast[1] = (bcast >> 8) & 0xFF;   //Octet du milieu
+                    // broadcast[1] = 0xF0 | ( (bcast >> 8) & 0x0F ); 0x00Fxxx
                     broadcast[2] = bcast & 0xFF;          // Octet de poids faible
+
                     memcpy(packets2send.back()->payload.packet.header.target, broadcast, 3);
 
-                    packets2send.back()->delayed = 150;
+                    packets2send.back()->delayed = 75;
                 }
 
                 _radioInstance->send(packets2send);
@@ -260,13 +257,13 @@ namespace IOHC {
                     if (i == 5) {
                         std::vector<uint8_t> toSend = {};
                         forgeAnyWPacket(packets2send.back(), toSend);
-                        packets2send.back()->payload.packet.header.cmd = iohcDevice::SEND_DISCOVER_0x28;
+                        packets2send.back()->payload.packet.header.cmd = iohcDevice::DISCOVER_0x28;
                         memcpy(packets2send.back()->payload.packet.header.target, broadcast_3f, 3);
                     }
                     if (i == 4) {
                         std::vector<uint8_t> toSend = {};
                         forgeAnyWPacket(packets2send.back(), toSend);
-                        packets2send.back()->payload.packet.header.cmd = iohcDevice::SEND_DISCOVER_0x28;
+                        packets2send.back()->payload.packet.header.cmd = iohcDevice::DISCOVER_0x28;
                         memcpy(packets2send.back()->payload.packet.header.target, broadcast_3b, 3);
                     }
                     if (i == 3) {
@@ -274,7 +271,7 @@ namespace IOHC {
                             0x93, 0x32, 0xd6, 0x18, 0xde, 0x2a, 0x0f, 0xa6, 0x25, 0x0e, 0x2c, 0x7e
                         };
                         forgeAnyWPacket(packets2send.back(), toSend);
-                        packets2send.back()->payload.packet.header.cmd = iohcDevice::SEND_DISCOVER_REMOTE_0x2A;
+                        packets2send.back()->payload.packet.header.cmd = iohcDevice::DISCOVER_REMOTE_0x2A;
                         memcpy(packets2send.back()->payload.packet.header.target, broadcast_3f, 3);
                     }
                     if (i == 2) {
@@ -282,19 +279,19 @@ namespace IOHC {
                             0x93, 0x32, 0xd6, 0x18, 0xde, 0x2a, 0x0f, 0xa6, 0x25, 0x0e, 0x2c, 0x7e
                         };
                         forgeAnyWPacket(packets2send.back(), toSend);
-                        packets2send.back()->payload.packet.header.cmd = iohcDevice::SEND_DISCOVER_REMOTE_0x2A;
+                        packets2send.back()->payload.packet.header.cmd = iohcDevice::DISCOVER_REMOTE_0x2A;
                         memcpy(packets2send.back()->payload.packet.header.target, broadcast_3b, 3);
                     }
                     if (i == 1) {
                         std::vector<uint8_t> toSend = {0x00};
                         forgeAnyWPacket(packets2send.back(), toSend);
-                        packets2send.back()->payload.packet.header.cmd = iohcDevice::SEND_UNKNOWN_0x2E;
+                        packets2send.back()->payload.packet.header.cmd = iohcDevice::UNKNOWN_0x2E;
                         memcpy(packets2send.back()->payload.packet.header.target, broadcast_3f, 3);
                     }
                     if (i == 0) {
                         std::vector<uint8_t> toSend = {0x00};
                         forgeAnyWPacket(packets2send.back(), toSend);
-                        packets2send.back()->payload.packet.header.cmd = iohcDevice::SEND_UNKNOWN_0x2E;
+                        packets2send.back()->payload.packet.header.cmd = iohcDevice::UNKNOWN_0x2E;
                         memcpy(packets2send.back()->payload.packet.header.target, broadcast_3b, 3);
                     }
                     packets2send.back()->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
@@ -305,10 +302,10 @@ namespace IOHC {
                     // packets2send.back()->payload.packet.header.CtrlByte2.asStruct.Unk3 = 1;
 
                     memcpy(packets2send.back()->payload.packet.header.source, tahoma/*GW1*//*real*/, 3);
-                    packets2send.back()->repeat = 4;
-                    packets2send.back()->repeatTime = 60;
-                    // packets2send.back()->delayed = 120; // Give enough time for the answer
-                    packets2send.back()->frequency = CHANNEL3;
+                    // packets2send.back()->repeat = 4;
+                    // packets2send.back()->repeatTime = 60;
+                    packets2send.back()->delayed = 75; // Give enough time for the answer
+                    // packets2send.back()->frequency = CHANNEL3;
                 }
 
                 _radioInstance->send(packets2send);
@@ -350,8 +347,8 @@ namespace IOHC {
                 packets2send.push_back(new iohcPacket);
                 forgeAnyWPacket(packets2send.back(), toSend);
 
-                packets2send.back()->payload.packet.header.cmd = iohcDevice::SEND_KEY_TRANSFERT_ACK_0x33;
-                memorizeOther2W.memorizedCmd = iohcDevice::SEND_KEY_TRANSFERT_ACK_0x33;
+                packets2send.back()->payload.packet.header.cmd = iohcDevice::KEY_TRANSFERT_ACK_0x33;
+                memorizeOther2W.memorizedCmd = iohcDevice::KEY_TRANSFERT_ACK_0x33;
                 memorizeOther2W.memorizedData = toSend;
 
                 packets2send.back()->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
@@ -384,7 +381,7 @@ namespace IOHC {
                 uint8_t counter = 0;
 //                packets2send.clear();
                 for (const auto &[CmdSend, Answer]: mapValid) {
-                    if (Answer == 0 || (Answer == 5 && CmdSend != 0x19)) {
+                    if (Answer == 0xFF || (Answer == 5 && CmdSend != 0x19)) {
                         counter++;
 
                         // 0x00,  0x01, 0x03, 0x0a, 0x0c, 0x19, 0x1e, 0x20, 0x23, 0x28, 0x2a(12), 0x2c, 0x2e, 0x31, 0x32(16), 0x36, 0x38(6), 0x39, 0x3c(6), 0x46(9), 0x48(9), 0x4a(18), 0x4b
@@ -409,9 +406,11 @@ namespace IOHC {
                             toSend.assign(special12, special12 + 2);
                         if (CmdSend == 0x2A || CmdSend == 0x96)
                             toSend.assign(special12, special12 + 12);
-                        if (CmdSend == 0x38 || CmdSend == 0x3C || CmdSend == 0x3D)
+                        if (CmdSend == 0x38 || CmdSend == 0x3D)
                             toSend.assign(special12, special12 + 6);
-                        if (CmdSend == 0x32 || CmdSend == 0x52 || CmdSend == 0x92)
+                        if (CmdSend == 0x3C)
+                            toSend = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+                        if (CmdSend == 0x32 || CmdSend == 0x92)
                             toSend.assign(special12, special12 + 16);
                         if (CmdSend == 0x52) toSend = myName;
                         if (CmdSend == 0x46 || CmdSend == 0x48 || CmdSend == 0x6E || CmdSend == 0x6F)
@@ -431,22 +430,24 @@ namespace IOHC {
 
                         packets2send.back()->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
                         packets2send.back()->payload.packet.header.CtrlByte1.asStruct.EndFrame = 0;
-                        packets2send.back()->payload.packet.header.CtrlByte2.asStruct.LPM = 1;
+                        // packets2send.back()->payload.packet.header.CtrlByte2.asStruct.LPM = 1;
                         packets2send.back()->payload.packet.header.CtrlByte2.asStruct.Prio = 1;
                         address GW2 = {0x26, 0x94, 0x11};
                         address GW1 = {0x08, 0x42, 0xe3};
-                        address UK2 = {0xE6, 0x73, 0x34}; //{0x94, 0x78, 0x6E};
+                        address BUREAU = {0x90, 0x4c, 0x09}; //{0x94, 0x78, 0x6E};
                         address SALONRUE = {0x05, 0x4E, 0x17};
+                        address PORTAIL = {0x9A, 0x5C, 0xA0}; // TODO search the 2W address
+                        address GARAGE = {0x41, 0x56, 0x84};
                         address tahoma = {0xEF, 0x37, 0x12};
 
-                        memcpy(packets2send.back()->payload.packet.header.source, GW1, 3);
+                        memcpy(packets2send.back()->payload.packet.header.source, tahoma, 3);
                         // if (command.first == 0x14 || command.first == 0x19 || command.first == 0x1e || command.first == 0x2a || command.first == 0x34 || command.first == 0x4a) {
                         // memcpy(packets2send.back()->payload.packet.header.target, broad, 3);
                         // } else {
-                        memcpy(packets2send.back()->payload.packet.header.target,SALONRUE, 3);
+                        memcpy(packets2send.back()->payload.packet.header.target, BUREAU, 3);
                         // }
 
-                        packets2send.back()->delayed = 245;
+                        packets2send.back()->delayed = 145;
                     }
                     toSend.clear();
                 }
@@ -466,24 +467,23 @@ namespace IOHC {
      50 51 - 52(16) 53 - 54 55 - 56 57 - 60(21) .. - 64(2) 65 - 6e(9) fe - 6f(9) .. - 71 72 - 73(3) .. - 80 81 - 82(21) .. - 84  85 - 86 87 - 88 89 - 8a(18) 8c - 8b(1) 8c - 8e .. - 90 91 - 92(16) 93 - 94 95 - 96(12) 97 - 98 99
      EE 03 ??*/
     void iohcOther2W::initializeValid() {
-        size_t validKey = 0;
-        auto valid = std::vector<uint8_t>(255);
-        std::iota(valid.begin(), valid.end(), 0);
+        // size_t validKey = 0;
+        // auto valid = std::vector<uint8_t>(255);
+        // std::iota(valid.begin(), valid.end(), 0x00);
 
-        valid = {
+        const std::vector valid = {
             0x00, 0x01, 0x03, 0x0a, 0x0c, 0x19, 0x1e, 0x20, 0x23, 0x28, 0x2a, 0x2c, 0x38, 0x2e, 0x31, 0x32, 0x36, 0x39,
-            0x3c, 0x46, 0x48, 0x4a, 0x4b,
+            0x46, 0x48, 0x4a, 0x4b,
             0x50, 0x52, 0x54, 0x56, 0x60, 0x64, 0x6e, 0x6f, 0x71, 0x73, 0x80, 0x82, 0x84, 0x86, 0x88, 0x8a, 0x8b, 0x8e,
             0x90, 0x92, 0x94, 0x96, 0x98,
             // 0xe0, 0xe1, 0xe2, 0xe3, 0xe4, 0xe5, 0xe6, 0xe7, 0xe8, 0xe9, 0xea, 0xeb, 0xec, 0xed, 0xee, 0xef,
             // 0xf0, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7, 0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff,
-            //Not found in firmware 02 0e 25 30 34 3a 58
-            0x02, 0x0b, 0x0e, 0x14, 0x16, 0x25, 0x30, 0x34, 0x3a, 0x58
+            //Not found in firmware 02 0e 25 30 34 3a 58 and send 0x3c at end ;)
+            0x02, 0x0b, 0x0e, 0x14, 0x16, 0x25, 0x30, 0x34, 0x3a, 0x58, 0x3c
         };
 
         for (int key: valid) {
-            // validKey++;
-            mapValid[key] = 0;
+            mapValid[key] = 0xff;
         }
         // printf("ValidKey: %d\n", validKey);
         // printf("MapValid size: %zu\n", mapValid.size());
@@ -497,28 +497,18 @@ namespace IOHC {
 
         uint8_t count = 0;
 
-        for (auto &it: mapValid) {
-            // Prints the first two bytes of the second.
-            // Prints the token and argument.
-            if (it.second != 0x08) {
-                // Prints the first and second of the token.
-                // Prints the argument string representation of the argument.
-                if (it.second == 0x3C)
-                    ets_printf("%2.2x=AUTH ", it.first, it.second);
-                    // Prints the string representation of the argument.
-                    // Prints the string representation of the argument.
-                else if (it.second == 0x80)
-                    ets_printf("%2.2x=NRDY ", it.first, it.second);
+        for (auto &[Command, Answer]: mapValid) {
+            if (Answer != 0x08) {
+                if (Answer == 0x3C)
+                    ets_printf("%2.2x=AUTH ", Command, Answer);
+                else if (Answer == 0x80)
+                    ets_printf("%2.2x=NRDY ", Command, Answer);
                 else
-                    ets_printf("%2.2x=%2.2x\t", it.first, it.second);
+                    ets_printf("%2.2x=%2.2x\t", Command, Answer);
                 count++;
-                // Prints the number of bytes to the console.
-                // Prints the number of bytes to the console.
                 if (count % 16 == 0) ets_printf("\n");
             }
         }
-
-        // Prints the number of bytes to the console.
         if (count % 16 != 0) ets_printf("\n");
 
         ets_printf("%u toCheck \n", count);
@@ -572,7 +562,7 @@ namespace IOHC {
 
         JsonDocument doc;
         for (const auto &d: devices) {
-            // Utiliser dst comme clé au lieu de node
+            // use dst as a key instead of node
             std::string key = bytesToHexString(d._dst, sizeof(address));
             auto jobj = doc[key.c_str()].to<JsonObject>();
             jobj["node"] = bytesToHexString(d._node, sizeof(address));

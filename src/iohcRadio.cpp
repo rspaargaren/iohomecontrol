@@ -22,8 +22,8 @@
 #include <log_buffer.h>
 #include <utility>
 
-#define LONG_PREAMBLE_MS 1920
-#define SHORT_PREAMBLE_MS 40
+#define LONG_PREAMBLE_MS 206
+#define SHORT_PREAMBLE_MS 52
 
 TaskHandle_t IOHC::iohcRadio::txTaskHandle = nullptr;
 
@@ -33,7 +33,7 @@ namespace IOHC {
     volatile bool iohcRadio::_g_payload = false;
     volatile uint32_t iohcRadio::_g_payload_millis = 0L;
     uint8_t iohcRadio::_flags[2] = {0, 0};
-    volatile bool iohcRadio::f_lock = false;
+    volatile bool iohcRadio::f_lock_hop = false;
     volatile bool iohcRadio::send_lock = false;
     volatile bool iohcRadio::txMode = false;
     volatile iohcRadio::RadioState iohcRadio::radioState = iohcRadio::RadioState::IDLE;
@@ -73,7 +73,7 @@ namespace IOHC {
      */
     void IRAM_ATTR handle_interrupt_fromisr(/*void *arg*/) {
         iohcRadio::_g_preamble = digitalRead(RADIO_PREAMBLE_DETECTED);
-        iohcRadio::f_lock = iohcRadio::_g_preamble;
+        iohcRadio::f_lock_hop = iohcRadio::_g_preamble;
 iohcRadio::setRadioState(iohcRadio::_g_preamble ? iohcRadio::RadioState::PREAMBLE : iohcRadio::RadioState::RX);
         iohcRadio::_g_payload = digitalRead(RADIO_PACKET_AVAIL);
 iohcRadio::setRadioState(iohcRadio::_g_payload ? iohcRadio::RadioState::PAYLOAD : iohcRadio::RadioState::RX);
@@ -130,16 +130,15 @@ iohcRadio::setRadioState(iohcRadio::_g_payload ? iohcRadio::RadioState::PAYLOAD 
     }
 
 /**
- * The `start` function initializes the radio with specified parameters and sets it to receive mode.
+ * Initializes the radio with specified parameters and sets it to receive mode.
  * 
- * @param num_freqs The `num_freqs` parameter in the `start` function represents the number of
+ * @param num_freqs Number of
  * frequencies to scan. It is of type `uint8_t`. This
  * parameter specifies how many frequencies the radio will scan during operation.
- * @param scan_freqs The `scan_freqs` parameter is an array of `uint32_t` values that represent the
+ * @param scan_freqs array of `uint32_t` values that represent the
  * frequencies to be scanned during the radio operation. The `start` function initializes the radio
  * with the provided frequencies for scanning.
- * @param scanTimeUs The `scanTimeUs`
- * represents the time interval in microseconds for scanning frequencies. If a specific value is
+ * @param scanTimeUs time interval in microseconds for scanning frequencies. If a specific value is
  * provided for `scanTimeUs`, it will be used as the scan interval. Otherwise, the default scan
  * interval defined as
  * @param rxCallback The `rxCallback`  `IohcPacketDelegate`, which is a delegate or
@@ -159,7 +158,7 @@ iohcRadio::setRadioState(iohcRadio::_g_payload ? iohcRadio::RadioState::PAYLOAD 
         Radio::clearBuffer();
         Radio::clearFlags();
         /* We always start at freq[0], the 1W/2W channel*/
-        Radio::setCarrier(Radio::Carrier::Frequency, scan_freqs[0]); //868950000);
+        Radio::setCarrier(Radio::Carrier::Frequency, CHANNEL2); // scan_freqs[0]); //868950000);
         // Radio::calibrate();
         Radio::setRx();
     }
@@ -188,9 +187,8 @@ iohcRadio::setRadioState(iohcRadio::_g_payload ? iohcRadio::RadioState::PAYLOAD 
                 if (!txMode) {
                     Radio::setRx();
                     radio->setRadioState(iohcRadio::RadioState::RX);
-                    f_lock = false;
+                    f_lock_hop = false;
                 }
-                // radio->sent(radio->iohc); // Put after Workaround to permit MQTT sending. No more needed
                 return;
             }
             // if in RX mode?
@@ -205,9 +203,8 @@ iohcRadio::setRadioState(iohcRadio::_g_payload ? iohcRadio::RadioState::PAYLOAD 
         // if (_g_preamble) {
             radio->tickCounter = 0;
             radio->preCounter = radio->preCounter + 1;
-            //radio->preCounter += 1;
 
-            //            if (_flags[0] & RF_IRQFLAGS1_SYNCADDRESSMATCH) radio->preCounter = 0;
+            // if (_flags[0] & RF_IRQFLAGS1_SYNCADDRESSMATCH) radio->preCounter = 0;
             // In case of Sync received resets the preamble duration
             if ((radio->preCounter * SM_GRANULARITY_US) >= SM_PREAMBLE_RECOVERY_TIMEOUT_US) {
                 // Avoid hanging on a too long preamble detect
@@ -217,7 +214,7 @@ iohcRadio::setRadioState(iohcRadio::_g_payload ? iohcRadio::RadioState::PAYLOAD 
         }
 
         // if (radioState != iohcRadio::RadioState::RX) return;
-        if (f_lock) return;
+        if (f_lock_hop) return;
 
         radio->tickCounter = radio->tickCounter + 1;
         if (radio->tickCounter * SM_GRANULARITY_US < radio->scanTimeUs) return;
@@ -254,6 +251,160 @@ iohcRadio::setRadioState(iohcRadio::_g_payload ? iohcRadio::RadioState::PAYLOAD 
         txCounter = 0;
 
         Sender.attach_ms(packets2send[txCounter]->repeatTime, packetSender, this);
+    }
+
+/**
+ * Handles the transmission of packets using radio
+ * communication, including frequency setting, packet preparation, and handling of repeated
+ * transmissions.
+ * 
+ * @param radio Pointer to an object of type
+ * `iohcRadio`. It is used to access and manipulate data and functions within the `iohcRadio` class.
+ */
+    void IRAM_ATTR iohcRadio::packetSender(iohcRadio *radio) {
+        digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
+        // Stop frequency hopping
+        f_lock_hop = true;
+        txMode = true; // Avoid Radio put in Rx mode at next packet sent/received
+        // Using Delayed Packet radio->txCounter)
+        if (radio->packets2send[radio->txCounter] == nullptr) {
+            // Plus de Delayed Packet
+            if (radio->delayed != nullptr)
+                // Use Saved Delayed Packet
+                    radio->iohc = radio->delayed;
+        } else
+            radio->iohc = radio->packets2send[radio->txCounter];
+
+        // if (radio->iohc->frequency != 0) {
+        if (radio->iohc->frequency != radio->scan_freqs[radio->currentFreqIdx]) {
+            // printf("ChangedFreq !\n");
+            Radio::setCarrier(Radio::Carrier::Frequency, radio->iohc->frequency);
+        }
+        // else {
+        //     radio->iohc->frequency = radio->scan_freqs[radio->currentFreqIdx];
+        // }
+
+        Radio::setStandby();
+        Radio::clearFlags();
+Radio::setPreambleLength(LONG_PREAMBLE_MS);
+        Radio::writeBytes(REG_FIFO, radio->iohc->payload.buffer, radio->iohc->buffer_length);
+        Radio::setTx();
+        radio->setRadioState(iohcRadio::RadioState::TX);
+        // There is no need to maintain radio locked between packets transmission unless clearly asked
+        txMode = radio->iohc->lock;
+
+        packetStamp = esp_timer_get_time();
+        radio->iohc->decode(true); //false);
+
+        IOHC::lastSendCmd = radio->iohc->payload.packet.header.cmd;
+
+        if (radio->iohc->repeat) {
+            // Only the first frame is LPM (1W)
+            radio->iohc->payload.packet.header.CtrlByte2.asStruct.LPM = 0;
+Radio::setPreambleLength(SHORT_PREAMBLE_MS);
+
+            radio->iohc->repeat -= 1;
+        }
+        if (radio->iohc->repeat == 0) {
+            radio->Sender.detach();
+            radio->txCounter = radio->txCounter + 1;
+            if (radio->txCounter < radio->packets2send.size() && radio->packets2send[radio->txCounter] != nullptr) {
+
+                if (radio->packets2send[radio->txCounter]->delayed != 0) {
+                    radio->delayed = radio->packets2send[radio->txCounter];
+                    radio->packets2send[radio->txCounter] = nullptr;
+                    radio->Sender.delay_ms(radio->delayed/*radio->packets2send[radio->txCounter]*/->delayed, packetSender, radio);
+                } else {
+                    radio->Sender.attach_ms(radio->packets2send[radio->txCounter]->repeatTime, packetSender, radio);
+                }
+            } else {
+                // In any case, after last packet sent, unlock the radio
+                txMode = false;
+                f_lock_hop = false;
+                // FIX: Deallocate memory from previous packets before clearing the vector to prevent memory leaks.
+                for (auto p : radio->packets2send) {
+                    delete p;
+                }
+                radio->packets2send.clear();
+            }
+        }
+
+        digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
+    }
+
+/**
+ * The `sent` function checks if a callback function `txCB` is set and calls
+ * it with a packet as a parameter, returning the result.
+ * 
+ * @param packet The `packet` parameter is a pointer to an object of type `iohcPacket`.
+ * 
+ * @return  boolean , which is determined by the result of
+ * calling the `txCB` function with the `packet` parameter. If `txCB` is not null, the return value
+ * will be the result of calling `txCB(packet)`, otherwise it will be `false`.
+ */
+    bool IRAM_ATTR iohcRadio::sent(iohcPacket *packet) {
+        bool ret = false;
+        if (txCB) ret = txCB(packet);
+        return ret;
+    }
+
+    //    static uint8_t RF96lnaMap[] = { 0, 0, 6, 12, 24, 36, 48, 48 };
+/**
+ * The `iohcRadio::receive` function toggles an LED, reads radio data, processes it, and
+ * triggers a callback function.
+ * 
+ * @param stats The `stats` boolean used to determine whether to gather additional statistics during the radio reception process. If
+ * `stats` is set to `true`, the function will collect and process additional information such as RSSI
+ * (Received Signal
+ * 
+ * @return The function `iohcRadio::receive` is returning a boolean value `true`.
+ */
+    bool IRAM_ATTR iohcRadio::receive(bool stats = false) {
+        digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
+
+        // Create a new packet for this reception. Use a pointer to pass to the callback.
+        auto* currentPacket = new iohcPacket();
+
+        currentPacket->buffer_length = 0;
+        currentPacket->frequency = scan_freqs[currentFreqIdx];
+
+        _g_payload_millis = esp_timer_get_time();
+        packetStamp = _g_payload_millis;
+
+        if (stats) {
+            currentPacket->rssi = static_cast<float>(Radio::readByte(REG_RSSIVALUE)) / -2.0f;
+            int16_t thres = Radio::readByte(REG_RSSITHRESH);
+            currentPacket->snr = currentPacket->rssi > thres ? 0 : (thres - currentPacket->rssi);
+            int16_t f = static_cast<uint16_t>(Radio::readByte(REG_AFCMSB));
+            f = (f << 8) | static_cast<uint16_t>(Radio::readByte(REG_AFCLSB));
+            currentPacket->afc = f * 61.0;
+        }
+
+        while (Radio::dataAvail()) {
+            if (currentPacket->buffer_length < MAX_FRAME_LEN) {
+                currentPacket->payload.buffer[currentPacket->buffer_length++] = Radio::readByte(REG_FIFO);
+            } else {
+                // Prevent buffer overflow, discard extra bytes.
+                Radio::readByte(REG_FIFO);
+            }
+        }
+
+        if (/*bool is_duplicate = last1wPacketValid &&*/ *currentPacket == last1wPacket) {
+            // ets_printf("Same packet, skipping\n");
+        } else {
+            if (rxCB) rxCB(currentPacket);
+            currentPacket->decode(true); //stats);
+            // addLogMessage(String(currentPacket->decodeToString(true).c_str()));
+
+            // Save the new packet's data for the next comparison
+            last1wPacket = *currentPacket;
+            /*last1wPacketValid = true;*/
+        }
+
+        delete currentPacket; // The packet is processed or duplicated, we can free it.
+
+        digitalWrite(RX_LED, false);
+        return true;
     }
 
     void iohcRadio::send_2(std::vector<iohcPacket *> &iohcTx) {
@@ -417,160 +568,6 @@ iohcRadio::setRadioState(iohcRadio::_g_payload ? iohcRadio::RadioState::PAYLOAD 
 
         // Start AutoTxRx
         //Radio::writeByte(REG_OPMODE, RF_OPMODE_AUTOTXRX);
-    }
-
-/**
- * The function `packetSender` in the `iohcRadio` class handles the transmission of packets using radio
- * communication, including frequency setting, packet preparation, and handling of repeated
- * transmissions.
- * 
- * @param radio The `radio` parameter in the `packetSender` function is a pointer to an object of type
- * `iohcRadio`. It is used to access and manipulate data and functions within the `iohcRadio` class.
- */
-    void IRAM_ATTR iohcRadio::packetSender(iohcRadio *radio) {
-        digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
-        // Stop frequency hopping
-        f_lock = true;
-        txMode = true; // Avoid Radio put in Rx mode at next packet sent/received
-        // Using Delayed Packet radio->txCounter)
-        if (radio->packets2send[radio->txCounter] == nullptr) {
-            // Plus de Delayed Packet
-            if (radio->delayed != nullptr)
-                // Use Saved Delayed Packet
-                    radio->iohc = radio->delayed;
-        } else
-            radio->iohc = radio->packets2send[radio->txCounter];
-
-        // if (radio->iohc->frequency != 0) {
-        if (radio->iohc->frequency != radio->scan_freqs[radio->currentFreqIdx]) {
-            // printf("ChangedFreq !\n");
-            Radio::setCarrier(Radio::Carrier::Frequency, radio->iohc->frequency);
-        }
-        // else {
-        //     radio->iohc->frequency = radio->scan_freqs[radio->currentFreqIdx];
-        // }
-
-        Radio::setStandby();
-        Radio::clearFlags();
-
-        Radio::writeBytes(REG_FIFO, radio->iohc->payload.buffer, radio->iohc->buffer_length);
-
-        packetStamp = esp_timer_get_time();
-        radio->iohc->decode(true); //false);
-
-        IOHC::lastSendCmd = radio->iohc->payload.packet.header.cmd;
-
-        Radio::setTx();
-        radio->setRadioState(iohcRadio::RadioState::TX);
-        // There is no need to maintain radio locked between packets transmission unless clearly asked
-        txMode = radio->iohc->lock;
-
-        if (radio->iohc->repeat) {
-            // Only the first frame is LPM (1W)
-            radio->iohc->payload.packet.header.CtrlByte2.asStruct.LPM = 0;
-
-            radio->iohc->repeat -= 1;
-        }
-        if (radio->iohc->repeat == 0) {
-            radio->Sender.detach();
-            radio->txCounter = radio->txCounter + 1;
-            if (radio->txCounter < radio->packets2send.size() && radio->packets2send[radio->txCounter] != nullptr) {
-
-                if (radio->packets2send[radio->txCounter]->delayed != 0) {
-                    radio->delayed = radio->packets2send[radio->txCounter];
-                    radio->packets2send[radio->txCounter] = nullptr;
-                    radio->Sender.delay_ms(radio->delayed/*radio->packets2send[radio->txCounter]*/->delayed,
-                                           packetSender, radio);
-                } else {
-                    radio->Sender.attach_ms(radio->packets2send[radio->txCounter]->repeatTime, packetSender, radio);
-                }
-            } else {
-                // In any case, after last packet sent, unlock the radio
-                txMode = false;
-                // FIX: Deallocate memory from previous packets before clearing the vector to prevent memory leaks.
-                for (auto p : radio->packets2send) {
-                    delete p;
-                }
-                radio->packets2send.clear();
-            }
-        }
-
-        digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
-    }
-
-/**
- * The `sent` function checks if a callback function `txCB` is set and calls
- * it with a packet as a parameter, returning the result.
- * 
- * @param packet The `packet` parameter is a pointer to an object of type `iohcPacket`.
- * 
- * @return  boolean , which is determined by the result of
- * calling the `txCB` function with the `packet` parameter. If `txCB` is not null, the return value
- * will be the result of calling `txCB(packet)`, otherwise it will be `false`.
- */
-    bool IRAM_ATTR iohcRadio::sent(iohcPacket *packet) {
-        bool ret = false;
-        if (txCB) ret = txCB(packet);
-        return ret;
-    }
-
-    //    static uint8_t RF96lnaMap[] = { 0, 0, 6, 12, 24, 36, 48, 48 };
-/**
- * The `iohcRadio::receive` function toggles an LED, reads radio data, processes it, and
- * triggers a callback function.
- * 
- * @param stats The `stats` boolean used to determine whether to gather additional statistics during the radio reception process. If
- * `stats` is set to `true`, the function will collect and process additional information such as RSSI
- * (Received Signal
- * 
- * @return The function `iohcRadio::receive` is returning a boolean value `true`.
- */
-    bool IRAM_ATTR iohcRadio::receive(bool stats = false) {
-        digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
-
-        // Create a new packet for this reception. Use a pointer to pass to the callback.
-        auto* currentPacket = new iohcPacket();
-
-        currentPacket->buffer_length = 0;
-        currentPacket->frequency = scan_freqs[currentFreqIdx];
-
-        _g_payload_millis = esp_timer_get_time();
-        packetStamp = _g_payload_millis;
-
-        if (stats) {
-            currentPacket->rssi = static_cast<float>(Radio::readByte(REG_RSSIVALUE)) / -2.0f;
-            int16_t thres = Radio::readByte(REG_RSSITHRESH);
-            currentPacket->snr = currentPacket->rssi > thres ? 0 : (thres - currentPacket->rssi);
-            int16_t f = static_cast<uint16_t>(Radio::readByte(REG_AFCMSB));
-            f = (f << 8) | static_cast<uint16_t>(Radio::readByte(REG_AFCLSB));
-            currentPacket->afc = f * 61.0;
-        }
-
-        while (Radio::dataAvail()) {
-            if (currentPacket->buffer_length < MAX_FRAME_LEN) {
-                currentPacket->payload.buffer[currentPacket->buffer_length++] = Radio::readByte(REG_FIFO);
-            } else {
-                // Prevent buffer overflow, discard extra bytes.
-                Radio::readByte(REG_FIFO);
-            }
-        }
-
-        if (/*bool is_duplicate = last1wPacketValid &&*/ *currentPacket == last1wPacket) {
-            // ets_printf("Same packet, skipping\n");
-        } else {
-            if (rxCB) rxCB(currentPacket);
-            currentPacket->decode(true); //stats);
-            // addLogMessage(String(currentPacket->decodeToString(true).c_str()));
-
-            // Save the new packet's data for the next comparison
-            last1wPacket = *currentPacket;
-            /*last1wPacketValid = true;*/
-        }
-
-        delete currentPacket; // The packet is processed or duplicated, we can free it.
-
-        digitalWrite(RX_LED, false);
-        return true;
     }
 
 /**
