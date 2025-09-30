@@ -114,7 +114,7 @@ namespace Radio {
 void setPreambleLength(uint16_t preambleLen) {
     writeByte(REG_PREAMBLEMSB, (preambleLen >> 8) & 0xFF);
     writeByte(REG_PREAMBLELSB, preambleLen & 0xFF);
-    ets_printf("Radio: Preamble length set to %u symbols\n", preambleLen);
+    // ets_printf("Radio: Preamble length set to %u symbols\n", preambleLen);
 }
 
 /**
@@ -437,7 +437,7 @@ void setPreambleLength(uint16_t preambleLen) {
                 tmpVal = static_cast<uint32_t>((static_cast<float_t>(value) / FXOSC) * (1 << 19));
                 out[0] = (tmpVal & 0x00ff0000) >> 16;
                 out[1] = (tmpVal & 0x0000ff00) >> 8;
-                out[2] = (tmpVal & 0x000000ff); // If Radio is active writing LSB triggers frequency change
+                out[2] = (tmpVal & 0x000000ff); // If Radio is active, writing LSB triggers frequency change
                 writeBytes(REG_FRFMSB, out, 3);
                 break;
             case Carrier::Bandwidth:

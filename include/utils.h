@@ -84,7 +84,9 @@ inline std::unordered_map<int, std::string> sCommandId = {
 {0x3D,"CHALLENGE ACK 0x3D        "},
 {0x50,"GET NAME REQ 0x50         "},
 {0x51,"GET NAME ACK 0x51         "},
-{0xfe,"ERROR 0xFE                "}
+{0x52,"SET NAME REQ 0x52         "},
+{0x53,"SET NAME ACK 0x53         "},
+{0xfe,"STATUS 0xFE                "}
 };
 
 inline std::unordered_map<int, std::string> sDevicesType = {
