@@ -384,10 +384,10 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
                     AES_ECB_encrypt(&ctx, initial_value);
 
                 }
-                ets_printf("Challenge response %2.2X: ", packet->payload.packet.header.cmd);
-                for (int i = 0; i < dataLen; i++)
-                    ets_printf("%02X ", initial_value[i]);
-                ets_printf("\n");
+                // ets_printf("Challenge response %2.2X: ", packet->payload.packet.header.cmd);
+                // for (int i = 0; i < dataLen; i++)
+                //     ets_printf("%02X ", initial_value[i]);
+                // ets_printf("\n");
 
                 std::vector<uint8_t> toSend;
                 toSend.assign(initial_value, initial_value + dataLen);
@@ -535,6 +535,7 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
             break;
         }
         case iohcDevice::CHALLENGE_ANSWER_0x3D:
+        case 0x2A:
         case 0x48:
         case 0x49:
         case 0x4A:
