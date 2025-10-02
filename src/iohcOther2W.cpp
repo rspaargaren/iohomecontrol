@@ -449,6 +449,9 @@ namespace IOHC {
                         memorizeOther2W.memorizedCmd = CmdSend;
                         IOHC::lastCmd = CmdSend;
 
+                        // cozyDevice2W->memorizeSend.memorizedCmd = CmdSend;
+                        // cozyDevice2W->memorizeSend.memorizedData = toSend;
+
                         packets2send.back()->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
                         packets2send.back()->payload.packet.header.CtrlByte1.asStruct.EndFrame = 0;
                         // packets2send.back()->payload.packet.header.CtrlByte2.asStruct.LPM = 1;

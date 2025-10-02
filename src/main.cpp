@@ -170,9 +170,6 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
         otherDevice2W->memorizeOther2W = {};
         otherDevice2W->mapValid[IOHC::lastCmd] = iohc->payload.packet.header.cmd;
     }
-    // cozyDevice2W->memorizeSend.memorizedCmd = iohc->payload.packet.header.cmd;
-    // cozyDevice2W->memorizeSend.memorizedData.assign(iohc->payload.buffer + 9, iohc->payload.buffer + iohc->buffer_length);
-    // lastCmd = iohc->payload.packet.header.cmd;
 
     switch (iohc->payload.packet.header.cmd) {
 

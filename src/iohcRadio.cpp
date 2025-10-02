@@ -22,6 +22,8 @@
 #include <log_buffer.h>
 #include <utility>
 
+#include "iohcCozyDevice2W.h"
+
 #define LONG_PREAMBLE_MS 206
 #define SHORT_PREAMBLE_MS 52
 
@@ -297,6 +299,10 @@ Radio::setPreambleLength(LONG_PREAMBLE_MS);
         radio->iohc->decode(true); //false);
 
         IOHC::lastCmd = radio->iohc->payload.packet.header.cmd;
+        // Used for the AUTH replies in main
+        iohcCozyDevice2W *cozyDevice2W = iohcCozyDevice2W::getInstance();
+        cozyDevice2W->memorizeSend.memorizedCmd = IOHC::lastCmd;
+        // cozyDevice2W->memorizeSend.memorizedData = {radio->iohc->payload.buffer+9, radio->iohc->payload.buffer-radio->iohc->buffer_length};
 
         if (radio->iohc->repeat) {
             // Only the first frame is LPM (1W)
