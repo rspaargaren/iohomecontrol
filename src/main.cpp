@@ -172,7 +172,7 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
     }
     // cozyDevice2W->memorizeSend.memorizedCmd = iohc->payload.packet.header.cmd;
     // cozyDevice2W->memorizeSend.memorizedData.assign(iohc->payload.buffer + 9, iohc->payload.buffer + iohc->buffer_length);
-    lastCmd = iohc->payload.packet.header.cmd;
+    // lastCmd = iohc->payload.packet.header.cmd;
 
     switch (iohc->payload.packet.header.cmd) {
 
@@ -399,7 +399,7 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
 
                 packet->payload.packet.header.CtrlByte1.asStruct.StartFrame = 0;
 
-                packet->repeatTime = 11;
+                packet->repeatTime = 9;
                 packet->repeat = 1;
 
                 packets2send.push_back(packet);

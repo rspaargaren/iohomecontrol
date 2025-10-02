@@ -24,6 +24,8 @@
 #include <vector>
 #include <numeric>
 
+#include "iohcCozyDevice2W.h"
+
 namespace IOHC {
     iohcOther2W *iohcOther2W::_iohcOtherDevice2W = nullptr;
 
@@ -62,12 +64,14 @@ namespace IOHC {
         packet->buffer_length = toSend.size() + 9;
     }
 
+
     void iohcOther2W::cmd(Other2WButton cmd, Tokens *data) {
         if (!_radioInstance) {
             ets_printf("NO RADIO INSTANCE\n");
             _radioInstance = iohcRadio::getInstance();
         }
         packets2send.clear();
+        iohcCozyDevice2W *cozyDevice2W = iohcCozyDevice2W::getInstance();
 
         // Emulates device button press
         switch (cmd) {
@@ -112,6 +116,11 @@ namespace IOHC {
 
                     packets2send.push_back(packet);
                 }
+
+                IOHC::lastCmd = GET_NAME_0x50;
+                cozyDevice2W->memorizeSend.memorizedCmd = GET_NAME_0x50;
+                cozyDevice2W->memorizeSend.memorizedData = {};
+
                 _radioInstance->send(packets2send);
                 break;
             }
@@ -335,6 +344,8 @@ namespace IOHC {
                     memorizeOther2W.memorizedData = toSend;
                     memorizeOther2W.memorizedCmd = 0x03;
                     IOHC::lastCmd = 0x03;
+                    cozyDevice2W->memorizeSend.memorizedCmd = 0x03;
+                    cozyDevice2W->memorizeSend.memorizedData = toSend;
 
                     packets2send.back()->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
 
