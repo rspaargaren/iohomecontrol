@@ -223,7 +223,7 @@ namespace IOHC {
 
     inline unsigned long packetStamp = 0L;
     inline unsigned long relStamp = 0L;
-    inline size_t lastSendCmd = 0xFF;
+    inline size_t lastCmd = 0xFF;
     /**
     Class implementing the IOHC packet received/sent, including some additional members useful to track/control Radio parameters and timings
     */

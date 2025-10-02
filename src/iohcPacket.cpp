@@ -112,7 +112,7 @@ namespace IOHC {
                            bitrow_to_hex_string(this->payload.packet.msg.p0x30.sequence, 2).c_str());
                     break;
                 }
-                case 0x2E:
+                case 0x2E: ets_printf("In 1W Learning mode\n");
                 case 0x39: {
                     ets_printf("\tDATA %X ", this->payload.packet.msg.p0x2e.data);
                     ets_printf("\tSEQ %s MAC %s ", bitrow_to_hex_string(this->payload.packet.msg.p0x2e.sequence, 2).c_str(),

@@ -93,7 +93,6 @@ namespace IOHC {
 
         static void forgeAnyWPacket(iohcPacket *packet, const std::vector<uint8_t> &vector, size_t typn);
 
-
         std::vector<Device> devices;
         std::string getDescription(const Device &device)    {
             const auto it = std::ranges::find(devices, device);

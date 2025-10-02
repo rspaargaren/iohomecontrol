@@ -296,7 +296,7 @@ Radio::setPreambleLength(LONG_PREAMBLE_MS);
         packetStamp = esp_timer_get_time();
         radio->iohc->decode(true); //false);
 
-        IOHC::lastSendCmd = radio->iohc->payload.packet.header.cmd;
+        IOHC::lastCmd = radio->iohc->payload.packet.header.cmd;
 
         if (radio->iohc->repeat) {
             // Only the first frame is LPM (1W)

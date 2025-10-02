@@ -241,6 +241,7 @@ namespace IOHC {
                 address GW1 = {0x08, 0x42, 0xe3};
                 address real = {0x5c, 0xd6, 0x8f}; // Discovery Session from 2W KLR200 (5cd68f)
                 address tahoma = {0xEF, 0x37, 0x12};
+                address somfy = {0xe0, 0x98, 0x48}; // Somfy Remote (E09848)
                 address broadcast_3b = {0x00, 0x00, 0x3b};
                 address broadcast_3f = {0x00, 0x00, 0x3f};
                 // 24 types
@@ -258,53 +259,63 @@ namespace IOHC {
                         std::vector<uint8_t> toSend = {};
                         forgeAnyWPacket(packets2send.back(), toSend);
                         packets2send.back()->payload.packet.header.cmd = iohcDevice::DISCOVER_0x28;
-                        memcpy(packets2send.back()->payload.packet.header.target, broadcast_3f, 3);
+                        memcpy(packets2send.back()->payload.packet.header.target, broadcast_3b, 3);
+                    packets2send.back()->payload.packet.header.CtrlByte2.asStruct.LPM = 0;
                     }
                     if (i == 4) {
                         std::vector<uint8_t> toSend = {};
                         forgeAnyWPacket(packets2send.back(), toSend);
                         packets2send.back()->payload.packet.header.cmd = iohcDevice::DISCOVER_0x28;
-                        memcpy(packets2send.back()->payload.packet.header.target, broadcast_3b, 3);
+                        memcpy(packets2send.back()->payload.packet.header.target, broadcast_3f, 3);
+                    packets2send.back()->payload.packet.header.CtrlByte2.asStruct.LPM = 0;
                     }
                     if (i == 3) {
                         std::vector<uint8_t> toSend = {
                             0x93, 0x32, 0xd6, 0x18, 0xde, 0x2a, 0x0f, 0xa6, 0x25, 0x0e, 0x2c, 0x7e
                         };
+                        toSend = {0x0c, 0x3d, 0xd2, 0x09, 0x2d, 0x87, 0x20, 0x8d, 0x46, 0xb7, 0x92, 0x73};
                         forgeAnyWPacket(packets2send.back(), toSend);
                         packets2send.back()->payload.packet.header.cmd = iohcDevice::DISCOVER_REMOTE_0x2A;
-                        memcpy(packets2send.back()->payload.packet.header.target, broadcast_3f, 3);
+                        memcpy(packets2send.back()->payload.packet.header.target, broadcast_3b, 3);
+                        packets2send.back()->payload.packet.header.CtrlByte2.asStruct.LPM = 1;
+
                     }
                     if (i == 2) {
                         std::vector<uint8_t> toSend = {
                             0x93, 0x32, 0xd6, 0x18, 0xde, 0x2a, 0x0f, 0xa6, 0x25, 0x0e, 0x2c, 0x7e
                         };
+                        toSend = {0x0c, 0x3d, 0xd2, 0x09, 0x2d, 0x87, 0x20, 0x8d, 0x46, 0xb7, 0x92, 0x73};
                         forgeAnyWPacket(packets2send.back(), toSend);
                         packets2send.back()->payload.packet.header.cmd = iohcDevice::DISCOVER_REMOTE_0x2A;
-                        memcpy(packets2send.back()->payload.packet.header.target, broadcast_3b, 3);
+                        memcpy(packets2send.back()->payload.packet.header.target, broadcast_3f, 3);
+                    packets2send.back()->payload.packet.header.CtrlByte2.asStruct.LPM = 1;
                     }
                     if (i == 1) {
                         std::vector<uint8_t> toSend = {0x00};
                         forgeAnyWPacket(packets2send.back(), toSend);
                         packets2send.back()->payload.packet.header.cmd = iohcDevice::UNKNOWN_0x2E;
-                        memcpy(packets2send.back()->payload.packet.header.target, broadcast_3f, 3);
+                        memcpy(packets2send.back()->payload.packet.header.target, broadcast_3b, 3);
+                        packets2send.back()->payload.packet.header.CtrlByte2.asStruct.LPM = 1;
+
                     }
                     if (i == 0) {
                         std::vector<uint8_t> toSend = {0x00};
                         forgeAnyWPacket(packets2send.back(), toSend);
                         packets2send.back()->payload.packet.header.cmd = iohcDevice::UNKNOWN_0x2E;
-                        memcpy(packets2send.back()->payload.packet.header.target, broadcast_3b, 3);
+                        memcpy(packets2send.back()->payload.packet.header.target, broadcast_3f, 3);
+                        packets2send.back()->payload.packet.header.CtrlByte2.asStruct.LPM = 1;
+
                     }
                     packets2send.back()->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
                     packets2send.back()->payload.packet.header.CtrlByte1.asStruct.EndFrame = 1;
 
-                    packets2send.back()->payload.packet.header.CtrlByte2.asStruct.LPM = 1;
                     packets2send.back()->payload.packet.header.CtrlByte2.asStruct.Prio = 0;
                     // packets2send.back()->payload.packet.header.CtrlByte2.asStruct.Unk3 = 1;
 
-                    memcpy(packets2send.back()->payload.packet.header.source, tahoma/*GW1*//*real*/, 3);
-                    // packets2send.back()->repeat = 4;
-                    // packets2send.back()->repeatTime = 60;
-                    packets2send.back()->delayed = 75; // Give enough time for the answer
+                    memcpy(packets2send.back()->payload.packet.header.source, somfy, 3);
+                    packets2send.back()->repeat = 4;
+                    packets2send.back()->repeatTime = 60;
+                    // packets2send.back()->delayed = 75; // Give enough time for the answer
                     // packets2send.back()->frequency = CHANNEL3;
                 }
 
@@ -314,8 +325,7 @@ namespace IOHC {
             }
             case Other2WButton::fake0: {
                 std::vector<uint8_t> toSend ={0x03, 0x00, 0x00}; //{0x03, 0xe7, 0x32, 0x00, 0x00, 0x00};
-                 //  Not good for Cmd 0x01 Answer FE 0x10
-                
+
                 size_t i = 0;
                 for (const auto &d: devices) {
                     packets2send.push_back(new iohcPacket);
@@ -324,7 +334,7 @@ namespace IOHC {
                     packets2send.back()->payload.packet.header.cmd = 0x03;
                     memorizeOther2W.memorizedData = toSend;
                     memorizeOther2W.memorizedCmd = 0x03;
-                    IOHC::lastSendCmd = 0x03;
+                    IOHC::lastCmd = 0x03;
 
                     packets2send.back()->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
 
@@ -334,7 +344,7 @@ namespace IOHC {
                     memcpy(packets2send.back()->payload.packet.header.source, d._node, 3);
                     memcpy(packets2send.back()->payload.packet.header.target, d._dst, 3);
 
-                    packets2send.back()->delayed = 120; // Give enough time for the answer
+                    packets2send.back()->delayed = 120;
                 }
 
                 _radioInstance->send(packets2send);
@@ -426,7 +436,7 @@ namespace IOHC {
                         // memorizeOther2W.memorizedCmd = packets2send.back()->payload.packet.header.cmd;
                         // memorizeOther2W.memorizedData = toSend;
                         memorizeOther2W.memorizedCmd = CmdSend;
-                        IOHC::lastSendCmd = CmdSend;
+                        IOHC::lastCmd = CmdSend;
 
                         packets2send.back()->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
                         packets2send.back()->payload.packet.header.CtrlByte1.asStruct.EndFrame = 0;
@@ -439,12 +449,14 @@ namespace IOHC {
                         address PORTAIL = {0x9A, 0x5C, 0xA0}; // TODO search the 2W address
                         address GARAGE = {0x41, 0x56, 0x84};
                         address tahoma = {0xEF, 0x37, 0x12};
+                        address UK1 = {0x5B, 0xE4, 0xD0};
+                        address UK2 = {0x94, 0x78, 0x6E}; //94786E
 
-                        memcpy(packets2send.back()->payload.packet.header.source, tahoma, 3);
+                        memcpy(packets2send.back()->payload.packet.header.source, GW2, 3);
                         // if (command.first == 0x14 || command.first == 0x19 || command.first == 0x1e || command.first == 0x2a || command.first == 0x34 || command.first == 0x4a) {
                         // memcpy(packets2send.back()->payload.packet.header.target, broad, 3);
                         // } else {
-                        memcpy(packets2send.back()->payload.packet.header.target, BUREAU, 3);
+                        memcpy(packets2send.back()->payload.packet.header.target, UK2, 3);
                         // }
 
                         packets2send.back()->delayed = 145;
