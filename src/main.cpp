@@ -336,7 +336,8 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
         }
         case iohcDevice::CHALLENGE_REQUEST_0x3C: {
             // Answer only to our fake gateway, not to others real devices
-            if (true) { //cozyDevice2W->isFake(iohc->payload.packet.header.source, iohc->payload.packet.header.target)) {
+            // if (true) {
+                if (cozyDevice2W->isFake(iohc->payload.packet.header.source, iohc->payload.packet.header.target)) {
                 doc["type"] = "Gateway";
 
                 // if (Cmd::scanMode) {
