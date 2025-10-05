@@ -65,9 +65,9 @@ namespace IOHC {
             };
             void start(uint8_t num_freqs, uint32_t *scan_freqs, uint32_t scanTimeUs, CallbackFunction rxCallback, CallbackFunction txCallback);
             void send(std::vector<iohcPacket*>&iohcTx);
-            void send_2(std::vector<iohcPacket*>&iohcTx);
+            // void send_2(std::vector<iohcPacket*>&iohcTx);
 
-        void sendAuto(std::vector<iohcPacket*>&iohcTx); // Nouvelle version pour AutoTxRx
+        // void sendAuto(std::vector<iohcPacket*>&iohcTx); // Nouvelle version pour AutoTxRx
         static void setRadioState(RadioState newState);
         static const char* radioStateToString(RadioState state);
         volatile static RadioState radioState;
@@ -94,10 +94,10 @@ namespace IOHC {
             volatile uint32_t tickCounter = 0;
             volatile uint32_t preCounter = 0;
             volatile uint8_t txCounter = 0;
-            static void txTaskLoop(void *pvParameters);
-            static void lightTxTask(void *pvParameters);
+            // static void txTaskLoop(void *pvParameters);
+            // static void lightTxTask(void *pvParameters);
             //TaskHandle_t txTaskHandle = nullptr;
-            static void IRAM_ATTR onTxTicker(void *arg);
+            // static void IRAM_ATTR onTxTicker(void *arg);
 
             uint8_t num_freqs = 0;
             uint32_t *scan_freqs{};
@@ -117,8 +117,10 @@ namespace IOHC {
         protected:
             // static void i_preamble();
             // static void i_payload();
-            static void packetSender(iohcRadio *radio);
-            static void configureAutoTxRx(iohcPacket *packet); // Fonction auxiliaire pour activer Autotxrx
+            static void packetSender_org(iohcRadio *radio);
+        static void packetSender(iohcRadio *radio);
+
+        // static void configureAutoTxRx(iohcPacket *packet); // Fonction auxiliaire pour activer Autotxrx
     };
 }
 
