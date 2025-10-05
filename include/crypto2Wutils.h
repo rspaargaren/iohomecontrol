@@ -17,9 +17,11 @@
 #ifndef CRYPTO2WUTILS_H
 #define CRYPTO2WUTILS_H
 #include <Aes.h>
+#include <map>
 #include <vector>
 
 /* Crypto Part */
+
 // NEW from device connection with 0x38 transfert key 0x00*6
 // u_int8_t device_key[] = {0x3f, 0xf4, 0x69, 0x0a, 0x2b, 0x43, 0x7b, 0x76, 0x19, 0x4c, 0xbf, 0x97, 0x85, 0x20, 0xe9, 0x2f};
 // NEW Reversed 06/10/2023
@@ -89,6 +91,7 @@ inline void constructInitialValue(/*uint8_t*/std::vector<uint8_t>  /***/frame_da
         }
 //    }
 }
+
 // The number of columns comprising a state in AES. This is a constant in AES. Value=4
     #define Nb 4
     #define Nk 4        // The number of 32 bit words in a key.

@@ -90,6 +90,7 @@ namespace IOHC {
         void scanDump();
         std::unordered_map<uint8_t, int> mapValid;
 //        void scanDump() override {}
+        std::map<std::array<uint8_t, 6> /*challengeAsked*/, std::array<uint8_t, 6> /*challengeAnswer*/> mapChallenge;
 
         static void forgeAnyWPacket(iohcPacket *packet, const std::vector<uint8_t> &vector, size_t typn);
 
@@ -128,7 +129,6 @@ namespace IOHC {
         static iohcOther2W *_iohcOtherDevice2W;
 
     protected:
-
         std::vector<iohcPacket *> packets2send{};
 
     };
