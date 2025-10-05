@@ -22,22 +22,52 @@
 #endif
 #include <WiFiManager.h>
 
+TaskHandle_t wifiTaskHandle = nullptr;
+
+void wifiReconnectTask(void *param) {
+    Serial.println("wifiReconnectTask started");
+    while (true) {
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY); // Attend la notification
+        // Serial.println("wifiReconnectTask notified");
+        connectToWifi(); // Appelle la fonction en contexte tâche
+        vTaskDelay(10 / portTICK_PERIOD_MS); // Ajout pour éviter le blocage CPU
+    }
+}
+
+void startWifiReconnectTask() {
+    xTaskCreate(wifiReconnectTask, "wifiTask", 4096, nullptr, 1, &wifiTaskHandle);
+}
+
+void wifiTimerCallback(TimerHandle_t xTimer) {
+    if (wifiTaskHandle) {
+        xTaskNotifyGive(wifiTaskHandle); // Notifie la tâche
+    }
+}
+
 TimerHandle_t wifiReconnectTimer;
 
 ConnState wifiStatus = ConnState::Disconnected;
 
 void initWifi() {
+    // Serial.println("initWifi called");
     wifiReconnectTimer = xTimerCreate(
         "wifiTimer",
-        pdMS_TO_TICKS(35000),  // 10 seconds retry interval
+        pdMS_TO_TICKS(30000),
         pdFALSE,
         nullptr,
-        reinterpret_cast<TimerCallbackFunction_t>(connectToWifi)
+        wifiTimerCallback // Utilise le nouveau callback
     );
     if (!wifiReconnectTimer) {
         Serial.println("Failed to create WiFi reconnect timer");
+    } else {
+        // Serial.println("WiFi reconnect timer created");
     }
-    connectToWifi();
+    startWifiReconnectTask(); // Lance la tâche au démarrage
+    // Notifie la tâche pour lancer la première connexion
+    if (wifiTaskHandle) {
+        xTaskNotifyGive(wifiTaskHandle);
+    }
+    // connectToWifi();
 }
 
 void connectToWifi() {

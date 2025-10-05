@@ -125,10 +125,11 @@ void setup() {
     nvs_init();
     // Initialize network services
     initWifi();
-    // Wait for WiFi to be connected before starting uEcho
+    // Wait for WiFi to be connected before starting services
     while (WiFi.status() != WL_CONNECTED) {
         vTaskDelay(100 / portTICK_PERIOD_MS);
     }
+
     // set WiFi power mode
     esp_wifi_set_ps(WIFI_PS_NONE);
 
@@ -170,6 +171,10 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
         otherDevice2W->memorizeOther2W = {};
         otherDevice2W->mapValid[IOHC::lastCmd] = iohc->payload.packet.header.cmd;
     }
+    // Used for the AUTH replies in main
+    // iohcCozyDevice2W *cozyDevice2W = iohcCozyDevice2W::getInstance();
+    // cozyDevice2W->memorizeSend.memorizedCmd = IOHC::lastCmd;
+    // cozyDevice2W->memorizeSend.memorizedData = {iohc->payload.buffer+9, iohc->payload.buffer+iohc->buffer_length};
 
     switch (iohc->payload.packet.header.cmd) {
 
@@ -336,7 +341,7 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
         }
         case iohcDevice::CHALLENGE_REQUEST_0x3C: {
             // Answer only to our fake gateway, not to others real devices
-            // if (true) {
+            //if (true) {
                 if (cozyDevice2W->isFake(iohc->payload.packet.header.source, iohc->payload.packet.header.target)) {
                 doc["type"] = "Gateway";
 
@@ -348,7 +353,7 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
                 // IVdata is the challenge with commandId put on start
                 std::vector<uint8_t> challengeAsked;
                 challengeAsked.assign(iohc->payload.buffer + 9, iohc->payload.buffer + 15);
-                ets_printf("Challenge asked after Last Command %2.2X and Memorized %2.2X\n", IOHC::lastCmd, cozyDevice2W->memorizeSend.memorizedCmd);
+                ets_printf("Challenge asked after Last Command %2.2X and Memorized %2.2X (%d)\n", IOHC::lastCmd, cozyDevice2W->memorizeSend.memorizedCmd, cozyDevice2W->memorizeSend.memorizedData.size());
 
 
                 auto packet = new iohcPacket;
@@ -366,7 +371,7 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
                 if (cozyDevice2W->memorizeSend.memorizedCmd == IOHC::iohcDevice::ASK_CHALLENGE_0x31) {
                     packet->payload.packet.header.cmd = IOHC::iohcDevice::KEY_TRANSFERT_0x32;
                     dataLen = 16;
-                     IVdata = {IOHC::iohcDevice::ASK_CHALLENGE_0x31};
+                    IVdata = {IOHC::iohcDevice::ASK_CHALLENGE_0x31};
                     constructInitialValue(IVdata, initial_value, 1, challengeAsked, nullptr);
                     AES_ECB_encrypt(&ctx, initial_value);
                     for (int i = 0; i < dataLen; i++)
@@ -402,12 +407,6 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
 
                 packets2send.push_back(packet);
                 radioInstance->send(packets2send);
-
-                // ets_printf("Challenge response %2.2X: ", packets2send[0]->payload.packet.header.cmd);
-                // for (int i = 0; i < dataLen; i++)
-                //     ets_printf("%02X ", initial_value[i]);
-                // ets_printf("\n");
-
             }
             break;
         }
@@ -478,8 +477,11 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
 #endif
             } else {
                 doc["type"] = "Other";
-                otherDevice2W->memorizeOther2W.memorizedCmd = iohc->payload.packet.header.cmd;
-                cozyDevice2W->memorizeSend.memorizedCmd = iohc->payload.packet.header.cmd;
+                IOHC::lastCmd = cozyDevice2W->memorizeSend.memorizedCmd;
+                otherDevice2W->memorizeOther2W.memorizedCmd = IOHC::lastCmd;
+                cozyDevice2W->memorizeSend.memorizedCmd = IOHC::lastCmd;
+                cozyDevice2W->memorizeSend.memorizedData = {iohc->payload.buffer+9, iohc->payload.buffer+iohc->buffer_length};
+
             }
             break;
         }
@@ -532,7 +534,12 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
             ets_printf("\n");
             break;
         }
-        case iohcDevice::CHALLENGE_ANSWER_0x3D:
+        case iohcDevice::CHALLENGE_ANSWER_0x3D: // TODO save
+            // ets_printf("Challenge response from %2.2X: ", iohc->payload.packet.header.cmd);
+            // for (int i = 0; i < 6; i++)
+            //     ets_printf("%02X ", iohc->payload.buffer[10+i]);
+            // ets_printf("\n");
+
         case 0x2A:
         case 0x48:
         case 0x49:
@@ -540,6 +547,13 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
         case 0X05:
         case 0x19:
         case 0x0C: // Can answer with 0x0d (7bytes): 05 aa1c 0000  or 05 aa0a 0000
+        case 0x31:
+        case 0x32:
+        case 0x33:
+        case 0x46:
+        case 0x47:
+        case 0x54:
+        case 0x56:
         case 0x37: break;
         default:
             ets_printf("Received Unknown command %02X ", iohc->payload.packet.header.cmd);
