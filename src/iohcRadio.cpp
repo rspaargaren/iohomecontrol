@@ -163,6 +163,13 @@ iohcRadio::setRadioState(iohcRadio::_g_payload ? iohcRadio::RadioState::PAYLOAD 
         Radio::setCarrier(Radio::Carrier::Frequency, CHANNEL2); // scan_freqs[0]); //868950000);
         // Radio::calibrate();
         Radio::setRx();
+
+#if defined(ESP32)
+        if (TickTimer.active()) {
+            TickTimer.detach();
+        }
+        TickTimer.attach_us(SM_GRANULARITY_US, tickerCounter, this);
+#endif
     }
 
 /**
