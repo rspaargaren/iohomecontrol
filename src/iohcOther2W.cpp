@@ -325,7 +325,7 @@ namespace IOHC {
                     packets2send.back()->repeat = 4;
                     packets2send.back()->repeatTime = 60;
                     // packets2send.back()->delayed = 75; // Give enough time for the answer
-                    // packets2send.back()->frequency = CHANNEL3;
+                    // packets2send.back()->frequency = CHANNEL1;
                 }
 
                 _radioInstance->send(packets2send);

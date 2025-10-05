@@ -31,7 +31,6 @@
 namespace IOHC {
 
     void IRAM_ATTR iohcPacket::decode(bool verbosity) {
-
         bool save2W =  false;
 
         if (packetStamp - relStamp > 500000L) {
@@ -72,11 +71,11 @@ namespace IOHC {
                this->payload.packet.header.target[2],
                this->payload.packet.header.cmd);
         
-        // if (verbosity) printf(" +%03.3f F%03.3f, %03.1fdBm %f %f\t", static_cast<float>(packetStamp - relStamp)/1000.0, static_cast<float>(this->frequency)/1000000.0, this->rssi, this->lna, this->afc);
+        if (verbosity) printf(" +%03.3f F%03.3f, %03.1fdBm %f %f\t", static_cast<float>(packetStamp - relStamp)/1000.0, static_cast<float>(this->frequency)/1000000.0, this->rssi, this->lna, this->afc);
         // if (verbosity) printf(" +%03.3f F%03.3f, %03.1fdBm %f\t", static_cast<float>(packetStamp - relStamp)/1000.0, static_cast<float>(this->frequency)/1000000.0, this->rssi, this->afc);
         // if (verbosity) printf(" +%03.3f\t%03.1fdBm\t", static_cast<float>(packetStamp - relStamp)/1000.0,  this->rssi);
-        //if (verbosity) printf(" +%03.3f F%03.3f\t", static_cast<float>(packetStamp - relStamp)/1000.0, static_cast<float>(this->frequency)/1000000.0);
-        if (verbosity) ets_printf(" +%03d\t", static_cast<int>((packetStamp - relStamp)/1000.0));
+        // if (verbosity) printf(" +%03.3f F%03.3f\t", static_cast<float>(packetStamp - relStamp)/1000.0, static_cast<float>(this->frequency)/1000000.0);
+        //if (verbosity) ets_printf(" +%03d\t", static_cast<int>((packetStamp - relStamp)/1000.0));
         ets_printf(" %s ", _dir);
 
         uint8_t dataLen = this->buffer_length - 9;

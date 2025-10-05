@@ -76,9 +76,9 @@ namespace IOHC {
     void IRAM_ATTR handle_interrupt_fromisr(/*void *arg*/) {
         iohcRadio::_g_preamble = digitalRead(RADIO_PREAMBLE_DETECTED);
         iohcRadio::f_lock_hop = iohcRadio::_g_preamble;
-iohcRadio::setRadioState(iohcRadio::_g_preamble ? iohcRadio::RadioState::PREAMBLE : iohcRadio::RadioState::RX);
+        iohcRadio::setRadioState(iohcRadio::_g_preamble ? iohcRadio::RadioState::PREAMBLE : iohcRadio::RadioState::RX);
         iohcRadio::_g_payload = digitalRead(RADIO_PACKET_AVAIL);
-iohcRadio::setRadioState(iohcRadio::_g_payload ? iohcRadio::RadioState::PAYLOAD : iohcRadio::RadioState::RX);
+        iohcRadio::setRadioState(iohcRadio::_g_payload ? iohcRadio::RadioState::PAYLOAD : iohcRadio::RadioState::RX);
         iohcRadio::txComplete = true;
         // Notify the thread so it will wake up when the ISR is complete
         BaseType_t xHigherPriorityTaskWoken = pdFALSE;
@@ -164,12 +164,12 @@ iohcRadio::setRadioState(iohcRadio::_g_payload ? iohcRadio::RadioState::PAYLOAD 
         // Radio::calibrate();
         Radio::setRx();
 
-#if defined(ESP32)
-        if (TickTimer.active()) {
-            TickTimer.detach();
-        }
-        TickTimer.attach_us(SM_GRANULARITY_US, tickerCounter, this);
-#endif
+//#if defined(ESP32)
+//        if (TickTimer.active()) {
+//            TickTimer.detach();
+//        }
+//        TickTimer.attach_us(SM_GRANULARITY_US, tickerCounter, this);
+//#endif
     }
 
 /**
@@ -295,7 +295,7 @@ iohcRadio::setRadioState(iohcRadio::_g_payload ? iohcRadio::RadioState::PAYLOAD 
 
         Radio::setStandby();
         Radio::clearFlags();
-Radio::setPreambleLength(LONG_PREAMBLE_MS);
+        Radio::setPreambleLength(LONG_PREAMBLE_MS);
         Radio::writeBytes(REG_FIFO, radio->iohc->payload.buffer, radio->iohc->buffer_length);
         Radio::setTx();
         radio->setRadioState(iohcRadio::RadioState::TX);
@@ -314,7 +314,7 @@ Radio::setPreambleLength(LONG_PREAMBLE_MS);
         if (radio->iohc->repeat) {
             // Only the first frame is LPM (1W)
             radio->iohc->payload.packet.header.CtrlByte2.asStruct.LPM = 0;
-Radio::setPreambleLength(SHORT_PREAMBLE_MS);
+            Radio::setPreambleLength(SHORT_PREAMBLE_MS);
 
             radio->iohc->repeat -= 1;
         }
@@ -372,7 +372,7 @@ Radio::setPreambleLength(SHORT_PREAMBLE_MS);
  * 
  * @return The function `iohcRadio::receive` is returning a boolean value `true`.
  */
-    bool IRAM_ATTR iohcRadio::receive(bool stats = false) {
+    bool IRAM_ATTR iohcRadio::receive(bool stats = true) {
         digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
 
         // Create a new packet for this reception. Use a pointer to pass to the callback.
@@ -401,18 +401,19 @@ Radio::setPreambleLength(SHORT_PREAMBLE_MS);
                 Radio::readByte(REG_FIFO);
             }
         }
-
-        if (/*bool is_duplicate = last1wPacketValid &&*/ *currentPacket == last1wPacket) {
+        
+        //if (/*bool is_duplicate = last1wPacketValid &&*/ *currentPacket == last1wPacket) {
             // ets_printf("Same packet, skipping\n");
-        } else {
-            if (rxCB) rxCB(currentPacket);
+        //} else {
+        //    if (rxCB) rxCB(currentPacket);
             currentPacket->decode(true); //stats);
             // addLogMessage(String(currentPacket->decodeToString(true).c_str()));
 
             // Save the new packet's data for the next comparison
-            last1wPacket = *currentPacket;
+        //    last1wPacket = *currentPacket;
             /*last1wPacketValid = true;*/
-        }
+        //}
+        
 
         delete currentPacket; // The packet is processed or duplicated, we can free it.
 
