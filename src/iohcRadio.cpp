@@ -58,13 +58,9 @@ namespace IOHC {
         constexpr TickType_t xMaxBlockTime = pdMS_TO_TICKS(655 * 4); // 218.4 );
         while (true) {
             thread_notification = ulTaskNotifyTake(pdTRUE, xMaxBlockTime/*xNoDelay*/); // Attendre la notification
-            if (thread_notification &&
-                // (iohcRadio::_g_payload ||
-                    // iohcRadio::_g_preamble)) {
-                (iohcRadio::radioState == iohcRadio::RadioState::PAYLOAD ||
-                 iohcRadio::radioState == iohcRadio::RadioState::PREAMBLE)) {
-
+            while (thread_notification > 0) {
                 iohcRadio::tickerCounter(static_cast<iohcRadio *>(pvParameters));
+                --thread_notification;
             }
         }
     }
@@ -164,12 +160,12 @@ namespace IOHC {
         // Radio::calibrate();
         Radio::setRx();
 
-//#if defined(ESP32)
-//        if (TickTimer.active()) {
-//            TickTimer.detach();
-//        }
-//        TickTimer.attach_us(SM_GRANULARITY_US, tickerCounter, this);
-//#endif
+#if defined(ESP32)
+        if (TickTimer.active()) {
+            TickTimer.detach();
+        }
+        TickTimer.attach_us(SM_GRANULARITY_US, onScanTicker, this);
+#endif
     }
 
 /**
@@ -238,6 +234,15 @@ namespace IOHC {
 
         Radio::setCarrier(Radio::Carrier::Frequency, radio->scan_freqs[radio->currentFreqIdx]);
 
+    }
+
+    void IRAM_ATTR iohcRadio::onScanTicker(void *arg) {
+        (void)arg;
+        if (!handle_interrupt) {
+            return;
+        }
+
+        xTaskNotifyGive(handle_interrupt);
     }
 
     /**

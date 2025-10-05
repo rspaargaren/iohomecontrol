@@ -98,6 +98,7 @@ namespace IOHC {
             static void lightTxTask(void *pvParameters);
             //TaskHandle_t txTaskHandle = nullptr;
             static void IRAM_ATTR onTxTicker(void *arg);
+            static void IRAM_ATTR onScanTicker(void *arg);
 
             uint8_t num_freqs = 0;
             uint32_t *scan_freqs{};
