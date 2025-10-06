@@ -35,7 +35,7 @@ void wifiReconnectTask(void *param) {
 }
 
 void startWifiReconnectTask() {
-    xTaskCreate(wifiReconnectTask, "wifiTask", 4096, nullptr, 1, &wifiTaskHandle);
+    xTaskCreate(wifiReconnectTask, "wifiTask", 8192, nullptr, 1, &wifiTaskHandle);
 }
 
 void wifiTimerCallback(TimerHandle_t xTimer) {
@@ -49,7 +49,11 @@ TimerHandle_t wifiReconnectTimer;
 ConnState wifiStatus = ConnState::Disconnected;
 
 void initWifi() {
-    // Serial.println("initWifi called");
+    // Supprime l'ancien timer s'il existe
+    if (wifiReconnectTimer) {
+        xTimerDelete(wifiReconnectTimer, 0);
+        wifiReconnectTimer = nullptr;
+    }
     wifiReconnectTimer = xTimerCreate(
         "wifiTimer",
         pdMS_TO_TICKS(30000),
@@ -59,8 +63,6 @@ void initWifi() {
     );
     if (!wifiReconnectTimer) {
         Serial.println("Failed to create WiFi reconnect timer");
-    } else {
-        // Serial.println("WiFi reconnect timer created");
     }
     startWifiReconnectTask(); // Lance la tâche au démarrage
     // Notifie la tâche pour lancer la première connexion
@@ -98,6 +100,9 @@ void connectToWifi() {
         Serial.printf("Connected to WiFi. IP address: %s\n", WiFi.localIP().toString().c_str());
         wifiStatus = ConnState::Connected;
         updateDisplayStatus();
+
+        esp_timer_dump(stdout);
+
 #if defined(MQTT)
         // Kick off MQTT connection when WiFi becomes available
         if (mqttReconnectTimer) {

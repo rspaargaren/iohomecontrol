@@ -55,9 +55,6 @@ namespace TimersUS {
     template<typename TArg>
     void attach(uint32_t seconds, void (*callback)(TArg), TArg arg) {
         static_assert(sizeof(TArg) <= sizeof(uint32_t), "attach() callback argument size must be <= 4 bytes");
-        // C-cast serves two purposes:
-        // static_cast for smaller integer types,
-        // reinterpret_cast + const_cast for pointer types
         auto arg32 = (uint32_t)arg;
         _attach_ms(seconds * 1000, true, reinterpret_cast<callback_with_arg_t>(callback), arg32);
     }

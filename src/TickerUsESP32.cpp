@@ -40,7 +40,7 @@ namespace TimersUS {
         // Use ISR dispatch method so callbacks run in the hardware timer context
         //_timerConfig.dispatch_method = ESP_TIMER_ISR;
         _timerConfig.dispatch_method = ESP_TIMER_TASK;
-        _timerConfig.skip_unhandled_events = false; //true;
+        _timerConfig.skip_unhandled_events = false;
         _timerConfig.name = "TickerMsESP32";
         if (_timer) {
             ESP_ERROR_CHECK(esp_timer_stop(_timer));
@@ -48,10 +48,8 @@ namespace TimersUS {
         }
         ESP_ERROR_CHECK(esp_timer_create(&_timerConfig, &_timer));
         if (repeat) {
-            //        printf("Packet %u Periodic\n", milliseconds);
             ESP_ERROR_CHECK(esp_timer_start_periodic(_timer, milliseconds * 1000ULL));
-        }
-        else {
+        } else {
             ESP_ERROR_CHECK(esp_timer_start_once(_timer, milliseconds * 1000ULL));
         }
     }
@@ -65,7 +63,7 @@ namespace TimersUS {
         // Run delayed callbacks via ISR for consistent timing
         //_timerConfig.dispatch_method = ESP_TIMER_ISR; // But ISR doesn't work with 100ULL
         _timerConfig.dispatch_method = ESP_TIMER_TASK;
-        //    _timerConfig.skip_unhandled_events = true;
+        _timerConfig.skip_unhandled_events = false;
         _timerConfig.name = "TickerMsESP32Delay";
         if (_timer_delayed) {
             ESP_ERROR_CHECK(esp_timer_delete(_timer_delayed));
@@ -82,7 +80,7 @@ namespace TimersUS {
         // Dispatch microsecond timer callbacks directly from ISR
         //_timerConfig.dispatch_method = ESP_TIMER_ISR; // But ISR doesn't work with 100ULL
         _timerConfig.dispatch_method = ESP_TIMER_TASK;
-        _timerConfig.skip_unhandled_events = true;
+        _timerConfig.skip_unhandled_events = false;
         _timerConfig.name = "TickerUsESP32";
 
         if (_timer) {
@@ -105,11 +103,6 @@ namespace TimersUS {
             ESP_ERROR_CHECK(esp_timer_delete(_timer));
             _timer = nullptr;
         }
-        //     if (_timer_delayed) {
-        //     ESP_ERROR_CHECK(esp_timer_stop(_timer_delayed));
-        //     ESP_ERROR_CHECK(esp_timer_delete(_timer_delayed));
-        //     _timer = nullptr;
-        // }
     }
 
     /**
