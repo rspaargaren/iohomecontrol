@@ -6,6 +6,7 @@
 #include <AsyncJson.h>
 #include <LittleFS.h>
 #include <Update.h>
+#include <cstdlib>
 #include <interact.h>
 #include <iohcCryptoHelpers.h>
 #include <iohcRemote1W.h>
@@ -396,6 +397,7 @@ void handleApiMqttGet(AsyncWebServerRequest *request) {
   root["user"] = mqtt_user.c_str();
   root["password"] = mqtt_password.c_str();
   root["discovery"] = mqtt_discovery_topic.c_str();
+  root["port"] = mqtt_port;
   response->setLength();
   request->send(response);
 }
@@ -417,6 +419,15 @@ void handleApiMqttSet(AsyncWebServerRequest *request, JsonVariant &json) {
   String user = doc["user"] | "";
   String password = doc["password"] | "";
   String discovery = doc["discovery"] | "";
+  int portValue = -1;
+  if (doc.containsKey("port")) {
+    JsonVariant portVariant = doc["port"];
+    if (portVariant.is<uint16_t>() || portVariant.is<int>() || portVariant.is<long>()) {
+      portValue = portVariant.as<int>();
+    } else if (portVariant.is<const char*>()) {
+      portValue = atoi(portVariant.as<const char*>());
+    }
+  }
 
   bool mqttChanged = false;
   bool discChanged = false;
@@ -442,9 +453,15 @@ void handleApiMqttSet(AsyncWebServerRequest *request, JsonVariant &json) {
     discChanged = true;
   }
 
+  if (portValue > 0 && portValue <= 65535 && mqtt_port != static_cast<uint16_t>(portValue)) {
+    mqtt_port = static_cast<uint16_t>(portValue);
+    nvs_write_u16(NVS_KEY_MQTT_PORT, mqtt_port);
+    mqttChanged = true;
+  }
+
   if (mqttChanged) {
     mqttClient.disconnect();
-    mqttClient.setServer(mqtt_server.c_str(), 1883);
+    mqttClient.setServer(mqtt_server.c_str(), mqtt_port);
     mqttClient.setCredentials(mqtt_user.c_str(), mqtt_password.c_str());
   }
 
