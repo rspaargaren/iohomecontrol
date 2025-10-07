@@ -38,6 +38,7 @@ inline std::string mqtt_discovery_topic = "homeassistant";
 inline uint16_t mqtt_port = 1883;
 
 #define SYSLOG                       // Comment out to disable remote syslog
+inline bool syslog_enabled = true;     // Allow runtime control of syslog forwarding
 inline std::string syslog_server = "192.168.178.15"; // Syslog server IP address
 inline uint16_t syslog_port = 514;     // Syslog server port
 

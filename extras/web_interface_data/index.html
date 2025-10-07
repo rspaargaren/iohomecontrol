@@ -114,6 +114,22 @@
                         <button id="mqtt-update">Update</button>
                     </div>
                 </section>
+                <section id="syslog-settings-section">
+                    <div class="title">
+                        <h2>Syslog settings</h2>
+                    </div>
+                    <div class="card">
+                        <label class="checkbox-inline" for="syslog-enabled">
+                            <input type="checkbox" id="syslog-enabled">
+                            Enable syslog forwarding
+                        </label>
+                        <label for="syslog-server">Server:</label>
+                        <input type="text" id="syslog-server" placeholder="Syslog Server">
+                        <label for="syslog-port">Port:</label>
+                        <input type="number" id="syslog-port" placeholder="Syslog Port" min="1" max="65535">
+                        <button id="syslog-update">Update</button>
+                    </div>
+                </section>
                 <section id="update-section">
                     <div class="title">
                         <h2>Update</h2>

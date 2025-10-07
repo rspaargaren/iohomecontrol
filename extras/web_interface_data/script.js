@@ -14,6 +14,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const mqttPasswordInput = document.getElementById('mqtt-password');
     const mqttDiscoveryInput = document.getElementById('mqtt-discovery');
     const mqttUpdateButton = document.getElementById('mqtt-update');
+    const syslogEnabledCheckbox = document.getElementById('syslog-enabled');
+    const syslogServerInput = document.getElementById('syslog-server');
+    const syslogPortInput = document.getElementById('syslog-port');
+    const syslogUpdateButton = document.getElementById('syslog-update');
     const firmwareFileInput = document.getElementById('firmware-file');
     const filesystemFileInput = document.getElementById('filesystem-file');
     const firmwareUploadButton = document.getElementById('upload-firmware');
@@ -87,6 +91,26 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error fetching MQTT config', e);
         }
     }
+
+    function setSyslogInputsState(disabled) {
+        if (syslogServerInput) syslogServerInput.disabled = disabled;
+        if (syslogPortInput) syslogPortInput.disabled = disabled;
+    }
+
+    async function loadSyslogConfig() {
+        if (!syslogEnabledCheckbox) return;
+        try {
+            const resp = await fetch('/api/syslog');
+            if (!resp.ok) return;
+            const cfg = await resp.json();
+            syslogEnabledCheckbox.checked = !!cfg.enabled;
+            if (syslogServerInput) syslogServerInput.value = cfg.server || '';
+            if (syslogPortInput) syslogPortInput.value = cfg.port != null ? cfg.port : '';
+            setSyslogInputsState(!syslogEnabledCheckbox.checked);
+        } catch (e) {
+            console.error('Error fetching syslog config', e);
+        }
+    }
     // update MQTT config
     async function updateMqttConfig() {
         const payload = {
@@ -111,6 +135,32 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (e) {
             console.error('Error updating MQTT config', e);
             logStatus('Error updating MQTT config', true);
+        }
+    }
+
+    async function updateSyslogConfig() {
+        if (!syslogEnabledCheckbox) return;
+        const payload = {
+            enabled: syslogEnabledCheckbox.checked,
+            server: syslogServerInput ? syslogServerInput.value : ''
+        };
+        if (syslogPortInput) {
+            const portValue = parseInt(syslogPortInput.value, 10);
+            if (!Number.isNaN(portValue)) {
+                payload.port = portValue;
+            }
+        }
+        try {
+            const resp = await fetch('/api/syslog', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await resp.json();
+            logStatus(result.message || 'Syslog settings updated.');
+        } catch (e) {
+            console.error('Error updating syslog config', e);
+            logStatus('Error updating syslog config', true);
         }
     }
     // upload firmware
@@ -489,6 +539,15 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     if (mqttUpdateButton) {
         mqttUpdateButton.addEventListener('click', updateMqttConfig);
+    }
+    if (syslogUpdateButton) {
+        syslogUpdateButton.addEventListener('click', updateSyslogConfig);
+    }
+    if (syslogEnabledCheckbox) {
+        syslogEnabledCheckbox.addEventListener('change', () => {
+            setSyslogInputsState(!syslogEnabledCheckbox.checked);
+        });
+        setSyslogInputsState(!syslogEnabledCheckbox.checked);
     }
     if (firmwareUploadButton) {
         firmwareUploadButton.addEventListener('click', uploadFirmware);
@@ -955,6 +1014,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     loadMqttConfig();
+    loadSyslogConfig();
     fetchAndDisplayDevices();
     fetchAndDisplayRemotes();
     loadLastAddress();
