@@ -15,6 +15,9 @@
 #include <log_buffer.h>
 #include <mqtt_handler.h>
 #include <nvs_helpers.h>
+#if defined(SYSLOG)
+#include <syslog_helper.h>
+#endif
 #include <tokens.h>
 // #include "main.h" // Or other relevant headers to access device data and
 // command functions
@@ -385,6 +388,145 @@ void handleApiLastAddr(AsyncWebServerRequest *request) {
   request->send(response);
 }
 
+#if defined(SYSLOG)
+static bool jsonToBool(JsonVariant variant, bool &value) {
+  if (variant.is<bool>()) {
+    value = variant.as<bool>();
+    return true;
+  }
+  if (variant.is<int>() || variant.is<long>() || variant.is<unsigned long>() ||
+      variant.is<uint8_t>() || variant.is<uint16_t>() || variant.is<uint32_t>()) {
+    value = variant.as<long>() != 0;
+    return true;
+  }
+  if (variant.is<const char *>()) {
+    const char *text = variant.as<const char *>();
+    if (!text) {
+      return false;
+    }
+    String normalized = String(text);
+    normalized.toLowerCase();
+    if (normalized == "true" || normalized == "1" || normalized == "yes" ||
+        normalized == "on") {
+      value = true;
+      return true;
+    }
+    if (normalized == "false" || normalized == "0" || normalized == "no" ||
+        normalized == "off") {
+      value = false;
+      return true;
+    }
+  }
+  return false;
+}
+
+void handleApiSyslogGet(AsyncWebServerRequest *request) {
+  initSyslog();
+
+  AsyncJsonResponse *response = new AsyncJsonResponse();
+  if (!response) {
+    request->send(500, "text/plain", "OOM");
+    return;
+  }
+
+  JsonObject root = response->getRoot().to<JsonObject>();
+  root["enabled"] = syslog_enabled;
+  root["server"] = syslog_server.c_str();
+  root["port"] = syslog_port;
+
+  response->setLength();
+  request->send(response);
+}
+
+void handleApiSyslogSet(AsyncWebServerRequest *request, JsonVariant &json) {
+  if (request->method() != HTTP_POST) {
+    request->send(405, "text/plain", "Method Not Allowed");
+    return;
+  }
+
+  initSyslog();
+
+  JsonObject doc = json.as<JsonObject>();
+  if (doc.isNull()) {
+    request->send(400, "application/json",
+                  "{\"success\":false, \"message\":\"Invalid JSON\"}");
+    return;
+  }
+
+  bool enabledChanged = false;
+  bool serverChanged = false;
+  bool portChanged = false;
+
+  if (doc.containsKey("enabled")) {
+    bool newEnabled = syslog_enabled;
+    if (!jsonToBool(doc["enabled"], newEnabled)) {
+      request->send(400, "application/json",
+                    "{\"success\":false,\"message\":\"Invalid enabled value\"}");
+      return;
+    }
+    if (newEnabled != syslog_enabled) {
+      syslog_enabled = newEnabled;
+      nvs_write_bool(NVS_KEY_SYSLOG_ENABLED, syslog_enabled);
+      enabledChanged = true;
+    }
+  }
+
+  if (doc.containsKey("server")) {
+    String newServer = doc["server"] | "";
+    if (newServer != syslog_server.c_str()) {
+      syslog_server = newServer.c_str();
+      nvs_write_string(NVS_KEY_SYSLOG_SERVER, syslog_server);
+      serverChanged = true;
+    }
+  }
+
+  if (doc.containsKey("port")) {
+    int portValue = -1;
+    JsonVariant portVariant = doc["port"];
+    if (portVariant.is<uint16_t>() || portVariant.is<int>() ||
+        portVariant.is<long>() || portVariant.is<unsigned long>()) {
+      portValue = portVariant.as<int>();
+    } else if (portVariant.is<const char *>()) {
+      portValue = atoi(portVariant.as<const char *>());
+    }
+
+    if (portValue <= 0 || portValue > 65535) {
+      request->send(400, "application/json",
+                    "{\"success\":false,\"message\":\"Invalid port value\"}");
+      return;
+    }
+
+    if (syslog_port != static_cast<uint16_t>(portValue)) {
+      syslog_port = static_cast<uint16_t>(portValue);
+      nvs_write_u16(NVS_KEY_SYSLOG_PORT, syslog_port);
+      portChanged = true;
+    }
+  }
+
+  if (enabledChanged || serverChanged || portChanged) {
+    resetSyslog();
+    if (syslog_enabled) {
+      initSyslog();
+    }
+  }
+
+  AsyncJsonResponse *response = new AsyncJsonResponse();
+  if (!response) {
+    request->send(500, "application/json",
+                  "{\"success\":false,\"message\":\"OOM\"}");
+    return;
+  }
+  JsonObject root = response->getRoot().to<JsonObject>();
+  root["success"] = true;
+  root["message"] = "Syslog configuration updated";
+  root["enabled"] = syslog_enabled;
+  root["server"] = syslog_server.c_str();
+  root["port"] = syslog_port;
+  response->setLength();
+  request->send(response);
+}
+#endif
+
 #if defined(MQTT)
 void handleApiMqttGet(AsyncWebServerRequest *request) {
   AsyncJsonResponse *response = new AsyncJsonResponse();
@@ -573,6 +715,9 @@ void setupWebServer() {
   server.on("/api/remotes", HTTP_GET, handleApiRemotes);
   server.on("/api/logs", HTTP_GET, handleApiLogs);
   server.on("/api/lastaddr", HTTP_GET, handleApiLastAddr);
+#if defined(SYSLOG)
+  server.on("/api/syslog", HTTP_GET, handleApiSyslogGet);
+#endif
 #if defined(MQTT)
   server.on("/api/mqtt", HTTP_GET, handleApiMqttGet);
 #endif
@@ -583,6 +728,10 @@ void setupWebServer() {
 #if defined(MQTT)
   server.addHandler(
       new AsyncCallbackJsonWebHandler("/api/mqtt", handleApiMqttSet));
+#endif
+#if defined(SYSLOG)
+  server.addHandler(
+      new AsyncCallbackJsonWebHandler("/api/syslog", handleApiSyslogSet));
 #endif
   server.on("/api/firmware", HTTP_POST, handleFirmwareUpdate,
             handleFirmwareUpload);
