@@ -9,6 +9,7 @@ static constexpr char NVS_KEY_MQTT_SERVER[] = "mqtt_server";
 static constexpr char NVS_KEY_MQTT_USER[] = "mqtt_user";
 static constexpr char NVS_KEY_MQTT_PASSWORD[] = "mqtt_password";
 static constexpr char NVS_KEY_MQTT_DISCOVERY[] = "mqtt_disc_topic";
+static constexpr char NVS_KEY_MQTT_CLIENT_ID[] = "mqtt_client_id";
 static constexpr char NVS_KEY_MQTT_PORT[] = "mqtt_port";
 
 

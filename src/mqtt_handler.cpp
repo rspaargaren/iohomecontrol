@@ -50,13 +50,20 @@ void initMqtt() {
             nvs_write_string(NVS_KEY_MQTT_DISCOVERY, mqtt_discovery_topic);
         }
     }
+    if (!nvs_read_string(NVS_KEY_MQTT_CLIENT_ID, mqtt_client_id)) {
+        if (mqtt_client_id.empty()) {
+            Serial.println("MQTT client id not set");
+        } else {
+            nvs_write_string(NVS_KEY_MQTT_CLIENT_ID, mqtt_client_id);
+        }
+    }
 
     if (!nvs_read_u16(NVS_KEY_MQTT_PORT, mqtt_port)) {
         nvs_write_u16(NVS_KEY_MQTT_PORT, mqtt_port);
     }
 
     mqttClient.setWill(AVAILABILITY_TOPIC, 0, true, "offline");
-    mqttClient.setClientId("iown");
+    mqttClient.setClientId(mqtt_client_id.c_str());
     mqttClient.setCredentials(mqtt_user.c_str(), mqtt_password.c_str());
     mqttClient.setServer(mqtt_server.c_str(), mqtt_port);
     mqttClient.onConnect(onMqttConnect);
