@@ -51,10 +51,14 @@ void initMqtt() {
         }
     }
 
+    if (!nvs_read_u16(NVS_KEY_MQTT_PORT, mqtt_port)) {
+        nvs_write_u16(NVS_KEY_MQTT_PORT, mqtt_port);
+    }
+
     mqttClient.setWill(AVAILABILITY_TOPIC, 0, true, "offline");
     mqttClient.setClientId("iown");
     mqttClient.setCredentials(mqtt_user.c_str(), mqtt_password.c_str());
-    mqttClient.setServer(mqtt_server.c_str(), 1883);
+    mqttClient.setServer(mqtt_server.c_str(), mqtt_port);
     mqttClient.onConnect(onMqttConnect);
     mqttClient.onDisconnect(onMqttDisconnect);
     mqttClient.onMessage(onMqttMessage);
@@ -263,7 +267,7 @@ void connectToMqtt() {
         Serial.println("MQTT server not configured");
         return;
     }
-    Serial.printf("Connecting to MQTT at %s...\n", mqtt_server.c_str());
+    Serial.printf("Connecting to MQTT at %s:%u...\n", mqtt_server.c_str(), mqtt_port);
     mqttStatus = ConnState::Connecting;
     updateDisplayStatus();
     mqttClient.connect();
