@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const sendCommandButton = document.getElementById('send-command-button');
     const statusMessagesDiv = document.getElementById('status-messages');
     const MAX_LOGS = 20; // maximaal aantal logs
+    const mqttClientIdInput = document.getElementById('mqtt-client-id');
     const mqttUserInput = document.getElementById('mqtt-user');
     const mqttServerInput = document.getElementById('mqtt-server');
     const mqttPortInput = document.getElementById('mqtt-port');
@@ -76,6 +77,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const resp = await fetch('/api/mqtt');
             if (!resp.ok) return;
             const cfg = await resp.json();
+            mqttClientIdInput.value = cfg.clientId || '';
             mqttUserInput.value = cfg.user || '';
             mqttServerInput.value = cfg.server || '';
             mqttPortInput.value = cfg.port != null ? cfg.port : '';
@@ -88,6 +90,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // update MQTT config
     async function updateMqttConfig() {
         const payload = {
+            clientId: mqttClientIdInput.value,
             user: mqttUserInput.value,
             server: mqttServerInput.value,
             password: mqttPasswordInput.value,

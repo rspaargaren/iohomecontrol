@@ -30,6 +30,7 @@ inline const char *wifi_passwd = "";
 
 // Default MQTT configuration. These values can be changed at runtime through
 // the interactive command interface. Leave empty to rely on stored values.
+inline std::string mqtt_client_id = "iown";
 inline std::string mqtt_server = "";
 inline std::string mqtt_user = "mosquitto";
 inline std::string mqtt_password = "";

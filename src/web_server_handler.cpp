@@ -397,6 +397,7 @@ void handleApiMqttGet(AsyncWebServerRequest *request) {
   root["user"] = mqtt_user.c_str();
   root["password"] = mqtt_password.c_str();
   root["discovery"] = mqtt_discovery_topic.c_str();
+  root["clientId"] = mqtt_client_id.c_str();
   root["port"] = mqtt_port;
   response->setLength();
   request->send(response);
@@ -419,6 +420,7 @@ void handleApiMqttSet(AsyncWebServerRequest *request, JsonVariant &json) {
   String user = doc["user"] | "";
   String password = doc["password"] | "";
   String discovery = doc["discovery"] | "";
+  String clientId = doc["clientId"] | "";
   int portValue = -1;
   if (doc.containsKey("port")) {
     JsonVariant portVariant = doc["port"];
@@ -452,6 +454,11 @@ void handleApiMqttSet(AsyncWebServerRequest *request, JsonVariant &json) {
     nvs_write_string(NVS_KEY_MQTT_DISCOVERY, mqtt_discovery_topic);
     discChanged = true;
   }
+  if (!clientId.isEmpty() && mqtt_client_id != clientId.c_str()) {
+    mqtt_client_id = clientId.c_str();
+    nvs_write_string(NVS_KEY_MQTT_CLIENT_ID, mqtt_client_id);
+    mqttChanged = true;
+  }
 
   if (portValue > 0 && portValue <= 65535 && mqtt_port != static_cast<uint16_t>(portValue)) {
     mqtt_port = static_cast<uint16_t>(portValue);
@@ -463,6 +470,7 @@ void handleApiMqttSet(AsyncWebServerRequest *request, JsonVariant &json) {
     mqttClient.disconnect();
     mqttClient.setServer(mqtt_server.c_str(), mqtt_port);
     mqttClient.setCredentials(mqtt_user.c_str(), mqtt_password.c_str());
+    mqttClient.setClientId(mqtt_client_id.c_str());
   }
 
   if (discChanged && mqttStatus == ConnState::Connected) {

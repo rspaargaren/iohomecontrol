@@ -309,6 +309,19 @@ void createCommands() {
         mqttClient.setCredentials(mqtt_user.c_str(), mqtt_password.c_str());
         connectToMqtt();
     });
+    Cmd::addHandler((char *) "mqttId", (char *) "Set MQTT client ID", [](Tokens *cmd)-> void {
+        if (cmd->size() < 2) {
+            Serial.println("Usage: mqttId <id>");
+            return;
+        }
+        mqtt_client_id = cmd->at(1);
+
+        nvs_write_string(NVS_KEY_MQTT_CLIENT_ID, mqtt_client_id);
+
+        mqttClient.disconnect();
+        mqttClient.setClientId(mqtt_client_id.c_str());
+        connectToMqtt();
+    });
     Cmd::addHandler((char *) "mqttPass", (char *) "Set MQTT password", [](Tokens *cmd)-> void {
         if (cmd->size() < 2) {
             Serial.println("Usage: mqttPass <password>");
