@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const MAX_LOGS = 20; // maximaal aantal logs
     const mqttUserInput = document.getElementById('mqtt-user');
     const mqttServerInput = document.getElementById('mqtt-server');
+    const mqttPortInput = document.getElementById('mqtt-port');
     const mqttPasswordInput = document.getElementById('mqtt-password');
     const mqttDiscoveryInput = document.getElementById('mqtt-discovery');
     const mqttUpdateButton = document.getElementById('mqtt-update');
@@ -78,6 +79,7 @@ document.addEventListener('DOMContentLoaded', function() {
             mqttUserInput.value = cfg.user || '';
             mqttServerInput.value = cfg.server || '';
             mqttPasswordInput.value = cfg.password || '';
+            mqttPortInput.value = cfg.port || '';
             mqttDiscoveryInput.value = cfg.discovery || '';
         } catch (e) {
             console.error('Error fetching MQTT config', e);
@@ -89,6 +91,7 @@ document.addEventListener('DOMContentLoaded', function() {
             user: mqttUserInput.value,
             server: mqttServerInput.value,
             password: mqttPasswordInput.value,
+            port: mqttPortInput.value,
             discovery: mqttDiscoveryInput.value
         };
         try {
