@@ -293,7 +293,7 @@ void createCommands() {
         nvs_write_string(NVS_KEY_MQTT_SERVER, mqtt_server);
 
         mqttClient.disconnect();
-        mqttClient.setServer(mqtt_server.c_str(), 1883);
+        mqttClient.setServer(mqtt_server.c_str(), mqtt_port);
         connectToMqtt();
     });
     Cmd::addHandler((char *) "mqttUser", (char *) "Set MQTT username", [](Tokens *cmd)-> void {
@@ -320,6 +320,24 @@ void createCommands() {
 
         mqttClient.disconnect();
         mqttClient.setCredentials(mqtt_user.c_str(), mqtt_password.c_str());
+        connectToMqtt();
+    });
+    Cmd::addHandler((char *) "mqttPort", (char *) "Set MQTT port", [](Tokens *cmd)-> void {
+        if (cmd->size() < 2) {
+            Serial.println("Usage: mqttPort <port>");
+            return;
+        }
+        int port = atoi(cmd->at(1).c_str());
+        if (port <= 0 || port > 65535) {
+            Serial.println("Invalid port value");
+            return;
+        }
+        mqtt_port = static_cast<uint16_t>(port);
+
+        nvs_write_u16(NVS_KEY_MQTT_PORT, mqtt_port);
+
+        mqttClient.disconnect();
+        mqttClient.setServer(mqtt_server.c_str(), mqtt_port);
         connectToMqtt();
     });
     Cmd::addHandler((char *) "mqttDiscovery", (char *) "Set MQTT discovery topic", [](Tokens *cmd)-> void {
