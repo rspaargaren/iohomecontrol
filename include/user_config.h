@@ -30,12 +30,15 @@ inline const char *wifi_passwd = "";
 
 // Default MQTT configuration. These values can be changed at runtime through
 // the interactive command interface. Leave empty to rely on stored values.
+inline std::string mqtt_client_id = "iown";
 inline std::string mqtt_server = "";
 inline std::string mqtt_user = "mosquitto";
 inline std::string mqtt_password = "";
 inline std::string mqtt_discovery_topic = "homeassistant";
+inline uint16_t mqtt_port = 1883;
 
 #define SYSLOG                       // Comment out to disable remote syslog
+inline bool syslog_enabled = true;     // Allow runtime control of syslog forwarding
 inline std::string syslog_server = "192.168.178.15"; // Syslog server IP address
 inline uint16_t syslog_port = 514;     // Syslog server port
 

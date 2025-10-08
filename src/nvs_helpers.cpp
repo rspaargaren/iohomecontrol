@@ -38,3 +38,27 @@ void nvs_write_string(const char *key, const std::string &value) {
     if (!nvs_init()) return;
     prefs.putString(key, value.c_str());
 }
+
+bool nvs_read_u16(const char *key, uint16_t &value) {
+    if (!nvs_init()) return false;
+    if (!prefs.isKey(key)) return false;
+    value = prefs.getUShort(key, value);
+    return true;
+}
+
+void nvs_write_u16(const char *key, uint16_t value) {
+    if (!nvs_init()) return;
+    prefs.putUShort(key, value);
+}
+
+bool nvs_read_bool(const char *key, bool &value) {
+    if (!nvs_init()) return false;
+    if (!prefs.isKey(key)) return false;
+    value = prefs.getBool(key, value);
+    return true;
+}
+
+void nvs_write_bool(const char *key, bool value) {
+    if (!nvs_init()) return;
+    prefs.putBool(key, value);
+}

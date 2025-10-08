@@ -86,35 +86,17 @@
                         <h2>MQTT settings</h2>
                     </div>
                     <div class="card">
-                        <label for="mqtt-client-id">Client ID:</label>
-                        <input type="text" id="mqtt-client-id" placeholder="MQTT Client ID">
                         <label for="mqtt-user">User:</label>
                         <input type="text" id="mqtt-user" placeholder="MQTT User">
                         <label for="mqtt-server">Server:</label>
                         <input type="text" id="mqtt-server" placeholder="MQTT Server">
-                        <label for="mqtt-port">Port:</label>
-                        <input type="number" id="mqtt-port" placeholder="MQTT Port" min="1" max="65535">
+                        <label for="mqtt-port">MQTT Port:</label>
+                        <input type="text" id="mqtt-port" placeholder="MQTT Port">
                         <label for="mqtt-password">Password:</label>
                         <input type="password" id="mqtt-password" placeholder="MQTT Password">
                         <label for="mqtt-discovery">Discovery Topic:</label>
                         <input type="text" id="mqtt-discovery" placeholder="Discovery Topic">
                         <button id="mqtt-update">Update</button>
-                    </div>
-                </section>
-                <section id="syslog-settings-section">
-                    <div class="title">
-                        <h2>Syslog settings</h2>
-                    </div>
-                    <div class="card">
-                        <label class="checkbox-inline" for="syslog-enabled">
-                            <input type="checkbox" id="syslog-enabled">
-                            Enable syslog forwarding
-                        </label>
-                        <label for="syslog-server">Server:</label>
-                        <input type="text" id="syslog-server" placeholder="Syslog Server">
-                        <label for="syslog-port">Port:</label>
-                        <input type="number" id="syslog-port" placeholder="Syslog Port" min="1" max="65535">
-                        <button id="syslog-update">Update</button>
                     </div>
                 </section>
                 <section id="update-section">

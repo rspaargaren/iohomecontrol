@@ -7,6 +7,7 @@
 #include <AsyncMqttClient.h>
 #include <ArduinoJson.h>
 #include <interact.h>
+#include <log_buffer.h>
 #include <oled_display.h>
 #include <cstring>
 #include <cstdlib>
@@ -50,11 +51,22 @@ void initMqtt() {
             nvs_write_string(NVS_KEY_MQTT_DISCOVERY, mqtt_discovery_topic);
         }
     }
+    if (!nvs_read_string(NVS_KEY_MQTT_CLIENT_ID, mqtt_client_id)) {
+        if (mqtt_client_id.empty()) {
+            Serial.println("MQTT client id not set");
+        } else {
+            nvs_write_string(NVS_KEY_MQTT_CLIENT_ID, mqtt_client_id);
+        }
+    }
+
+    if (!nvs_read_u16(NVS_KEY_MQTT_PORT, mqtt_port)) {
+        nvs_write_u16(NVS_KEY_MQTT_PORT, mqtt_port);
+    }
 
     mqttClient.setWill(AVAILABILITY_TOPIC, 0, true, "offline");
-    mqttClient.setClientId("iown");
+    mqttClient.setClientId(mqtt_client_id.c_str());
     mqttClient.setCredentials(mqtt_user.c_str(), mqtt_password.c_str());
-    mqttClient.setServer(mqtt_server.c_str(), 1883);
+    mqttClient.setServer(mqtt_server.c_str(), mqtt_port);
     mqttClient.onConnect(onMqttConnect);
     mqttClient.onDisconnect(onMqttDisconnect);
     mqttClient.onMessage(onMqttMessage);
@@ -263,7 +275,8 @@ void connectToMqtt() {
         Serial.println("MQTT server not configured");
         return;
     }
-    Serial.printf("Connecting to MQTT at %s...\n", mqtt_server.c_str());
+    Serial.printf("Connecting to MQTT at %s:%u...\n", mqtt_server.c_str(), mqtt_port);
+    addLogMessage(String("Connecting to MQTT at ") + mqtt_server.c_str() + ":" + String(mqtt_port));
     mqttStatus = ConnState::Connecting;
     updateDisplayStatus();
     mqttClient.connect();
@@ -271,6 +284,7 @@ void connectToMqtt() {
 
 void onMqttConnect(bool sessionPresent) {
     Serial.println("Connected to MQTT.");
+    addLogMessage(String("Connected to MQTT at ") + mqtt_server.c_str() + ":" + String(mqtt_port));
     mqttStatus = ConnState::Connected;
     updateDisplayStatus();
 
@@ -300,6 +314,7 @@ void onMqttConnect(bool sessionPresent) {
 void onMqttDisconnect(AsyncMqttClientDisconnectReason reason) {
     Serial.print("Disconnected from MQTT. Reason: ");
     Serial.println(static_cast<uint8_t>(reason));
+    addLogMessage(String("Disconnected from MQTT (reason ") + String(static_cast<uint8_t>(reason)) + ")");
     mqttStatus = ConnState::Disconnected;
     updateDisplayStatus();
     if (WiFi.status() == WL_CONNECTED && mqttReconnectTimer) {
