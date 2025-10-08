@@ -7,6 +7,7 @@
 #include <AsyncMqttClient.h>
 #include <ArduinoJson.h>
 #include <interact.h>
+#include <log_buffer.h>
 #include <oled_display.h>
 #include <cstring>
 #include <cstdlib>
@@ -275,6 +276,7 @@ void connectToMqtt() {
         return;
     }
     Serial.printf("Connecting to MQTT at %s:%u...\n", mqtt_server.c_str(), mqtt_port);
+    addLogMessage(String("Connecting to MQTT at ") + mqtt_server.c_str() + ":" + String(mqtt_port));
     mqttStatus = ConnState::Connecting;
     updateDisplayStatus();
     mqttClient.connect();
@@ -282,6 +284,7 @@ void connectToMqtt() {
 
 void onMqttConnect(bool sessionPresent) {
     Serial.println("Connected to MQTT.");
+    addLogMessage(String("Connected to MQTT at ") + mqtt_server.c_str() + ":" + String(mqtt_port));
     mqttStatus = ConnState::Connected;
     updateDisplayStatus();
 
@@ -311,6 +314,7 @@ void onMqttConnect(bool sessionPresent) {
 void onMqttDisconnect(AsyncMqttClientDisconnectReason reason) {
     Serial.print("Disconnected from MQTT. Reason: ");
     Serial.println(static_cast<uint8_t>(reason));
+    addLogMessage(String("Disconnected from MQTT (reason ") + String(static_cast<uint8_t>(reason)) + ")");
     mqttStatus = ConnState::Disconnected;
     updateDisplayStatus();
     if (WiFi.status() == WL_CONNECTED && mqttReconnectTimer) {
