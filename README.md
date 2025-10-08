@@ -1,63 +1,85 @@
-Based on the wonderfull work of [Velocet/iown-homecontrol](https://github.com/Velocet/iown-homecontrol)
+<img src="https://github.com/user-attachments/assets/f6b606a1-0eca-4fd6-a509-d5d1136b2d31" alt="smlogo" width="50"/>
 
-![smlogo](https://github.com/user-attachments/assets/f6b606a1-0eca-4fd6-a509-d5d1136b2d31)
+# IO-Homecontrol ESP32 Project
 
-Image [miopen.io](https://miopen.io) © 2025 by [djbenbe](https://creativecommons.org) is licensed under [CC BY-NC-ND 4.0](https://creativecommons.org/licenses/by-nc-nd/4.0/)
-<img src="https://mirrors.creativecommons.org/presskit/icons/cc.svg" alt="CC" style="width:0.2em; height:0.2em; margin-left:.2em;">
-<img src="https://mirrors.creativecommons.org/presskit/icons/by.svg" alt="BY" style="width:0.2em; height:0.2em;margin-left:.2em;">
-<img src="https://mirrors.creativecommons.org/presskit/icons/nc.svg" alt="NC" style="width:0.2em; height:0.2em; margin-left:.2em;">
-<img src="https://mirrors.creativecommons.org/presskit/icons/nd.svg" alt="ND" style="width:0.2em; height:0.2em; margin-left:.2em;">
+Based on the wonderful work of:
+
+[Velocet/iown-homecontrol](https://github.com/Velocet/iown-homecontrol)  
+[cridp/iown-homecontrol-esp32sx1276](https://github.com/cridp/iown-homecontrol-esp32sx1276)
+
+Please be advised that the modification to this code have mainly be focussing on the 1W communication with the screen. Certain modification have made the 2W part of the code "unstable". Please notice if the code is used as a furhter base.
+
+[☕ Support the project on BuyMeACoffee](https://buymeacoffee.com/dyna_mite)
+
+---
+
+### 📖 Documentation & Wiki
+[- Dutch & English help ](https://github.com/rspaargaren/iohomecontrol/wiki)
+
+---
 
 ### **Disclaimer**  
 Tool designed for educational and testing purposes, provided "as is", without warranty of any kind. Creators and contributors are not responsible for any misuse or damage caused by this tool.
 
 _I don't give any support, especially concerning the obsolete 1W part._
 
-This code doesnt use the RadioLib, even perfect for start, it doesnt allow to be fast as possible
+This code doesn’t use the RadioLib. Even if it’s perfect for a start, it doesn’t allow to be as fast as possible.
 
+---
 
 ### Documentation
-This code was intentionally written with all possible details found in the protocol documentation.
-- (ie: there's 3 differents CRC, 3 differents AES implementation, all detailled)
+This code was intentionally written with all possible details found in the protocol documentation.  
+- (i.e., there are 3 different CRCs, 3 different AES implementations, all detailed)  
+- This allows those with little knowledge of C/CPP to understand the sequence of each command.  
+- All these details require you to carefully read the work of @Velocet to understand this protocol.  
+- There is no magic documentation; only personal work to adapt to your own needs.  
+- But all the functional basics for 1W and 2W are there.  
+- All AES implementations are included, without using an external library.  
+- All 1W / 2W commands for pairing/associating are included as well.  
 
-- This allows those who have little knowledge of C/CPP to understand the sequence of each command.
-All these details require you to carefully read the work of @Velocet to understand this protocol.
-- There is no magic documentation, there is only personal work to adapt to your own needs. 
-- But all the functional basis for the 1W and 2W is there.
-- All AES are there, without using an external library.
-- All 1W / 2W commands pairing/associating answers are there too.
+---
 
 ### Usage
-Use it like a scanner, do some commands on your real device to identify the corresponding CMDid and address
+Use it like a scanner, perform some commands on your real device to identify the corresponding CMDid and address.  
 
--> Choose you board before build.
+→ Choose your board before build.  
+
+---
 
 ### Brief explanation[^1]:
-Use 2 interrupts 
-  - if PAYLOAD and RX -> decode the frame [^3]
-  - if PAYLOAD and TX_READY -> send the frame, decode it [^3]
+Uses 2 interrupts:  
+- if PAYLOAD and RX → decode the frame [^3]  
+- if PAYLOAD and TX_READY → send the frame, decode it [^3]  
+
+---
 
 ### platformio[^2] :
-_At first time or when a JSON in data folder is modified:_
-  1. build filesystem image
-  2. upload filesystem image
-     
-_After any other changes:_
-  - upload and monitor
-  - make sure `CONFIG_ESP_TIMER_SUPPORTS_ISR_DISPATCH_METHOD` remains enabled in
-    `sdkconfig` so ESP timers can run callbacks from ISR context
+_First time or when a JSON in data folder is modified:_  
+1. build filesystem image  
+2. upload filesystem image  
 
-[^1]: I use an SX1276. If CC1101/SX1262: Feel free to use the old code (Not checked/garanted)
+_After any other changes:_  
+- upload and monitor  
+- make sure `CONFIG_ESP_TIMER_SUPPORTS_ISR_DISPATCH_METHOD` remains enabled in `sdkconfig` so ESP timers can run callbacks from ISR context  
 
-[^2]: I use Visual Studio Code Insider
+[^1]: I use an SX1276. If CC1101/SX1262: Feel free to use the old code (not checked/guaranteed).  
+[^2]: I use Visual Studio Code Insider.  
+[^3]: Decoding can be verbose (RSSI, Timing, …).  
 
-[^3]: Decoding can be verbose (RSSI, Timing, ...)
+---
 
 ## Web Interface (Experimental)
 
 This project now includes an experimental web interface to control IOHC devices.
 
 ### Setup & Access
+1. **Configure WiFi** – on first boot the device starts an access point named `iohc-setup`.  
+   Connect and follow the WiFiManager portal to enter your WiFi credentials.  
+2. **Build and Upload Filesystem** – upload web files in `extras/web_interface_data/` via LittleFS.  
+3. **Build and Upload Firmware** – flash main firmware with PlatformIO.  
+4. **Find ESP32 IP** – check Serial Monitor for IP.  
+5. **Access the Interface** – open browser at IP or `http://miopenio.local` if mDNS is supported.  
+
 
 1.  **Configure WiFi:**
     *   On first boot the device starts an access point named `iohc-setup`.
@@ -95,13 +117,11 @@ The web interface allows you to:
 
 This feature is under development, and functionality will be expanded in the future.
 
+
 ## Home Assistant Discovery
 
-When MQTT is enabled (`#define MQTT` in `include/user_config.h`) the firmware publishes Home Assistant discovery messages for every blind defined in `extras/1W.json` as soon as the MQTT connection is established. Comment out the `MQTT` definition if you do not wish to compile the firmware with MQTT support.
+When MQTT is enabled (`#define MQTT` in `include/user_config.h`), the firmware publishes HA discovery messages for every blind.  
 
-Each blind configuration is sent to the topic `homeassistant/cover/<id>/config` where `<id>` is the hexadecimal address from `1W.json`.
-
-The discovery payload's `device` section now also exposes the device's AES `key` as read from `1W.json`.
 
 The `1W.json` file now accepts an optional `travel_time` field per device. This value represents the time in seconds a blind takes to move from fully closed to fully open. It allows the firmware to estimate the current position when no feedback is available. The estimated position is printed to the serial console and shown on the OLED display every second while the blind is moving. When a command is transmitted or received, this position feedback is appended below the action information on the display so that the original message remains visible.
 If these fields (`name` and `travel_time`) are missing, default values are applied using the device description and a 10 second travel time. These defaults are saved back to `1W.json` so subsequent boots load the updated values automatically.
@@ -115,11 +135,14 @@ On boot the value from the file is compared to the one in NVS and the highest
 value is kept so sequence numbers continue uninterrupted even after filesystem
 uploads or resets.
 
-Example payload for `B60D1A`:
 
+It supports `travel_time`, pairing state, and sequence numbers.  
+
+Example payload:  
 ```json
 {"name":"IZY1","command_topic":"iown/B60D1A/set","state_topic":"iown/B60D1A/state","position_topic":"iown/B60D1A/position","set_position_topic":"iown/B60D1A/position/set","unique_id":"B60D1A","payload_open":"OPEN","payload_close":"CLOSE","payload_stop":"STOP","device_class":"blind","availability_topic":"iown/status"}
 ```
+
 
 For each blind the firmware also publishes MQTT button entities that allow
 executing pairing or controller management commands directly from Home Assistant.
@@ -161,4 +184,11 @@ configured to send `offline` on the same topic if it disconnects unexpectedly.
 Home Assistant uses this message to mark all covers as unavailable when the
 gateway goes offline.
 
+
 #### **License**
+
+Image [miopen.io](https://miopen.io) © 2025 by [djbenbe](https://creativecommons.org) is licensed under [CC BY-NC-ND 4.0](https://creativecommons.org/licenses/by-nc-nd/4.0/)
+<img src="https://mirrors.creativecommons.org/presskit/icons/cc.svg" alt="CC" style="width:0.2em; height:0.2em; margin-left:.2em;">
+<img src="https://mirrors.creativecommons.org/presskit/icons/by.svg" alt="BY" style="width:0.2em; height:0.2em;margin-left:.2em;">
+<img src="https://mirrors.creativecommons.org/presskit/icons/nc.svg" alt="NC" style="width:0.2em; height:0.2em; margin-left:.2em;">
+<img src="https://mirrors.creativecommons.org/presskit/icons/nd.svg" alt="ND" style="width:0.2em; height:0.2em; margin-left:.2em;">
