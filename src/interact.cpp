@@ -199,6 +199,22 @@ void createCommands() {
         }
         IOHC::iohcRemoteMap::getInstance()->add(node, name);
     });
+    Cmd::addHandler((char *) "editRemote", (char *) "Edit remote name", [](Tokens *cmd)-> void {
+        if (cmd->size() < 2) {
+            Serial.println("Usage: editRemote <address> <name>");
+            return;
+        }
+        IOHC::address node{};
+        if (hexStringToBytes(cmd->at(1), node) != sizeof(IOHC::address)) {
+            Serial.println("Invalid address");
+            return;
+        }
+        std::string name = cmd->at(2);
+        for (size_t i = 3; i < cmd->size(); ++i) {
+            name += " " + cmd->at(i);
+        }
+        IOHC::iohcRemoteMap::getInstance()->renameDevice(node, name);
+    });
     Cmd::addHandler((char *) "linkRemote", (char *) "Link device to remote", [](Tokens *cmd)-> void {
         if (cmd->size() < 3) {
             Serial.println("Usage: linkRemote <address> <device>");

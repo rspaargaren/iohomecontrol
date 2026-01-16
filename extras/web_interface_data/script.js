@@ -839,7 +839,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         const response = await fetch('/api/command', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ RemoteId: remoteId, command: `editRemote ${newName}` })
+                            body: JSON.stringify({ command: `editRemote ${remoteId} ${newName}` })
                         });
                         const result = await response.json();
                         if (result.success) {
