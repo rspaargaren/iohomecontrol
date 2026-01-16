@@ -181,6 +181,7 @@ void handleApiDevices(AsyncWebServerRequest *request, JsonArray &root) {
   IOHC::iohcRemote1W::getInstance()->updatePositions();
 
   auto remotes = IOHC::iohcRemote1W::getInstance()->getRemotes();
+  std::sort(remotes.begin(), remotes.end(), [](const auto r1, const auto r2) { return r1.name.compare(r2.name) < 0; });
   for (const auto &r : remotes) {
     JsonObject deviceObj = root.add<JsonObject>();
     deviceObj["id"] = bytesToHexString(r.node, sizeof(r.node)).c_str();
@@ -201,6 +202,7 @@ void handleApiDevices(AsyncWebServerRequest *request, JsonArray &root) {
 
 void handleApiRemotes(AsyncWebServerRequest *request, JsonArray &root) {
   auto entries = IOHC::iohcRemoteMap::getInstance()->getEntries();
+  std::sort(entries.begin(), entries.end(), [](const auto e1, const auto e2) { return e1.name.compare(e2.name) < 0; });
   for (const auto &e : entries) {
     JsonObject obj = root.add<JsonObject>();
     obj["id"] = bytesToHexString(e.node, sizeof(e.node)).c_str();
