@@ -35,13 +35,13 @@ static void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
     IOHC::iohcRemote1W::getInstance()->updatePositions();
 
     // Build a compact init message containing only device information
-    DynamicJsonDocument doc(1024);
+    JsonDocument doc;
     doc["type"] = "init";
 
-    JsonArray devices = doc.createNestedArray("devices");
+    JsonArray devices = doc["devices"].to<JsonArray>();
     const auto &remotes = IOHC::iohcRemote1W::getInstance()->getRemotes();
     for (const auto &r : remotes) {
-      JsonObject d = devices.createNestedObject();
+      JsonObject d = devices.add<JsonObject>();
       d["id"] = bytesToHexString(r.node, sizeof(r.node)).c_str();
       d["name"] = r.name.c_str();
       d["position"] = r.positionTracker.getPosition();
@@ -54,7 +54,7 @@ static void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
     // Stream cached log messages individually to avoid a large JSON payload
     auto logMsgs = getLogMessages();
     for (const auto &m : logMsgs) {
-      DynamicJsonDocument logDoc(128);
+      JsonDocument logDoc;
       logDoc["type"] = "log";
       logDoc["message"] = m;
       String logPayload;
@@ -65,7 +65,7 @@ static void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
 }
 
 void broadcastLog(const String &msg) {
-  DynamicJsonDocument doc(128);
+  JsonDocument doc;
   doc["type"] = "log";
   doc["message"] = msg;
   String payload;
@@ -74,7 +74,7 @@ void broadcastLog(const String &msg) {
 }
 
 void broadcastDevicePosition(const String &id, int position) {
-  DynamicJsonDocument doc(128);
+  JsonDocument doc;
   doc["type"] = "position";
   doc["id"] = id;
   doc["position"] = position;
@@ -84,7 +84,7 @@ void broadcastDevicePosition(const String &id, int position) {
 }
 
 void broadcastLastAddress(const String &addr) {
-  DynamicJsonDocument doc(64);
+  JsonDocument doc;
   doc["type"] = "lastaddr";
   doc["address"] = addr;
   String payload;
@@ -142,7 +142,7 @@ void handleApiRemotes(AsyncWebServerRequest *request) {
     JsonObject obj = root.add<JsonObject>();
     obj["id"] = bytesToHexString(e.node, sizeof(e.node)).c_str();
     obj["name"] = e.name.c_str();
-    JsonArray devs = obj.createNestedArray("devices");
+    JsonArray devs = obj["devices"].to<JsonArray>();
     for (const auto &d : e.devices) {
       devs.add(d.c_str());
     }
@@ -457,7 +457,7 @@ void handleApiSyslogSet(AsyncWebServerRequest *request, JsonVariant &json) {
   bool serverChanged = false;
   bool portChanged = false;
 
-  if (doc.containsKey("enabled")) {
+  if (doc["enabled"].is<JsonVariant>()) {
     bool newEnabled = syslog_enabled;
     if (!jsonToBool(doc["enabled"], newEnabled)) {
       request->send(400, "application/json",
@@ -471,7 +471,7 @@ void handleApiSyslogSet(AsyncWebServerRequest *request, JsonVariant &json) {
     }
   }
 
-  if (doc.containsKey("server")) {
+  if (doc["server"].is<JsonVariant>()) {
     String newServer = doc["server"] | "";
     if (newServer != syslog_server.c_str()) {
       syslog_server = newServer.c_str();
@@ -480,7 +480,7 @@ void handleApiSyslogSet(AsyncWebServerRequest *request, JsonVariant &json) {
     }
   }
 
-  if (doc.containsKey("port")) {
+  if (doc["port"].is<JsonVariant>()) {
     int portValue = -1;
     JsonVariant portVariant = doc["port"];
     if (portVariant.is<uint16_t>() || portVariant.is<int>() ||
@@ -564,7 +564,7 @@ void handleApiMqttSet(AsyncWebServerRequest *request, JsonVariant &json) {
   String discovery = doc["discovery"] | "";
   String clientId = doc["clientId"] | "";
   int portValue = -1;
-  if (doc.containsKey("port")) {
+  if (doc["port"].is<JsonVariant>()) {
     JsonVariant portVariant = doc["port"];
     if (portVariant.is<uint16_t>() || portVariant.is<int>() || portVariant.is<long>()) {
       portValue = portVariant.as<int>();
