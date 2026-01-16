@@ -98,18 +98,89 @@ struct Device {
   String name;
 };
 
-void handleApiDevices(AsyncWebServerRequest *request) {
+template<class T>
+using ArGetRequestHandlerFunction = std::function<void(AsyncWebServerRequest *request, T &root)>;
+ArRequestHandlerFunction _jsonGet(const ArGetRequestHandlerFunction<JsonVariant> handler) {
+  return [handler] (AsyncWebServerRequest *request) {
+    AsyncJsonResponse *response = new AsyncJsonResponse();
+    if (!response) {
+      request->send(500, "text/plain", "Internal Server Error");
+      return;
+    }
+
+    handler(request, response->getRoot());
+
+    if (!request->isSent()) {
+      response->setLength();
+      request->send(response);
+    }
+  };
+}
+
+ArRequestHandlerFunction jsonGet(const ArGetRequestHandlerFunction<JsonObject> handler) {
+  return _jsonGet([handler] (AsyncWebServerRequest *request, JsonVariant &root) {
+    JsonObject json = root.to<JsonObject>();
+    handler(request, json);
+  });
+}
+
+ArRequestHandlerFunction jsonGet(const ArGetRequestHandlerFunction<JsonArray> handler) {
+  return _jsonGet([handler] (AsyncWebServerRequest *request, JsonVariant &root) {
+    JsonArray json = root.to<JsonArray>();
+    handler(request, json);
+  });
+}
+
+template<class T>
+using ArPostRequestHandlerFunction = std::function<void(AsyncWebServerRequest *request, JsonObject &doc, T &root)>;
+ArJsonRequestHandlerFunction _jsonPost(const ArPostRequestHandlerFunction<JsonVariant> handler) {
+  return [handler] (AsyncWebServerRequest *request, JsonVariant &json) -> void {
+    if (request->method() != HTTP_POST) {
+      request->send(405, "text/plain", "Method Not Allowed");
+      return;
+    }
+
+    JsonObject doc = json.as<JsonObject>();
+    if (doc.isNull()) {
+      request->send(400, "application/json",
+                    "{\"success\":false, \"message\":\"Invalid JSON\"}");
+      return;
+    }
+
+    AsyncJsonResponse *response = new AsyncJsonResponse();
+    if (!response) {
+      request->send(500, "text/plain", "Internal Server Error");
+      return;
+    }
+
+    handler(request, doc, response->getRoot());
+
+    if (!request->isSent()) {
+      response->setLength();
+      request->send(response);
+    }
+  };
+}
+
+ArJsonRequestHandlerFunction jsonPost(const ArPostRequestHandlerFunction<JsonObject> handler) {
+  return _jsonPost([handler] (AsyncWebServerRequest *request, JsonObject &doc, JsonVariant &root) {
+    JsonObject json = root.to<JsonObject>();
+    handler(request, doc, json);
+  });
+}
+
+ArJsonRequestHandlerFunction jsonPost(const ArPostRequestHandlerFunction<JsonArray> handler) {
+  return _jsonPost([handler] (AsyncWebServerRequest *request, JsonObject &doc, JsonVariant &root) {
+    JsonArray json = root.to<JsonArray>();
+    handler(request, doc, json);
+  });
+}
+
+void handleApiDevices(AsyncWebServerRequest *request, JsonArray &root) {
   // Update device positions before returning them to the web client
   IOHC::iohcRemote1W::getInstance()->updatePositions();
 
-  AsyncJsonResponse *response = new AsyncJsonResponse();
-  if (!response) {
-    request->send(500, "text/plain", "Out of memory");
-    return;
-  }
-  JsonArray root = response->getRoot().to<JsonArray>();
-
-  const auto &remotes = IOHC::iohcRemote1W::getInstance()->getRemotes();
+  auto remotes = IOHC::iohcRemote1W::getInstance()->getRemotes();
   for (const auto &r : remotes) {
     JsonObject deviceObj = root.add<JsonObject>();
     deviceObj["id"] = bytesToHexString(r.node, sizeof(r.node)).c_str();
@@ -124,20 +195,11 @@ void handleApiDevices(AsyncWebServerRequest *request) {
   // cmdObj["id"] = "cmd_if";
   // cmdObj["name"] = "Command Interface";
 
-  response->setLength();
-  request->send(response);
   // log_i("Sent device list"); // Requires a logging library
 }
 
-void handleApiRemotes(AsyncWebServerRequest *request) {
-  AsyncJsonResponse *response = new AsyncJsonResponse();
-  if (!response) {
-    request->send(500, "text/plain", "Out of memory");
-    return;
-  }
-  JsonArray root = response->getRoot().to<JsonArray>();
-
-  const auto &entries = IOHC::iohcRemoteMap::getInstance()->getEntries();
+void handleApiRemotes(AsyncWebServerRequest *request, JsonArray &root) {
+  auto entries = IOHC::iohcRemoteMap::getInstance()->getEntries();
   for (const auto &e : entries) {
     JsonObject obj = root.add<JsonObject>();
     obj["id"] = bytesToHexString(e.node, sizeof(e.node)).c_str();
@@ -147,9 +209,6 @@ void handleApiRemotes(AsyncWebServerRequest *request) {
       devs.add(d.c_str());
     }
   }
-
-  response->setLength();
-  request->send(response);
 }
 
 void handleDownloadDevices(AsyncWebServerRequest *request) {
@@ -211,19 +270,7 @@ void handleUploadRemotesFile(AsyncWebServerRequest *request, String filename,
   }
 }
 
-void handleApiCommand(AsyncWebServerRequest *request, JsonVariant &json) {
-  if (request->method() != HTTP_POST) {
-    request->send(405, "text/plain", "Method Not Allowed");
-    return;
-  }
-
-  JsonObject doc = json.as<JsonObject>();
-  if (doc.isNull()) {
-    request->send(400, "application/json",
-                  "{\"success\":false, \"message\":\"Invalid JSON\"}");
-    return;
-  }
-
+void handleApiCommand(AsyncWebServerRequest *request, JsonObject &doc, JsonObject &root) {
   String deviceId = doc["deviceId"] | "";
   String command = doc["command"] | "";
 
@@ -274,33 +321,11 @@ void handleApiCommand(AsyncWebServerRequest *request, JsonVariant &json) {
 
   addLogMessage(message);
 
-  AsyncJsonResponse *response = new AsyncJsonResponse();
-  if (!response) {
-    request->send(500, "application/json",
-                  "{\"success\":false,\"message\":\"OOM\"}");
-    return;
-  }
-  JsonObject root = response->getRoot().to<JsonObject>();
   root["success"] = success;
   root["message"] = message;
-
-  response->setLength();
-  request->send(response);
 }
 
-void handleApiAction(AsyncWebServerRequest *request, JsonVariant &json) {
-  if (request->method() != HTTP_POST) {
-    request->send(405, "text/plain", "Method Not Allowed");
-    return;
-  }
-
-  JsonObject doc = json.as<JsonObject>();
-  if (doc.isNull()) {
-    request->send(400, "application/json",
-                  "{\"success\":false, \"message\":\"Invalid JSON\"}");
-    return;
-  }
-
+void handleApiAction(AsyncWebServerRequest *request, JsonObject &doc, JsonObject &root) {
   String deviceId = doc["deviceId"] | "";
   String action = doc["action"] | "";
 
@@ -347,45 +372,19 @@ void handleApiAction(AsyncWebServerRequest *request, JsonVariant &json) {
   String msg = "Action " + action + " sent to " + String(it->name.c_str());
   addLogMessage(msg);
 
-  AsyncJsonResponse *response = new AsyncJsonResponse();
-  if (!response) {
-    request->send(500, "application/json",
-                  "{\"success\":false, \"message\":\"OOM\"}");
-    return;
-  }
-  JsonObject root = response->getRoot().to<JsonObject>();
   root["success"] = true;
   root["message"] = msg;
-
-  response->setLength();
-  request->send(response);
 }
 
-void handleApiLogs(AsyncWebServerRequest *request) {
-  AsyncJsonResponse *response = new AsyncJsonResponse();
-  if (!response) {
-    request->send(500, "text/plain", "OOM");
-    return;
-  }
-  JsonArray root = response->getRoot().to<JsonArray>();
+void handleApiLogs(AsyncWebServerRequest *request, JsonArray &root) {
   auto logs = getLogMessages();
   for (const auto &msg : logs) {
     root.add(msg);
   }
-  response->setLength();
-  request->send(response);
 }
 
-void handleApiLastAddr(AsyncWebServerRequest *request) {
-  AsyncJsonResponse *response = new AsyncJsonResponse();
-  if (!response) {
-    request->send(500, "text/plain", "OOM");
-    return;
-  }
-  JsonObject root = response->getRoot().to<JsonObject>();
+void handleApiLastAddr(AsyncWebServerRequest *request, JsonObject &root) {
   root["address"] = bytesToHexString(IOHC::lastFromAddress, sizeof(IOHC::lastFromAddress)).c_str();
-  response->setLength();
-  request->send(response);
 }
 
 #if defined(SYSLOG)
@@ -420,38 +419,16 @@ static bool jsonToBool(JsonVariant variant, bool &value) {
   return false;
 }
 
-void handleApiSyslogGet(AsyncWebServerRequest *request) {
+void handleApiSyslogGet(AsyncWebServerRequest *request, JsonObject &root) {
   initSyslog();
 
-  AsyncJsonResponse *response = new AsyncJsonResponse();
-  if (!response) {
-    request->send(500, "text/plain", "OOM");
-    return;
-  }
-
-  JsonObject root = response->getRoot().to<JsonObject>();
   root["enabled"] = syslog_enabled;
   root["server"] = syslog_server.c_str();
   root["port"] = syslog_port;
-
-  response->setLength();
-  request->send(response);
 }
 
-void handleApiSyslogSet(AsyncWebServerRequest *request, JsonVariant &json) {
-  if (request->method() != HTTP_POST) {
-    request->send(405, "text/plain", "Method Not Allowed");
-    return;
-  }
-
+void handleApiSyslogSet(AsyncWebServerRequest *request, JsonObject &doc, JsonObject &root) {
   initSyslog();
-
-  JsonObject doc = json.as<JsonObject>();
-  if (doc.isNull()) {
-    request->send(400, "application/json",
-                  "{\"success\":false, \"message\":\"Invalid JSON\"}");
-    return;
-  }
 
   bool enabledChanged = false;
   bool serverChanged = false;
@@ -510,54 +487,25 @@ void handleApiSyslogSet(AsyncWebServerRequest *request, JsonVariant &json) {
     }
   }
 
-  AsyncJsonResponse *response = new AsyncJsonResponse();
-  if (!response) {
-    request->send(500, "application/json",
-                  "{\"success\":false,\"message\":\"OOM\"}");
-    return;
-  }
-  JsonObject root = response->getRoot().to<JsonObject>();
   root["success"] = true;
   root["message"] = "Syslog configuration updated";
   root["enabled"] = syslog_enabled;
   root["server"] = syslog_server.c_str();
   root["port"] = syslog_port;
-  response->setLength();
-  request->send(response);
 }
 #endif
 
 #if defined(MQTT)
-void handleApiMqttGet(AsyncWebServerRequest *request) {
-  AsyncJsonResponse *response = new AsyncJsonResponse();
-  if (!response) {
-    request->send(500, "text/plain", "OOM");
-    return;
-  }
-  JsonObject root = response->getRoot().to<JsonObject>();
+void handleApiMqttGet(AsyncWebServerRequest *request, JsonObject &root) {
   root["server"] = mqtt_server.c_str();
   root["user"] = mqtt_user.c_str();
   root["password"] = mqtt_password.c_str();
   root["discovery"] = mqtt_discovery_topic.c_str();
   root["clientId"] = mqtt_client_id.c_str();
   root["port"] = mqtt_port;
-  response->setLength();
-  request->send(response);
 }
 
-void handleApiMqttSet(AsyncWebServerRequest *request, JsonVariant &json) {
-  if (request->method() != HTTP_POST) {
-    request->send(405, "text/plain", "Method Not Allowed");
-    return;
-  }
-
-  JsonObject doc = json.as<JsonObject>();
-  if (doc.isNull()) {
-    request->send(400, "application/json",
-                  "{\"success\":false, \"message\":\"Invalid JSON\"}");
-    return;
-  }
-
+void handleApiMqttSet(AsyncWebServerRequest *request, JsonObject &doc, JsonObject &root) {
   String server = doc["server"] | "";
   String user = doc["user"] | "";
   String password = doc["password"] | "";
@@ -619,17 +567,8 @@ void handleApiMqttSet(AsyncWebServerRequest *request, JsonVariant &json) {
     handleMqttConnect();
   }
 
-  AsyncJsonResponse *response = new AsyncJsonResponse();
-  if (!response) {
-    request->send(500, "application/json",
-                  "{\"success\":false,\"message\":\"OOM\"}");
-    return;
-  }
-  JsonObject root = response->getRoot().to<JsonObject>();
   root["success"] = true;
   root["message"] = "MQTT configuration updated";
-  response->setLength();
-  request->send(response);
 }
 #endif
 
@@ -711,27 +650,23 @@ void setupWebServer() {
   }
 
   // API Endpoints
-  server.on("/api/devices", HTTP_GET, handleApiDevices);
-  server.on("/api/remotes", HTTP_GET, handleApiRemotes);
-  server.on("/api/logs", HTTP_GET, handleApiLogs);
-  server.on("/api/lastaddr", HTTP_GET, handleApiLastAddr);
+  server.on("/api/devices", HTTP_GET, jsonGet(handleApiDevices));
+  server.on("/api/remotes", HTTP_GET, jsonGet(handleApiRemotes));
+  server.on("/api/logs", HTTP_GET, jsonGet(handleApiLogs));
+  server.on("/api/lastaddr", HTTP_GET, jsonGet(handleApiLastAddr));
 #if defined(SYSLOG)
-  server.on("/api/syslog", HTTP_GET, handleApiSyslogGet);
+  server.on("/api/syslog", HTTP_GET, jsonGet(handleApiSyslogGet));
 #endif
 #if defined(MQTT)
-  server.on("/api/mqtt", HTTP_GET, handleApiMqttGet);
+  server.on("/api/mqtt", HTTP_GET, jsonGet(handleApiMqttGet));
 #endif
-  server.addHandler(new AsyncCallbackJsonWebHandler(
-      "/api/command", handleApiCommand)); // For POST with JSON
-  server.addHandler(
-      new AsyncCallbackJsonWebHandler("/api/action", handleApiAction));
+  server.on("/api/command", HTTP_POST, jsonPost(handleApiCommand));
+  server.on("/api/action", HTTP_POST, jsonPost(handleApiAction));
 #if defined(MQTT)
-  server.addHandler(
-      new AsyncCallbackJsonWebHandler("/api/mqtt", handleApiMqttSet));
+  server.on("/api/mqtt", HTTP_POST, jsonPost(handleApiMqttSet));
 #endif
 #if defined(SYSLOG)
-  server.addHandler(
-      new AsyncCallbackJsonWebHandler("/api/syslog", handleApiSyslogSet));
+  server.on("/api/syslog", HTTP_POST, jsonPost(handleApiSyslogSet));
 #endif
   server.on("/api/firmware", HTTP_POST, handleFirmwareUpdate,
             handleFirmwareUpload);
