@@ -25,7 +25,7 @@
 
 TimerHandle_t wifiReconnectTimer;
 
-ConnState wifiStatus = ConnState::Disconnected;
+WiFiStatus wifiStatus = { ConnState::Disconnected, 0 };
 
 void initWifi() {
     wifiReconnectTimer = xTimerCreate(
@@ -43,7 +43,8 @@ void initWifi() {
 
 void connectToWifi(TimerHandle_t /*timer*/) {
     Serial.println("Connecting to Wi-Fi...");
-    wifiStatus = ConnState::Connecting;
+    wifiStatus = { ConnState::Connecting, 0 };
+
     updateDisplayStatus();
 
     WiFi.mode(WIFI_STA);
@@ -69,8 +70,7 @@ void connectToWifi(TimerHandle_t /*timer*/) {
 
     if (!res) {
         Serial.printf("WiFi connection failed after %lu ms\n", duration);
-        wifiStatus = ConnState::Disconnected;
-        updateDisplayStatus();
+        wifiStatus = { ConnState::Disconnected, 0 };
 
         // Retry later
         if (wifiReconnectTimer) {
@@ -79,8 +79,7 @@ void connectToWifi(TimerHandle_t /*timer*/) {
     } else {
         Serial.printf("Connected to WiFi in %lu ms. IP address: %s\n", duration,
                       WiFi.localIP().toString().c_str());
-        wifiStatus = ConnState::Connected;
-        updateDisplayStatus();
+        wifiStatus = { ConnState::Connected, wm.getRSSIasQuality(WiFi.RSSI()) };
 
         if (!MDNS.begin("miopenio")) {
             Serial.println("Error setting up MDNS responder!");
@@ -99,9 +98,9 @@ void connectToWifi(TimerHandle_t /*timer*/) {
 
 void checkWifiConnection() {
     if (WiFi.status() != WL_CONNECTED) {
-        if (wifiStatus == ConnState::Connected) {
+        if (wifiStatus.connectionStatus == ConnState::Connected) {
             Serial.println("WiFi connection lost");
-            wifiStatus = ConnState::Disconnected;
+            wifiStatus = { ConnState::Disconnected, 0 };
             updateDisplayStatus();
 
 #if defined(MQTT)

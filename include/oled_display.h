@@ -21,13 +21,12 @@
 extern Adafruit_SSD1306 display;
 
 bool initDisplay();
-void displayIpAddress(IPAddress ip);
 void display1WAction(const uint8_t *remote, const char *action, const char *dir, const char *name = nullptr);
 void display1WPosition(const uint8_t *remote, float position, const char *name = nullptr);
 void updateDisplayStatus();
 #else
 inline bool initDisplay() { return true; }
-inline void displayIpAddress(IPAddress) {}
+inline void display1WAction(const uint8_t *, const char *, const char *, const char * = nullptr) {}
 inline void display1WAction(const uint8_t *, const char *, const char *, const char * = nullptr) {}
 inline void updateDisplayStatus() {}
 #endif
