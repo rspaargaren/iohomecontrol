@@ -45,12 +45,15 @@
 #if defined(LILYGO)
 #define I2C_SDA_PIN 21
 #define I2C_SCL_PIN 22
+#define DISPLAY_OLED_RST_PIN 14
 #elif defined(HELTEC)
 #define I2C_SDA_PIN 4
 #define I2C_SCL_PIN 15
+#define DISPLAY_OLED_RST_PIN 16
 #else
 #define I2C_SDA_PIN 21
 #define I2C_SCL_PIN 22
+#define DISPLAY_OLED_RST_PIN 16
 #endif
 
 // OK LilyGo Wifi ESP32 Lora v2.1.6
