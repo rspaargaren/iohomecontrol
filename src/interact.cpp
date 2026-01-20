@@ -293,7 +293,7 @@ void createCommands() {
         nvs_write_string(NVS_KEY_MQTT_SERVER, mqtt_server);
 
         mqttClient.disconnect();
-        mqttClient.setServer(mqtt_server.c_str(), 1883);
+        mqttClient.setServer(mqtt_server.c_str(), mqtt_port);
         connectToMqtt();
     });
     Cmd::addHandler((char *) "mqttUser", (char *) "Set MQTT username", [](Tokens *cmd)-> void {
@@ -309,6 +309,19 @@ void createCommands() {
         mqttClient.setCredentials(mqtt_user.c_str(), mqtt_password.c_str());
         connectToMqtt();
     });
+    Cmd::addHandler((char *) "mqttId", (char *) "Set MQTT client ID", [](Tokens *cmd)-> void {
+        if (cmd->size() < 2) {
+            Serial.println("Usage: mqttId <id>");
+            return;
+        }
+        mqtt_client_id = cmd->at(1);
+
+        nvs_write_string(NVS_KEY_MQTT_CLIENT_ID, mqtt_client_id);
+
+        mqttClient.disconnect();
+        mqttClient.setClientId(mqtt_client_id.c_str());
+        connectToMqtt();
+    });
     Cmd::addHandler((char *) "mqttPass", (char *) "Set MQTT password", [](Tokens *cmd)-> void {
         if (cmd->size() < 2) {
             Serial.println("Usage: mqttPass <password>");
@@ -320,6 +333,24 @@ void createCommands() {
 
         mqttClient.disconnect();
         mqttClient.setCredentials(mqtt_user.c_str(), mqtt_password.c_str());
+        connectToMqtt();
+    });
+    Cmd::addHandler((char *) "mqttPort", (char *) "Set MQTT port", [](Tokens *cmd)-> void {
+        if (cmd->size() < 2) {
+            Serial.println("Usage: mqttPort <port>");
+            return;
+        }
+        int port = atoi(cmd->at(1).c_str());
+        if (port <= 0 || port > 65535) {
+            Serial.println("Invalid port value");
+            return;
+        }
+        mqtt_port = static_cast<uint16_t>(port);
+
+        nvs_write_u16(NVS_KEY_MQTT_PORT, mqtt_port);
+
+        mqttClient.disconnect();
+        mqttClient.setServer(mqtt_server.c_str(), mqtt_port);
         connectToMqtt();
     });
     Cmd::addHandler((char *) "mqttDiscovery", (char *) "Set MQTT discovery topic", [](Tokens *cmd)-> void {

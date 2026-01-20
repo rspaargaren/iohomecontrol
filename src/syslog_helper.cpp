@@ -6,8 +6,9 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include <WiFiUdp.h>
-#include <time.h>
 #include <esp_log.h>
+#include <nvs_helpers.h>
+#include <time.h>
 
 // ===== Config (adjust if you like) =====
 #ifndef SYSLOG_FACILITY
@@ -24,13 +25,37 @@
 namespace {
     WiFiUDP      syslogUdp;
     IPAddress    syslogIP;
-    bool         syslogReady = false;
-    static const char *TAG   = "SYSLOG";
+    bool         syslogReady  = false;
+    bool         configLoaded = false;
+    static const char *TAG    = "SYSLOG";
 
     inline int pri(int facility, int severity) {
         if (severity < 0) severity = 6;     // default info
         if (severity > 7) severity = 7;
         return facility * 8 + severity;
+    }
+
+    void ensureConfigLoaded() {
+        if (configLoaded) {
+            return;
+        }
+
+        bool enabled = syslog_enabled;
+        if (nvs_read_bool(NVS_KEY_SYSLOG_ENABLED, enabled)) {
+            syslog_enabled = enabled;
+        } else {
+            nvs_write_bool(NVS_KEY_SYSLOG_ENABLED, syslog_enabled);
+        }
+
+        if (!nvs_read_string(NVS_KEY_SYSLOG_SERVER, syslog_server)) {
+            nvs_write_string(NVS_KEY_SYSLOG_SERVER, syslog_server);
+        }
+
+        if (!nvs_read_u16(NVS_KEY_SYSLOG_PORT, syslog_port)) {
+            nvs_write_u16(NVS_KEY_SYSLOG_PORT, syslog_port);
+        }
+
+        configLoaded = true;
     }
 
 #ifndef SYSLOG_RFC5424
@@ -64,31 +89,56 @@ namespace {
 
 // Initialize UDP + resolve syslog IP from user_config.h
 void initSyslog() {
-    ESP_LOGD(TAG, "Init syslog: server='%s' port=%u", syslog_server.c_str(), syslog_port);
-    if (syslogReady) {
-        ESP_LOGD(TAG, "Syslog already initialized");
+    ensureConfigLoaded();
+
+    ESP_LOGD(TAG, "Init syslog: enabled=%d server='%s' port=%u",
+             syslog_enabled ? 1 : 0, syslog_server.c_str(), syslog_port);
+
+    if (!syslog_enabled) {
+        ESP_LOGD(TAG, "Syslog disabled - not initializing");
+        resetSyslog();
         return;
     }
+
     if (syslog_server.empty()) {
         ESP_LOGD(TAG, "Syslog server not set");
+        resetSyslog();
         return;
     }
+
+    if (syslog_port == 0 || syslog_port > 65535) {
+        ESP_LOGD(TAG, "Invalid syslog port: %u", syslog_port);
+        resetSyslog();
+        return;
+    }
+
     if (!syslogIP.fromString(syslog_server.c_str())) {
-        ESP_LOGD(TAG, "Invalid syslog server address: %s", syslog_server.c_str());
-        return;
+        if (WiFi.hostByName(syslog_server.c_str(), syslogIP) != 1) {
+            ESP_LOGD(TAG, "Unable to resolve syslog server: %s", syslog_server.c_str());
+            resetSyslog();
+            return;
+        }
     }
-    syslogUdp.begin(0);
-    syslogReady = true;
+
+    if (!syslogReady) {
+        syslogUdp.begin(0);
+        syslogReady = true;
+    }
+
     ESP_LOGD(TAG, "Syslog initialized with IP: %s", syslogIP.toString().c_str());
 }
 
 // Real sender with RFC header
 void sendSyslog(const String &msg, int severity) {
+    ensureConfigLoaded();
+    if (!syslog_enabled) {
+        return;
+    }
     if (!syslogReady) {
         ESP_LOGD(TAG, "Syslog not ready, initializing");
         initSyslog();
     }
-    if (!syslogReady) {
+    if (!syslog_enabled || !syslogReady) {
         ESP_LOGD(TAG, "Syslog initialization failed");
         return;
     }
@@ -121,10 +171,18 @@ void sendSyslog(const String &msg) {
     sendSyslog(msg, 6);
 }
 
+void resetSyslog() {
+    if (syslogReady) {
+        syslogUdp.stop();
+        syslogReady = false;
+    }
+}
+
 #else  // !SYSLOG
 
 // No-op definitions so you can build without SYSLOG
 void initSyslog() {}
+void resetSyslog() {}
 void sendSyslog(const String &) {}
 void sendSyslog(const String &, int) {}
 

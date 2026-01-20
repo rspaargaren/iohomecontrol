@@ -11,6 +11,9 @@
 // Initialize UDP + target IP from user_config.h
 void initSyslog();
 
+// Reset the UDP sender state so that configuration changes are applied
+void resetSyslog();
+
 // Legacy signature (no severity)
 void sendSyslog(const String &msg);
 
