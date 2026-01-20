@@ -194,9 +194,7 @@ namespace IOHC {
                 display1WAction(r.node, remoteButtonToString(cmd), "TX", r.name.c_str());
 
                 Serial.printf("%s position: %.0f%%\n", r.name.c_str(), r.positionTracker.getPosition());
-#if defined(SSD1306_DISPLAY)
                 display1WPosition(r.node, r.positionTracker.getPosition(), r.name.c_str());
-#endif
 
                 r.paired = true;
                 break;
@@ -246,9 +244,7 @@ namespace IOHC {
                 display1WAction(r.node, remoteButtonToString(cmd), "TX", r.name.c_str());
 
                 Serial.printf("%s position: %.0f%%\n", r.name.c_str(), r.positionTracker.getPosition());
-#if defined(SSD1306_DISPLAY)
                 display1WPosition(r.node, r.positionTracker.getPosition(), r.name.c_str());
-#endif
 
                 r.paired = false;
                 break;
@@ -296,9 +292,7 @@ namespace IOHC {
                 _radioInstance->send(packets2send);
                 display1WAction(r.node, remoteButtonToString(cmd), "TX", r.name.c_str());
                 Serial.printf("%s position: %.0f%%\n", r.name.c_str(), r.positionTracker.getPosition());
-#if defined(SSD1306_DISPLAY)
                 display1WPosition(r.node, r.positionTracker.getPosition(), r.name.c_str());
-#endif
                 break;
             }
            default: {
@@ -644,9 +638,7 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
                 _radioInstance->send(packets2send);
                 display1WAction(r.node, remoteButtonToString(cmd), "TX", r.name.c_str());
                 Serial.printf("%s position: %.0f%%\n", r.name.c_str(), r.positionTracker.getPosition());
-#if defined(SSD1306_DISPLAY)
                 display1WPosition(r.node, r.positionTracker.getPosition(), r.name.c_str());
-#endif
                 break;
 //            }
         }
@@ -1006,9 +998,7 @@ const std::vector<iohcRemote1W::remote>& iohcRemote1W::getRemotes() const {
 
             if (moving) {
                 //Serial.printf("%s position: %.0f%%\n", r.name.c_str(), pos);
-#if defined(SSD1306_DISPLAY)
                 display1WPosition(r.node, pos, r.name.c_str());
-#endif
 #if defined(MQTT) || defined(WEBSERVER)
                 std::string id = bytesToHexString(r.node, sizeof(r.node));
 #endif
@@ -1058,11 +1048,9 @@ const std::vector<iohcRemote1W::remote>& iohcRemote1W::getRemotes() const {
                 }
 #endif
                 r.movement = remote::Movement::Idle;
-#if defined(SSD1306_DISPLAY)
                 if (r.lastPublishedPosition != pos) {
                     display1WPosition(r.node, pos, r.name.c_str());
                 }
-#endif
             }
         }
     }

@@ -40,15 +40,6 @@ bool initDisplay() {
     return true;
 }
 
-void displayIpAddress(IPAddress ip) {
-    display.clearDisplay();
-    display.setTextSize(1);
-    display.setTextColor(SSD1306_WHITE);
-    display.setCursor(0, 0);
-    String ipStr = "IP: " + ip.toString();
-    display.println(ipStr);
-    display.display();
-}
 
 void display1WAction(const uint8_t *remote, const char *action, const char *dir, const char *name) {
     std::string id = bytesToHexString(remote, 3);
