@@ -86,6 +86,7 @@ document.addEventListener('DOMContentLoaded', function() {
             mqttServerInput.value = cfg.server || '';
             mqttPortInput.value = cfg.port != null ? cfg.port : '';
             mqttPasswordInput.value = cfg.password || '';
+            mqttPortInput.value = cfg.port || '';
             mqttDiscoveryInput.value = cfg.discovery || '';
         } catch (e) {
             console.error('Error fetching MQTT config', e);
@@ -118,6 +119,7 @@ document.addEventListener('DOMContentLoaded', function() {
             user: mqttUserInput.value,
             server: mqttServerInput.value,
             password: mqttPasswordInput.value,
+            port: mqttPortInput.value,
             discovery: mqttDiscoveryInput.value
         };
         const portValue = parseInt(mqttPortInput.value, 10);
