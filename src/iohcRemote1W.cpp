@@ -1017,8 +1017,8 @@ const std::vector<iohcRemote1W::remote>& iohcRemote1W::getRemotes() const {
 #if defined(WEBSERVER)
                     broadcastDevicePosition(id.c_str(), static_cast<int>(pos));
 #endif
-                    r.lastPublishedPosition = pos;
                 }
+                r.lastPublishedPosition = pos;
 #endif
             } else {
 #if defined(MQTT) || defined(WEBSERVER)
@@ -1036,21 +1036,21 @@ const std::vector<iohcRemote1W::remote>& iohcRemote1W::getRemotes() const {
                     r.lastPublishedState = state;
                 }
 #endif
+                if (r.lastPublishedPosition != pos) {
+                    display1WPosition(r.node, pos, r.name.c_str());
 #if defined(MQTT) || defined(WEBSERVER)
-                if (fabs(pos - r.lastPublishedPosition) >= 1.0f) {
+                    if (fabs(pos - r.lastPublishedPosition) >= 1.0f) {
 #if defined(MQTT)
-                    publishCoverPosition(id, pos);
+                        publishCoverPosition(id, pos);
 #endif
 #if defined(WEBSERVER)
-                    broadcastDevicePosition(id.c_str(), static_cast<int>(pos));
+                        broadcastDevicePosition(id.c_str(), static_cast<int>(pos));
+#endif
+                    }
 #endif
                     r.lastPublishedPosition = pos;
                 }
-#endif
                 r.movement = remote::Movement::Idle;
-                if (r.lastPublishedPosition != pos) {
-                    display1WPosition(r.node, pos, r.name.c_str());
-                }
             }
         }
     }
