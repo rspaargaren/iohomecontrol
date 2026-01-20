@@ -137,6 +137,17 @@ namespace IOHC {
         return false;
     }
 
+    bool iohcRemoteMap::renameDevice(const address node, const std::string &name) {
+        auto it = std::find_if(_entries.begin(), _entries.end(),
+                               [&](const entry &e) { return memcmp(e.node, node, sizeof(address)) == 0; });
+        if (it == _entries.end()) {
+            Serial.println("Remote not found");
+            return false;
+        }
+        it->name = name;
+        return save();
+    }
+
     bool iohcRemoteMap::remove(const address node) {
         auto it = std::find_if(_entries.begin(), _entries.end(),
                                [&](const entry &e) { return memcmp(e.node, node, sizeof(address)) == 0; });
