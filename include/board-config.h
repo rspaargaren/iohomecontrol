@@ -45,7 +45,7 @@
 #if defined(LILYGO)
 #define I2C_SDA_PIN 21
 #define I2C_SCL_PIN 22
-#define DISPLAY_OLED_RST_PIN 14
+#define DISPLAY_OLED_RST_PIN -1 // LilyGo LoRa32 T3 V1.6.1 does not have a display reset pin
 #elif defined(HELTEC)
 #define I2C_SDA_PIN 4
 #define I2C_SCL_PIN 15
