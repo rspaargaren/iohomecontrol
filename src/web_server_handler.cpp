@@ -112,7 +112,7 @@ ArRequestHandlerFunction _jsonGet(const ArGetRequestHandlerFunction<JsonVariant>
 
     if (!request->isSent()) {
       response->setLength();
-      request->send(response);
+      request->send(response);  // transfers response delete responsibility to request
     }
   };
 }
@@ -157,7 +157,7 @@ ArJsonRequestHandlerFunction _jsonPost(const ArPostRequestHandlerFunction<JsonVa
 
     if (!request->isSent()) {
       response->setLength();
-      request->send(response);
+      request->send(response); // transfers response delete responsibility to request
     }
   };
 }
