@@ -9,25 +9,25 @@ void Ticker::reset() {
     ticks = 0;
 }
 
-ScrollingWindow::ScrollingWindow(int pTicksToWaitLong, int pTicksToWaitShort) {
+ScrollingWindow::ScrollingWindow(const int pTicksToWaitLong, const int pTicksToWaitShort) {
     ticksToWaitLong = pTicksToWaitLong;
     ticksToWaitShort = pTicksToWaitShort;
     skip = 0;
 }
 
-Window determineWindow(int itemCount, int suggestedStart, int maxLen) {
+Window determineWindow(const int itemCount, const int suggestedStart, const int maxLen) {
     if (itemCount < maxLen) {
         return { 0, itemCount, itemCount };
     }
-    auto maxStart = itemCount - maxLen;
-    auto start = std::min(suggestedStart, maxStart);
+    const auto maxStart = itemCount - maxLen;
+    const auto start = std::min(suggestedStart, maxStart);
     return  { start, start + maxLen, maxLen };
 }
 
-Window ScrollingWindow::getWindow(int itemCount, int maxLen) {
-    auto window = determineWindow(itemCount, skip, maxLen);
+Window ScrollingWindow::getWindow(const int itemCount, const int maxLen) {
+    const auto window = determineWindow(itemCount, skip, maxLen);
 
-    int ticksToWait = skip == 0 || itemCount == window.end ? ticksToWaitLong : ticksToWaitShort;
+    const int ticksToWait = skip == 0 || itemCount == window.end ? ticksToWaitLong : ticksToWaitShort;
     if (ticker.tick() == ticksToWait) {
         if (itemCount == window.end) skip = 0; // continue from 0 next time
         else skip++;
@@ -37,10 +37,9 @@ Window ScrollingWindow::getWindow(int itemCount, int maxLen) {
     return window;
 }
 
-Line::Line(const std::string &pLeftText, const std::string &pRightText) {
+Line::Line(const std::string &pLeftText, const std::string &pRightText): scroller(10, 3) {
     leftText = pLeftText;
     rightText = pRightText;
-    scroller = new ScrollingWindow(10, 3);
 }
 
 bool Line::isValid() {
@@ -57,24 +56,23 @@ std::string Line::getKey() const {
     return leftText;
 }
 
-std::string Line::get(const int width) const {
-    auto elipses = ".."; 
-    auto leftLen = static_cast<int>(leftText.length());
-    auto rightLen = static_cast<int>(rightText.length());
-    auto maxLeftLen = std::max(0, width - rightLen - 1); // count one character for space between left and right
+std::string Line::get(const int width) {
+    const auto elipses = "..";
+    const auto leftLen = static_cast<int>(leftText.length());
+    const auto rightLen = static_cast<int>(rightText.length());
+    const auto maxLeftLen = std::max(0, width - rightLen - 1); // count one character for space between left and right
 
-    auto window = scroller->getWindow(leftLen, maxLeftLen);
+    const auto window = scroller.getWindow(leftLen, maxLeftLen);
 
-    std::string addition = leftLen > window.end ? elipses : "";
-    auto text = leftText.substr(window.start, window.cnt - addition.length());
+    const std::string addition = leftLen > window.end ? elipses : "";
+    const auto text = leftText.substr(window.start, window.cnt - addition.length());
 
-    std::string fillText(width - window.cnt - rightLen, ' ');
+    const std::string fillText(width - window.cnt - rightLen, ' ');
 
     return text + addition + fillText + rightText;
 }
 
-DisplayBuffer::DisplayBuffer() {
-    scroller = new ScrollingWindow(40, 20);
+DisplayBuffer::DisplayBuffer(): scroller(40, 20) {
 }
 
 Line* DisplayBuffer::find(const std::string key) {
@@ -87,12 +85,11 @@ Line* DisplayBuffer::find(const std::string key) {
 }
 
 void DisplayBuffer::addLine(const std::string &leftText, const std::string &rightText) {
-    auto *currentLine = find(leftText);
+    auto currentLine = find(leftText);
     if (currentLine) {
         currentLine->update(rightText);
     } else {
-        currentLine = new Line(leftText, rightText);
-        lines.push_back(*currentLine);
+        lines.push_back(Line(leftText, rightText));
     }
 }
 
@@ -110,8 +107,8 @@ void DisplayBuffer::purge() {
 std::vector<std::string> DisplayBuffer::getTextToDisplay(const int width, const int height) {
     purge();
 
-    auto lineCnt = lines.size();
-    auto window = scroller->getWindow(lineCnt, height - 1);
+    const auto lineCnt = lines.size();
+    const auto window = scroller.getWindow(lineCnt, height - 1);
 
     std::vector<std::string> toDisplay;
     for(int i=window.start; i<window.end; i++) {
