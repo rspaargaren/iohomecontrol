@@ -10,9 +10,9 @@ class Ticker {
 };
 
 struct Window {
-    int start;
-    int end;
-    int cnt;
+    const int start;
+    const int end;
+    const int cnt;
 };
 
 class ScrollingWindow {
@@ -22,8 +22,8 @@ class ScrollingWindow {
         int ticksToWaitShort;
         Ticker ticker;
     public:
-        ScrollingWindow(int pTicksToWaitLong, int pTicksToWaitShort);
-        Window getWindow(int itemCount, int maxLen);
+        ScrollingWindow(const int pTicksToWaitLong, const int pTicksToWaitShort);
+        Window getWindow(const int itemCount, const int maxLen);
 };
 
 class Line {
@@ -31,7 +31,7 @@ class Line {
         std::string leftText;
         std::string rightText;
         Ticker ticker;
-        ScrollingWindow *scroller;  
+        ScrollingWindow scroller;  
     public:
         Line(const std::string &pLeftText, const std::string &pRightText);
 
@@ -41,13 +41,13 @@ class Line {
 
         std::string getKey() const;
 
-        std::string get(const int width) const;
+        std::string get(const int width);
 };
  
 class DisplayBuffer {
     private:
         std::vector<Line> lines;
-        ScrollingWindow *scroller;
+        ScrollingWindow scroller;
 
         Line* find(const std::string key);
     public:
