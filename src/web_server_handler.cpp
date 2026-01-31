@@ -4,6 +4,7 @@
 #include "ArduinoJson.h"       // For creating JSON responses
 #include "ESPAsyncWebServer.h" // Or WebServer.h if that's preferred for memory
 #include <AsyncJson.h>
+#include <memory>
 #include <LittleFS.h>
 #include <Update.h>
 #include <cstdlib>
@@ -102,18 +103,18 @@ template<class T>
 using ArGetRequestHandlerFunction = std::function<void(AsyncWebServerRequest *request, T &root)>;
 ArRequestHandlerFunction _jsonGet(const ArGetRequestHandlerFunction<JsonVariant> handler) {
   return [handler] (AsyncWebServerRequest *request) {
-    AsyncJsonResponse *response = new AsyncJsonResponse();
-    if (!response) {
-      request->send(500, "text/plain", "Internal Server Error");
-      return;
-    }
+      std::unique_ptr<AsyncJsonResponse> response(new AsyncJsonResponse());
+      if (!response.get()) {
+        request->send(500, "text/plain", "Internal Server Error");
+        return;
+      }
 
-    handler(request, response->getRoot());
+      handler(request, response->getRoot());
 
-    if (!request->isSent()) {
-      response->setLength();
-      request->send(response);
-    }
+      if (!request->isSent()) {
+        response->setLength();
+        request->send(response.release());
+      }
   };
 }
 
@@ -147,8 +148,8 @@ ArJsonRequestHandlerFunction _jsonPost(const ArPostRequestHandlerFunction<JsonVa
       return;
     }
 
-    AsyncJsonResponse *response = new AsyncJsonResponse();
-    if (!response) {
+    std::unique_ptr<AsyncJsonResponse> response(new AsyncJsonResponse());
+    if (!response.get()) {
       request->send(500, "text/plain", "Internal Server Error");
       return;
     }
@@ -157,7 +158,7 @@ ArJsonRequestHandlerFunction _jsonPost(const ArPostRequestHandlerFunction<JsonVa
 
     if (!request->isSent()) {
       response->setLength();
-      request->send(response);
+      request->send(response.release());
     }
   };
 }

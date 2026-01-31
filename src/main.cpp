@@ -655,7 +655,11 @@ bool publishMsg(IOHC::iohcPacket *iohc) {
  * and `false` if there is a failure condition detected during the execution of the function.
  */
 bool msgArchive(IOHC::iohcPacket *iohc) {
-    radioPackets[nextPacket] = new IOHC::iohcPacket; 
+    if (radioPackets[nextPacket]) {
+        delete radioPackets[nextPacket];
+        radioPackets[nextPacket] = nullptr;
+    }
+    radioPackets[nextPacket] = new IOHC::iohcPacket;
     if (!radioPackets[nextPacket]) {
         Serial.printf("*** Malloc failed!\n");
         return false;
