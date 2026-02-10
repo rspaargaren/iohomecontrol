@@ -48,9 +48,7 @@
 
 
 #include <user_config.h>
-#if defined(SSD1306_DISPLAY)
 #include <oled_display.h>
-#endif
 
 
 extern "C" {
@@ -106,9 +104,7 @@ void setup() {
     ESP_LOGW("DEBUGTEST", "Waarschuwing zichtbaar");
     ESP_LOGE("DEBUGTEST", "Fout zichtbaar");
 
-#if defined(SSD1306_DISPLAY)
     initDisplay(); // Init OLED display
-#endif
 
     pinMode(RX_LED, OUTPUT); // Blink this LED
     digitalWrite(RX_LED, 1);
@@ -474,9 +470,7 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
                     default: break;
                 }
                 doc["action"] = action;
-                #if defined(SSD1306_DISPLAY)
                 display1WAction(iohc->payload.packet.header.source, action, "RX");
-                #endif
                 if (const auto *map = remoteMap->find(iohc->payload.packet.header.source)) {
                     IOHC::RemoteButton btn;
                     if (!strcmp(action, "OPEN")) btn = IOHC::RemoteButton::Open;
@@ -661,7 +655,11 @@ bool publishMsg(IOHC::iohcPacket *iohc) {
  * and `false` if there is a failure condition detected during the execution of the function.
  */
 bool msgArchive(IOHC::iohcPacket *iohc) {
-    radioPackets[nextPacket] = new IOHC::iohcPacket; 
+    if (radioPackets[nextPacket]) {
+        delete radioPackets[nextPacket];
+        radioPackets[nextPacket] = nullptr;
+    }
+    radioPackets[nextPacket] = new IOHC::iohcPacket;
     if (!radioPackets[nextPacket]) {
         Serial.printf("*** Malloc failed!\n");
         return false;

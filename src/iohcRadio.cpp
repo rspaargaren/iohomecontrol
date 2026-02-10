@@ -372,6 +372,8 @@ void iohcRadio::onTxTicker(void *arg) {
     if (radio->txCounter >= radio->packets2send.size()) {
         ets_printf("TX: All packets sent. Stopping Ticker.\n");
         radio->Sender.detach();
+        for (auto p : radio->packets2send) delete p;
+        radio->packets2send.clear();
         Radio::setRx();
         radio->setRadioState(RadioState::RX);
         return;
@@ -406,6 +408,8 @@ void iohcRadio::onTxTicker(void *arg) {
     if (radio->txCounter >= radio->packets2send.size()) {
         ets_printf("TX: All repeats done. Switching to RX\n");
         radio->Sender.detach();
+        for (auto p : radio->packets2send) delete p;
+        radio->packets2send.clear();
         Radio::setRx();
         radio->setRadioState(RadioState::RX);
         return;
@@ -452,7 +456,8 @@ void iohcRadio::onTxTicker(void *arg) {
                 vTaskDelay(pdMS_TO_TICKS(radio->iohc->repeatTime));
         }
 
-        // Alles verzonden
+        // Alles verzonden — delete owned packets then clear
+        for (auto p : radio->packets2send) delete p;
         radio->packets2send.clear();
         Radio::setRx();
         radio->setRadioState(iohcRadio::RadioState::RX);
@@ -510,6 +515,7 @@ void IRAM_ATTR iohcRadio::packetSender(iohcRadio *radio) {
     ets_printf("T1 packetSender() fired at %llu us\n", esp_timer_get_time());
     if (!radio || radio->packets2send.empty()) {
         ets_printf("TX: No packets to send. Forcing cleanup.\n");
+        for (auto p : radio->packets2send) delete p;
         radio->packets2send.clear();
         Radio::setRx(); // Go back to RX only after stop
         radio->setRadioState(iohcRadio::RadioState::RX);
@@ -522,6 +528,7 @@ void IRAM_ATTR iohcRadio::packetSender(iohcRadio *radio) {
         if (!radio->iohc || !radio->iohc->lock) {
             ets_printf("TX: Unlocking radio and switching to RX.\n");
             radio->Sender.detach();
+            for (auto p : radio->packets2send) delete p;
             radio->packets2send.clear();
             Radio::setRx();
             radio->setRadioState(iohcRadio::RadioState::RX);

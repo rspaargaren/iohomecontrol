@@ -60,7 +60,7 @@ namespace IOHC {
             uint32_t travelTime{}; // seconds to fully open or close
             BlindPosition positionTracker{};
             enum class Movement { Idle, Opening, Closing } movement{Movement::Idle};
-            float lastPublishedPosition{-1.0f};
+            float lastPublishedPosition{0.0f};
             std::string lastPublishedState{};
             float targetPosition{-1.0f};
         };
