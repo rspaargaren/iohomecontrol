@@ -28,9 +28,9 @@
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RST);
 DisplayBuffer displayBuffer;
 TimerHandle_t displayUpdateTimer;
-void handleTimerTick(TimerHandle_t);
 std::chrono::time_point<std::chrono::system_clock> startTime;
 std::chrono::time_point<std::chrono::system_clock> timeSinceNoData;
+void handleTimerTick(TimerHandle_t);
 
 const int MILLIS_BETWEEN_DISPLAY_UPDATE_SLOW = 5000;
 const int MILLIS_BETWEEN_DISPLAY_UPDATE_FAST = 100;
@@ -217,12 +217,12 @@ void drawHeader() {
 
 #if defined(MQTT)
     // mqtt icon is 16x5 (including 3 pixels space, so adding 1 extra for a reasonable space)
-    auto mqttIcon = mqttIcons[mqttStatusToIconIndex()];
+    const auto mqttIcon = mqttIcons[mqttStatusToIconIndex()];
     display.drawBitmap(127-8-1-16, 5, mqttIcon, 16, 5, SSD1306_WHITE);
 #endif // MQTT
 
     // wifi icon is 8x7
-    auto wifiIcon = wifiIcons[min(wifiStatus.signalStrengthPercent, 99) / 25];
+    const auto wifiIcon = wifiIcons[min(wifiStatus.signalStrengthPercent, 99) / 25];
     display.drawBitmap(127-8, 3, wifiIcon, 8, 7, SSD1306_WHITE);
 }
 
@@ -242,19 +242,18 @@ bool drawContents() {
     const int width = SCREEN_WIDTH / 6; // char width is 5 + 1 pixel space
     const int height = (SCREEN_HEIGHT - 20 - 8) / 8; // char height is 7 + 1 pixel space and 20 pixels (12 pixels + an empty line) for the header + 8 for the footer
 
-    bool hasData = false;
-    for(auto &line : displayBuffer.getTextToDisplay(width, height)) {
+    const auto lines = displayBuffer.getTextToDisplay(width, height);
+    for(auto &line : lines) {
         display.println(line.c_str());
-        hasData = true;
     }
-    return hasData;
+    return lines.size() > 0;
 }
 
 void handleTimerTick(TimerHandle_t) {
     display.clearDisplay();
 
     timeSinceNoData = timerIsFast ? std::chrono::system_clock::now() : timeSinceNoData;
-    auto secondsSinceNoData = getSecondsSinceNoData();
+    const auto secondsSinceNoData = getSecondsSinceNoData();
 
     if (timerIsFast || secondsSinceNoData < SECONDS_BEFORE_SCREENSAVER) {
         display.setTextSize(1);
@@ -263,7 +262,7 @@ void handleTimerTick(TimerHandle_t) {
         drawHeader();
 
         display.setCursor(0, 20);
-        bool hasData = drawContents();
+        const bool hasData = drawContents();
         if (!hasData) {
             setTimerSpeed(slow);
         }
@@ -271,8 +270,8 @@ void handleTimerTick(TimerHandle_t) {
         drawFooter();
     } else {
         // draw logo at random position to avoid burn-in
-        int x = 50.0 * std::rand() / RAND_MAX; // number between 0 and 50
-        int y = 48.0 * std::rand() / RAND_MAX; // number between 0 and 48
+        const int x = 50.0 * std::rand() / RAND_MAX; // number between 0 and 50
+        const int y = 48.0 * std::rand() / RAND_MAX; // number between 0 and 48
         drawLogo(x, y);
     }
 
