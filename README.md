@@ -120,7 +120,7 @@ This feature is under development, and functionality will be expanded in the fut
 
 ## Home Assistant Discovery
 
-When MQTT is enabled (`#define MQTT` in `include/user_config.h`), the firmware publishes HA discovery messages for every blind.  
+When MQTT is enabled (`#define MQTT` in `include/user_config.h`), the firmware publishes HA discovery messages for every configured 1W device (blind or light).  
 
 
 The `1W.json` file now accepts an optional `travel_time` field per device. This value represents the time in seconds a blind takes to move from fully closed to fully open. It allows the firmware to estimate the current position when no feedback is available. The estimated position is printed to the serial console and shown on the OLED display every second while the blind is moving. When a command is transmitted or received, this position feedback is appended below the action information on the display so that the original message remains visible.
@@ -130,13 +130,15 @@ Each blind also publishes a Home Assistant number entity for the travel time. Ad
 
 Each entry can also contain a `paired` boolean that indicates if the blind is paired to a screen. If the field is missing, it is automatically added with a default value of `false` when the file is loaded. The flag is updated automatically when the `pair` or `remove` commands are used.
 
+Each entry can include a `kind` field (`"blind"` or `"light"`). `blind` is the default. When set to `light`, the device is published as a Home Assistant MQTT light and can be controlled with `ON`/`OFF` over `iown/<id>/light/set`.
+
 Sequence numbers for each remote are stored both in `extras/1W.json` and in NVS.
 On boot the value from the file is compared to the one in NVS and the highest
 value is kept so sequence numbers continue uninterrupted even after filesystem
 uploads or resets.
 
 
-It supports `travel_time`, pairing state, and sequence numbers.  
+It supports `travel_time`, pairing state, device kind (`blind`/`light`), and sequence numbers.  
 
 Example payload:  
 ```json
@@ -159,7 +161,7 @@ device list.
 Sending `PRESS` to `iown/<id>/pair`, `iown/<id>/add` or `iown/<id>/remove`
 triggers the corresponding command on the blind.
 
-Configure your MQTT broker settings in `include/user_config.h` (`mqtt_server`, `mqtt_user`, `mqtt_password`, `mqtt_discovery_topic`). These values can also be changed at runtime via the `mqttIp`, `mqttUser`, `mqttPass` and `mqttDiscovery` commands. After boot and connection, Home Assistant should automatically discover the covers.
+Configure your MQTT broker settings in `include/user_config.h` (`mqtt_server`, `mqtt_user`, `mqtt_password`, `mqtt_discovery_topic`). These values can also be changed at runtime via the `mqttIp`, `mqttUser`, `mqttPass` and `mqttDiscovery` commands. After boot and connection, Home Assistant should automatically discover the covers/lights. You can switch a device type at runtime with `type1W <description> <blind|light>`.
 
 If you don't have an OLED display connected, comment out the `DISPLAY` definition in `include/user_config.h` to disable all display related code.
 

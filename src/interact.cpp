@@ -172,14 +172,23 @@ void createCommands() {
         uint32_t t = strtoul(cmd->at(2).c_str(), nullptr, 10);
         IOHC::iohcRemote1W::getInstance()->setTravelTime(cmd->at(1), t);
     });
+    Cmd::addHandler((char *) "type1W", (char *) "Set 1W device type (blind|light)", [](Tokens *cmd)-> void {
+        if (cmd->size() < 3) {
+            Serial.println("Usage: type1W <description> <blind|light>");
+            return;
+        }
+        auto kind = IOHC::iohcRemote1W::parseDeviceKind(cmd->at(2));
+        IOHC::iohcRemote1W::getInstance()->setDeviceKind(cmd->at(1), kind);
+    });
     Cmd::addHandler((char *) "list1W", (char *) "List 1W devices", [](Tokens *cmd)-> void {
         const auto &remotes = IOHC::iohcRemote1W::getInstance()->getRemotes();
         for (const auto &r : remotes) {
-            Serial.printf("%s: %s %u %s\n",
+            Serial.printf("%s: %s %u %s %s\n",
                           r.description.c_str(),
                           r.name.c_str(),
                           r.travelTime,
-                          r.paired ? "paired" : "unpaired");
+                          r.paired ? "paired" : "unpaired",
+                          IOHC::iohcRemote1W::deviceKindToString(r.kind));
         }
     });
     // Remote map
