@@ -46,6 +46,7 @@ static void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
       d["id"] = bytesToHexString(r.node, sizeof(r.node)).c_str();
       d["name"] = r.name.c_str();
       d["position"] = r.positionTracker.getPosition();
+      d["kind"] = IOHC::iohcRemote1W::deviceKindToString(r.kind);
     }
 
     String payload;
@@ -191,6 +192,7 @@ void handleApiDevices(AsyncWebServerRequest *request, JsonArray &root) {
     deviceObj["position"] = r.positionTracker.getPosition();
     deviceObj["travel_time"] = r.travelTime;
     deviceObj["paired"] = r.paired;
+    deviceObj["kind"] = IOHC::iohcRemote1W::deviceKindToString(r.kind);
   }
 
   // Provide a generic command interface as last entry

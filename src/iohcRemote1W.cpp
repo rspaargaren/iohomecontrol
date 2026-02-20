@@ -64,6 +64,23 @@ namespace IOHC {
         }
     }
 
+    const char* iohcRemote1W::deviceKindToString(DeviceKind kind) {
+        switch (kind) {
+            case DeviceKind::Light: return "light";
+            case DeviceKind::Blind:
+            default: return "blind";
+        }
+    }
+
+    iohcRemote1W::DeviceKind iohcRemote1W::parseDeviceKind(const std::string &value) {
+        std::string normalized = value;
+        std::transform(normalized.begin(), normalized.end(), normalized.begin(), ::tolower);
+        if (normalized == "light") {
+            return DeviceKind::Light;
+        }
+        return DeviceKind::Blind;
+    }
+
     iohcRemote1W::iohcRemote1W() = default;
 
     iohcRemote1W* iohcRemote1W::getInstance() {
@@ -734,6 +751,14 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
                 r.paired = false;
                 updateFile = true;
             }
+
+            if (jobj["kind"].is<const char *>()) {
+                r.kind = parseDeviceKind(jobj["kind"].as<const char *>());
+            } else {
+                r.kind = DeviceKind::Blind;
+                updateFile = true;
+            }
+
             r.positionTracker.setTravelTime(r.travelTime);
 
             remotes.push_back(r);
@@ -780,6 +805,7 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
             jobj["travel_time"] = r.travelTime;
 
             jobj["paired"] = r.paired;
+            jobj["kind"] = deviceKindToString(r.kind);
         }
         serializeJson(doc, f);
         f.close();
@@ -814,6 +840,7 @@ const std::vector<iohcRemote1W::remote>& iohcRemote1W::getRemotes() const {
         r.name = name;
         r.travelTime = DEFAULT_TRAVEL_TIME_SEC;
         r.paired = false;
+        r.kind = DeviceKind::Blind;
 
         // Generate unique description
         const char letters[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -835,7 +862,7 @@ const std::vector<iohcRemote1W::remote>& iohcRemote1W::getRemotes() const {
         if (mqttClient.connected()) {
             std::string id = bytesToHexString(r.node, sizeof(r.node));
             std::string key = bytesToHexString(r.key, sizeof(r.key));
-            publishDiscovery(id, r.name, key);
+            publishDiscovery(id, r.name, key, r.kind == DeviceKind::Light);
             publishTravelTimeDiscovery(id, r.name, key, r.travelTime);
             mqttClient.subscribe(("iown/" + id + "/set").c_str(), 0);
             mqttClient.subscribe(("iown/" + id + "/position/set").c_str(), 0);
@@ -892,7 +919,7 @@ const std::vector<iohcRemote1W::remote>& iohcRemote1W::getRemotes() const {
         if (mqttClient.connected()) {
             std::string id = bytesToHexString(it->node, sizeof(it->node));
             std::string key = bytesToHexString(it->key, sizeof(it->key));
-            publishDiscovery(id, it->name, key);
+            publishDiscovery(id, it->name, key, it->kind == DeviceKind::Light);
             publishTravelTimeDiscovery(id, it->name, key, it->travelTime);
         }
 #endif
@@ -969,6 +996,30 @@ const std::vector<iohcRemote1W::remote>& iohcRemote1W::getRemotes() const {
         it->travelTime = travelTime;
         it->positionTracker.setTravelTime(travelTime);
         save();
+        return true;
+    }
+
+
+    bool iohcRemote1W::setDeviceKind(const std::string &description, DeviceKind kind) {
+        auto it = std::find_if(remotes.begin(), remotes.end(), [&](const remote &e) {
+            return e.description == description;
+        });
+        if (it == remotes.end()) {
+            Serial.printf("Device %s not found\n", description.c_str());
+            return false;
+        }
+
+        it->kind = kind;
+        save();
+
+#if defined(MQTT)
+        if (mqttClient.connected()) {
+            std::string id = bytesToHexString(it->node, sizeof(it->node));
+            std::string key = bytesToHexString(it->key, sizeof(it->key));
+            publishDiscovery(id, it->name, key, it->kind == DeviceKind::Light);
+            publishTravelTimeDiscovery(id, it->name, key, it->travelTime);
+        }
+#endif
         return true;
     }
 

@@ -280,7 +280,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 // 🔘 up btn
                 const upButton = document.createElement('button');
-                upButton.textContent = 'up';
+                upButton.textContent = device.kind === 'light' ? 'on' : 'up';
                 upButton.classList.add('btn', 'open');
                 upButton.onclick = () => {
                     fetch('/api/action', {
@@ -302,7 +302,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 };
                 // 🔘 down btn
                 const downButton = document.createElement('button');
-                downButton.textContent = 'down';
+                downButton.textContent = device.kind === 'light' ? 'off' : 'down';
                 downButton.classList.add('btn', 'down');
                 downButton.onclick = () => {
                     fetch('/api/action', {
@@ -321,6 +321,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             'Description: ' + (device.description || ''),
                             'Position: ' + device.position + '%',
                             'Paired: ' + (device.paired ? 'Yes' : 'No'),
+                            'Type: ' + ((device.kind || 'blind') === 'light' ? 'Light' : 'Blind'),
                         ], [""], {
                         showSave: true,
                         showInput: true,
@@ -329,11 +330,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         defaultValue: device.name,
                         defaultTiming: device.travel_time,
                         showBoolean: true,
-                        booleanLabel: 'Active',
-                        defaultBoolean: device.active,  // bv. uit je data
+                        booleanLabel: 'Use as light (instead of blind)',
+                        defaultBoolean: (device.kind || 'blind') === 'light',
                         pairLabel: 'Add / Remove the device to the physical screen',
                         deleteInfo: 'Only use when the device is not linked to a physical screen.',
-                        onSave: async (newName, newTiming) => {
+                        onSave: async (newName, newTiming, _deviceValue, isLight) => {
                             try {
                                 if (newName.trim() && newName !== device.name) {
                                     const response = await fetch('/api/command', {
@@ -360,6 +361,20 @@ document.addEventListener('DOMContentLoaded', function() {
                                         logStatus(tResult.message || 'Travel time updated.');
                                     } else {
                                         logStatus(tResult.message || 'Failed to update travel time.', true);
+                                    }
+                                }
+                                const targetType = isLight ? 'light' : 'blind';
+                                if (targetType !== (device.kind || 'blind')) {
+                                    const typeResp = await fetch('/api/command', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ deviceId: device.id, command: `type1W ${targetType}` })
+                                    });
+                                    const typeResult = await typeResp.json();
+                                    if (typeResult.success) {
+                                        logStatus(typeResult.message || 'Device type updated.');
+                                    } else {
+                                        logStatus(typeResult.message || 'Failed to update device type.', true);
                                     }
                                 }
                                 fetchAndDisplayDevices();
@@ -595,6 +610,7 @@ document.addEventListener('DOMContentLoaded', function() {
         boolRow.style.display = showBoolean ? 'flex' : 'none';
         if (showBoolean) {
             boolInput.checked = !!options.defaultBoolean;
+            boolLabel.textContent = options.booleanLabel || "Enabled";
         }
         const showInput = options && options.showInput;
         input.style.display = showInput ? 'block' : 'none';
@@ -703,7 +719,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const timingValue = showTiming ? inputTiming.value : undefined;
             const deviceValue = showDevicePopup ? devicePopup.value : undefined;
             closePopup();
-            if (options.onSave) options.onSave(value, timingValue, deviceValue);
+            if (options.onSave) options.onSave(value, timingValue, deviceValue, boolInput.checked);
         };
 
         // add/remove buttons handled above

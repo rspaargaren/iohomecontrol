@@ -134,30 +134,38 @@ void publishTravelTimeDiscovery(const std::string &id, const std::string &name,
     mqttClient.publish(stateTopic.c_str(), 0, true, value.c_str());
 }
 
-void publishDiscovery(const std::string &id, const std::string &name, const std::string &key) {
+void publishDiscovery(const std::string &id, const std::string &name, const std::string &key, bool asLight) {
     JsonDocument doc;
     doc["name"] = name;
     doc["unique_id"] = id;
     doc["command_topic"] = "iown/" + id + "/set";
     doc["state_topic"] = "iown/" + id + "/state";
-    doc["position_topic"] = "iown/" + id + "/position";
-    doc["set_position_topic"] = "iown/" + id + "/position/set";
     doc["availability_topic"] = AVAILABILITY_TOPIC;
     doc["payload_available"] = "online";
     doc["payload_not_available"] = "offline";
-    doc["payload_open"] = "OPEN";
-    doc["payload_close"] = "CLOSE";
-    doc["payload_stop"] = "STOP";
-    doc["state_closed"] = "CLOSE";
-    doc["state_open"] = "OPEN";
-    doc["state_closing"] = "CLOSING";
-    doc["state_opening"] = "OPENING";
-    doc["state_stopped"] = "STOP";
-    doc["device_class"] = "blind";
     doc["expire_after"] = 120;
     doc["optimistic"] = false;
     doc["retain"] = true;
     doc["qos"] = 0;
+
+    if (asLight) {
+        doc["command_topic"] = "iown/" + id + "/light/set";
+        doc["state_topic"] = "iown/" + id + "/light/state";
+        doc["payload_on"] = "ON";
+        doc["payload_off"] = "OFF";
+    } else {
+        doc["position_topic"] = "iown/" + id + "/position";
+        doc["set_position_topic"] = "iown/" + id + "/position/set";
+        doc["payload_open"] = "OPEN";
+        doc["payload_close"] = "CLOSE";
+        doc["payload_stop"] = "STOP";
+        doc["state_closed"] = "CLOSE";
+        doc["state_open"] = "OPEN";
+        doc["state_closing"] = "CLOSING";
+        doc["state_opening"] = "OPENING";
+        doc["state_stopped"] = "STOP";
+        doc["device_class"] = "blind";
+    }
 
     JsonObject device = doc["device"].to<JsonObject>();
     device["identifiers"] = id;
@@ -171,7 +179,7 @@ void publishDiscovery(const std::string &id, const std::string &name, const std:
     std::string payload;
     size_t len = serializeJson(doc, payload);
 
-    std::string topic = mqtt_discovery_topic + "/cover/" + id + "/config";
+    std::string topic = mqtt_discovery_topic + (asLight ? "/light/" : "/cover/") + id + "/config";
     mqttClient.publish(topic.c_str(), 0, true, payload.c_str(), len);
 
     publishButtonDiscovery(id, name, "pair", key);
@@ -182,6 +190,8 @@ void publishDiscovery(const std::string &id, const std::string &name, const std:
 void removeDiscovery(const std::string &id) {
     std::string topic = mqtt_discovery_topic + "/cover/" + id + "/config";
     mqttClient.publish(topic.c_str(), 0, true, "", 0);
+    std::string lightTopic = mqtt_discovery_topic + "/light/" + id + "/config";
+    mqttClient.publish(lightTopic.c_str(), 0, true, "", 0);
 
     auto removeButton = [&](const std::string &action) {
         std::string t = mqtt_discovery_topic + "/button/" + id + "_" + action + "/config";
@@ -241,7 +251,7 @@ static void handleMqttConnectImpl() {
         std::string id = bytesToHexString(r.node, sizeof(r.node));
         std::string key = bytesToHexString(r.key, sizeof(r.key));
         std::string name = r.name.empty() ? r.description : r.name;
-        publishDiscovery(id, name, key);
+        publishDiscovery(id, name, key, r.kind == IOHC::iohcRemote1W::DeviceKind::Light);
         publishTravelTimeDiscovery(id, name, key, r.travelTime);
         //std::string t = "iown/" + id + "/set";
         //mqttClient.subscribe(t.c_str(), 0);
@@ -299,6 +309,7 @@ void onMqttConnect(bool sessionPresent) {
     // mqttClient.subscribe("iown/#", 0);  // DEBUG: later weer weghalen als alles werkt
 
     mqttClient.subscribe("iown/+/set", 0);
+    mqttClient.subscribe("iown/+/light/set", 0);
     mqttClient.subscribe("iown/+/position/set", 0);
     mqttClient.subscribe("iown/+/pair", 0);
     mqttClient.subscribe("iown/+/add", 0);
@@ -446,6 +457,45 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
         return;
     }
 
+    if (topicStr.rfind("iown/", 0) == 0 && topicStr.find("/light/set", 5) != std::string::npos) {
+        std::string id = topicStr.substr(5, topicStr.find("/light/set", 5) - 5);
+        std::transform(id.begin(), id.end(), id.begin(), ::tolower);
+        const auto &remotes = IOHC::iohcRemote1W::getInstance()->getRemotes();
+        auto it = std::find_if(remotes.begin(), remotes.end(), [&](const auto &r) {
+            return bytesToHexString(r.node, sizeof(r.node)) == id;
+        });
+        if (it != remotes.end()) {
+            std::string stateTopic = "iown/" + id + "/light/state";
+            std::string statePayload = payloadStr;
+            std::transform(statePayload.begin(), statePayload.end(), statePayload.begin(), ::toupper);
+
+            bool handled = false;
+            if (payloadStr == "ON" || payloadStr == "on" || payloadStr == "1" || payloadStr == "OPEN" || payloadStr == "open") {
+                Tokens t;
+                t.push_back("open");
+                t.push_back(it->description);
+                IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Open, &t);
+                statePayload = "ON";
+                handled = true;
+            } else if (payloadStr == "OFF" || payloadStr == "off" || payloadStr == "0" || payloadStr == "CLOSE" || payloadStr == "close") {
+                Tokens t;
+                t.push_back("close");
+                t.push_back(it->description);
+                IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Close, &t);
+                statePayload = "OFF";
+                handled = true;
+            }
+
+            if (handled) {
+                mqttClient.publish(stateTopic.c_str(), 0, true, statePayload.c_str());
+                mqttClient.publish(topicStr.c_str(), 0, true, "", 0);
+            } else {
+                Serial.printf("*> MQTT Unknown light payload %s <*\n", payloadStr.c_str());
+            }
+        }
+        return;
+    }
+
     if (topicStr.rfind("iown/", 0) == 0 && topicStr.find("/set", 5) != std::string::npos) {
         std::string id = topicStr.substr(5, topicStr.find("/set", 5) - 5);
         std::transform(id.begin(), id.end(), id.begin(), ::tolower);
@@ -463,9 +513,17 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
             if (payloadStr == "open") {
                 IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Open, &t);
                 mqttClient.publish(stateTopic.c_str(), 0, true, "OPEN");
+                if (it->kind == IOHC::iohcRemote1W::DeviceKind::Light) {
+                    std::string lightStateTopic = "iown/" + id + "/light/state";
+                    mqttClient.publish(lightStateTopic.c_str(), 0, true, "ON");
+                }
             } else if (payloadStr == "close") {
                 IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Close, &t);
                 mqttClient.publish(stateTopic.c_str(), 0, true, "CLOSE");
+                if (it->kind == IOHC::iohcRemote1W::DeviceKind::Light) {
+                    std::string lightStateTopic = "iown/" + id + "/light/state";
+                    mqttClient.publish(lightStateTopic.c_str(), 0, true, "OFF");
+                }
             } else if (payloadStr == "stop") {
                 IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Stop, &t);
                 mqttClient.publish(stateTopic.c_str(), 0, true, "STOP");

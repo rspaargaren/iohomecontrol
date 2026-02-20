@@ -48,6 +48,11 @@ namespace IOHC {
 
     class iohcRemote1W : public iohcDevice {
     public:
+        enum class DeviceKind {
+            Blind,
+            Light
+        };
+
         struct remote {
             address node{};
             uint16_t sequence{};
@@ -55,6 +60,7 @@ namespace IOHC {
             std::vector<uint8_t> type{};
             uint8_t manufacturer{};
             bool paired{false};
+            DeviceKind kind{DeviceKind::Blind};
             std::string description;
             std::string name;
             uint32_t travelTime{}; // seconds to fully open or close
@@ -81,7 +87,11 @@ namespace IOHC {
         bool removeRemote(const std::string &description);
         bool renameRemote(const std::string &description, const std::string &name);
         bool setTravelTime(const std::string &description, uint32_t travelTime);
+        bool setDeviceKind(const std::string &description, DeviceKind kind);
         void updatePositions();
+
+        static DeviceKind parseDeviceKind(const std::string &value);
+        static const char* deviceKindToString(DeviceKind kind);
 
     private:
         iohcRemote1W();
