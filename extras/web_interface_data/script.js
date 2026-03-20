@@ -7,17 +7,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const sendCommandButton = document.getElementById('send-command-button');
     const statusMessagesDiv = document.getElementById('status-messages');
     const MAX_LOGS = 20; // maximaal aantal logs
-    const mqttClientIdInput = document.getElementById('mqtt-client-id');
     const mqttUserInput = document.getElementById('mqtt-user');
     const mqttServerInput = document.getElementById('mqtt-server');
     const mqttPortInput = document.getElementById('mqtt-port');
     const mqttPasswordInput = document.getElementById('mqtt-password');
     const mqttDiscoveryInput = document.getElementById('mqtt-discovery');
     const mqttUpdateButton = document.getElementById('mqtt-update');
-    const syslogEnabledCheckbox = document.getElementById('syslog-enabled');
-    const syslogServerInput = document.getElementById('syslog-server');
-    const syslogPortInput = document.getElementById('syslog-port');
-    const syslogUpdateButton = document.getElementById('syslog-update');
     const firmwareFileInput = document.getElementById('firmware-file');
     const filesystemFileInput = document.getElementById('filesystem-file');
     const firmwareUploadButton = document.getElementById('upload-firmware');
@@ -29,7 +24,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const downloadDevicesButton = document.getElementById('download-devices');
     const downloadRemotesButton = document.getElementById('download-remotes');
     const lastAddrInput = document.getElementById('last-address');
-    const ws = new WebSocket(`ws://${window.location.host}/ws`);
+    const wsScheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const ws = new WebSocket(`${wsScheme}://${window.location.host}/ws`);
+    const i18nText = (key, fallback = key) => {
+        if (typeof window.t === 'function') {
+            const value = window.t(key);
+            if (value && value !== key) return value;
+        }
+        return fallback;
+    };
 
     // Function to add a message to the status/log
     function logStatus(message, isError = false) {
@@ -56,7 +59,9 @@ document.addEventListener('DOMContentLoaded', function() {
         } else if (data.type === 'position') {
             updateDeviceFill(data.id, data.position);
         } else if (data.type === 'init') {
-            data.logs.forEach(log => logStatus(log));
+            if (Array.isArray(data.logs)) {
+                data.logs.forEach(log => logStatus(log));
+            }
             fetchAndDisplayDevices();
         } else if (data.type === 'lastaddr') {
             lastAddrInput.value = data.address || '';
@@ -81,10 +86,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const resp = await fetch('/api/mqtt');
             if (!resp.ok) return;
             const cfg = await resp.json();
-            mqttClientIdInput.value = cfg.clientId || '';
             mqttUserInput.value = cfg.user || '';
             mqttServerInput.value = cfg.server || '';
-            mqttPortInput.value = cfg.port != null ? cfg.port : '';
             mqttPasswordInput.value = cfg.password || '';
             mqttPortInput.value = cfg.port || '';
             mqttDiscoveryInput.value = cfg.discovery || '';
@@ -92,40 +95,15 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error fetching MQTT config', e);
         }
     }
-
-    function setSyslogInputsState(disabled) {
-        if (syslogServerInput) syslogServerInput.disabled = disabled;
-        if (syslogPortInput) syslogPortInput.disabled = disabled;
-    }
-
-    async function loadSyslogConfig() {
-        if (!syslogEnabledCheckbox) return;
-        try {
-            const resp = await fetch('/api/syslog');
-            if (!resp.ok) return;
-            const cfg = await resp.json();
-            syslogEnabledCheckbox.checked = !!cfg.enabled;
-            if (syslogServerInput) syslogServerInput.value = cfg.server || '';
-            if (syslogPortInput) syslogPortInput.value = cfg.port != null ? cfg.port : '';
-            setSyslogInputsState(!syslogEnabledCheckbox.checked);
-        } catch (e) {
-            console.error('Error fetching syslog config', e);
-        }
-    }
     // update MQTT config
     async function updateMqttConfig() {
         const payload = {
-            clientId: mqttClientIdInput.value,
             user: mqttUserInput.value,
             server: mqttServerInput.value,
             password: mqttPasswordInput.value,
             port: mqttPortInput.value,
             discovery: mqttDiscoveryInput.value
         };
-        const portValue = parseInt(mqttPortInput.value, 10);
-        if (!Number.isNaN(portValue)) {
-            payload.port = portValue;
-        }
         try {
             const resp = await fetch('/api/mqtt', {
                 method: 'POST',
@@ -137,32 +115,6 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (e) {
             console.error('Error updating MQTT config', e);
             logStatus('Error updating MQTT config', true);
-        }
-    }
-
-    async function updateSyslogConfig() {
-        if (!syslogEnabledCheckbox) return;
-        const payload = {
-            enabled: syslogEnabledCheckbox.checked,
-            server: syslogServerInput ? syslogServerInput.value : ''
-        };
-        if (syslogPortInput) {
-            const portValue = parseInt(syslogPortInput.value, 10);
-            if (!Number.isNaN(portValue)) {
-                payload.port = portValue;
-            }
-        }
-        try {
-            const resp = await fetch('/api/syslog', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            const result = await resp.json();
-            logStatus(result.message || 'Syslog settings updated.');
-        } catch (e) {
-            console.error('Error updating syslog config', e);
-            logStatus('Error updating syslog config', true);
         }
     }
     // upload firmware
@@ -293,7 +245,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <td>${remote.name}</td>
                 <td>${linkedDevices}</td>
                 <td>
-                <button class="btn edit bg" onclick="editRemote('${remote.id}','${remote.name}')">Edit</button>
+                <button class="btn edit bg" onclick="editRemote('${remote.id}','${remote.name}')">${i18nText('button.edit', 'Edit')}</button>
                 </td>
             `;
             frag.appendChild(tr);
@@ -370,15 +322,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     }).then(r => r.json()).then(j => logStatus(j.message));
                 };
                 const editButton = document.createElement('button');
-                editButton.textContent = 'edit';
+                editButton.textContent = i18nText('button.edit', 'edit');
                 editButton.classList.add('btn', 'edit');
                 editButton.onclick = () =>
-                    openPopup('Edit Device', "Adjust the name:",
+                    openPopup(i18nText('popup.edit_device_title', 'Edit Device'), i18nText('popup.adjust_name', 'Adjust the name:'),
                         [
-                            'ID: ' + device.id,
-                            'Description: ' + (device.description || ''),
-                            'Position: ' + device.position + '%',
-                            'Paired: ' + (device.paired ? 'Yes' : 'No'),
+                            i18nText('popup.info_id', 'ID: {value}').replace('{value}', device.id),
+                            i18nText('popup.info_description', 'Description: {value}').replace('{value}', (device.description || '')),
+                            i18nText('popup.info_position', 'Position: {value}%').replace('{value}', String(device.position)),
+                            i18nText('popup.info_paired', 'Paired: {value}').replace('{value}', (device.paired ? i18nText('value.yes', 'Yes') : i18nText('value.no', 'No'))),
                         ], [""], {
                         showSave: true,
                         showInput: true,
@@ -387,10 +339,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         defaultValue: device.name,
                         defaultTiming: device.travel_time,
                         showBoolean: true,
-                        booleanLabel: 'Active',
+                        booleanLabel: i18nText('popup.active', 'Active'),
                         defaultBoolean: device.active,  // bv. uit je data
-                        pairLabel: 'Add / Remove the device to the physical screen',
-                        deleteInfo: 'Only use when the device is not linked to a physical screen.',
+                        pairLabel: i18nText('popup.pair_label_device', 'Add / Remove the device to the physical screen'),
+                        deleteInfo: i18nText('popup.delete_device_info', 'Only use when the device is not linked to a physical screen.'),
                         onSave: async (newName, newTiming) => {
                             try {
                                 if (newName.trim() && newName !== device.name) {
@@ -541,15 +493,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     if (mqttUpdateButton) {
         mqttUpdateButton.addEventListener('click', updateMqttConfig);
-    }
-    if (syslogUpdateButton) {
-        syslogUpdateButton.addEventListener('click', updateSyslogConfig);
-    }
-    if (syslogEnabledCheckbox) {
-        syslogEnabledCheckbox.addEventListener('change', () => {
-            setSyslogInputsState(!syslogEnabledCheckbox.checked);
-        });
-        setSyslogInputsState(!syslogEnabledCheckbox.checked);
     }
     if (firmwareUploadButton) {
         firmwareUploadButton.addEventListener('click', uploadFirmware);
@@ -787,18 +730,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // example function for the edit button
     async function editRemote(remoteId, remoteName) {
-        openPopup('Edit Remote', "Adjust the name/devices:", [
-            'remote id: ' + remoteId,
-            'name: ' + remoteName,
+        openPopup(i18nText('popup.edit_remote_title', 'Edit Remote'), i18nText('popup.adjust_name_devices', 'Adjust the name/devices:'), [
+            i18nText('popup.remote_id', 'Remote ID: {value}').replace('{value}', remoteId),
+            i18nText('popup.remote_name', 'Name: {value}').replace('{value}', remoteName),
         ], [""], {
             showInput: true,
             showDevicePopup: true,
             btnShowDelete: true,
             showSave: true,
             defaultValue: remoteName,
-            pairLabel: 'link / Unlink the remote',
-            pairBtnName: 'Link',
-            unpairBtnName: 'Unlink',
+            pairLabel: i18nText('popup.link_unlink_remote', 'link / Unlink the remote'),
+            pairBtnName: i18nText('button.link', 'Link'),
+            unpairBtnName: i18nText('button.unlink', 'Unlink'),
             onPair: async (deviceId) => {
                 try {
                     const response = await fetch('/api/command', {
@@ -886,63 +829,29 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       const helpDeviceBtn = document.getElementById('help-device');
       helpDeviceBtn.addEventListener('click', () => {
-        openPopup('Help', "help device", [
-                            'Nederlands',
-                            'Stap 1: Devices → (+) ',
-                            'Maak een nieuw screen aan.',
-                            'Stap 2: Open het wieltje (Edit) ',
-                            'Ga naar de instellingen van dat screen.',
-                            'Stap 3: Zet de fysieke remote in pair mode',
-                            'Het screen gaat kort op en neer.',
-                            'Stap 4: In Edit → Pair',
-                            'Klik Pair in de webpagina. Het screen gaat opnieuw op en neer.',
-                            'Stap 5: → Gekoppeld.',
-                        ], [
-                            'English',
-                            'Step 1: Devices → (+) ',
-                            'Create a new screen.',
-                            'Step 2: Open the gear (Edit) ',
-                            'Go to that screen\'s settings.',
-                            'Step 3: Put the physical remote in pairing mode',
-                            'The screen will briefly move up and down.',
-                            'Step 4: In Edit → Pair',
-                            'Click Pair in the web page. The screen will move up and down again.',
-                            'Step 5: → Paired.',
-                        ],  {
-                           showSave: false,
-                       });
+        openPopup(
+          i18nText('popup.help_title', 'Help'),
+          i18nText('popup.help_device', 'help device'),
+          [],
+          i18nText('help.device', 'No help text').split('\n'),
+          { showSave: false }
+        );
       });
       const helpRemoteBtn = document.getElementById('help-remote');
       helpRemoteBtn.addEventListener('click', () => {
-        openPopup('Help', "help remote", [
-                            'Nederlands',
-                            'Stap 1: Remotes → (+) ',
-                            'Maak een nieuwe remote aan.',
-                            'Stap 2: Controleer ID',
-                            'De ID moet overeenkomen met die van de fysieke remote.',
-                            '(Is standaard ingevuld op basis van het laatste command.)',
-                            'Stap 3: Klik op Edit (pop-up)',
-                            'Link hier de eerder aangemaakte screen aan deze remote.',
-                            'Stap 4: → Klaar.',
-                        ],[
-                            'English',
-                            'Step 1: Remotes → (+) ',
-                            'Create a new remote.',
-                            'Step 2: Check the ID',
-                            'The ID must match that of the physical remote.',
-                            '(It is pre-filled based on the last command.)',
-                            'Step 3: Click Edit (pop-up)',
-                            'Link the previously created screen to this remote here.',
-                            'Step 4: → Done.',
-                        ], {
-                           showSave: false,
-                       });
+        openPopup(
+          i18nText('popup.help_title', 'Help'),
+          i18nText('popup.help_remote', 'help remote'),
+          [],
+          i18nText('help.remote', 'No help text').split('\n'),
+          { showSave: false }
+        );
       });
       // popup for adding devices
       const addpopup = document.getElementById('add-popup');
       addpopup.addEventListener('click', () => {
-         openPopup('Add Device', "new device", [
-            'here add your device',
+         openPopup(i18nText('popup.add_device_title', 'Add Device'), i18nText('popup.new_device', 'new device'), [
+            i18nText('popup.here_add_device', 'here add your device'),
            ], [""], {
            showSave: true,
            showInput: true,
@@ -973,15 +882,15 @@ document.addEventListener('DOMContentLoaded', function() {
       // popup for adding remotes
       const remotePopup = document.getElementById('remote-popup');
       remotePopup.addEventListener('click', () => {
-         openPopup('Add Remote', 'Remote ID:', [
-            'here add your remote',
+         openPopup(i18nText('popup.add_remote_title', 'Add Remote'), i18nText('popup.remote_id_label', 'Remote ID:'), [
+            i18nText('popup.here_add_remote', 'here add your remote'),
          ], [""], {
            showSave: true,
            showInput: true,
            showTiming: true,
            btnShowDelete: false,
            btnShowCancel: false,
-           timingLabel: 'Remote Name:',
+           timingLabel: i18nText('popup.remote_name_label', 'Remote Name:'),
            defaultValue: lastAddrInput.value.trim(),
            onSave: async (addr, newName) => {
              const id = addr.trim();
@@ -1015,8 +924,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     });
 
+    window.addEventListener('i18n:changed', () => {
+        fetchAndDisplayDevices();
+        fetchAndDisplayRemotes();
+    });
+
     loadMqttConfig();
-    loadSyslogConfig();
     fetchAndDisplayDevices();
     fetchAndDisplayRemotes();
     loadLastAddress();
