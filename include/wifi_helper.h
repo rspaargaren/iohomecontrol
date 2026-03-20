@@ -22,7 +22,11 @@
 #include <WiFiManager.h>
 
 extern TimerHandle_t wifiReconnectTimer;
-extern ConnState wifiStatus;
+extern struct WiFiStatus {
+  ConnState connectionStatus;
+  int signalStrengthPercent;
+} wifiStatus;
+
 
 void initWifi();
 void connectToWifi(TimerHandle_t timer = nullptr);

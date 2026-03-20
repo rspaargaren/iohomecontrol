@@ -64,7 +64,15 @@ namespace IOHC {
     }
 
     void iohcSystemTable::clear() {
-        return(_objects.clear());
+        for (auto &kv : _objects) {
+            if (kv.second) delete kv.second;
+        }
+        _objects.clear();
+    }
+
+    iohcSystemTable::~iohcSystemTable() {
+        clear();
+        if (_iohcSystemTable == this) _iohcSystemTable = nullptr;
     }
 
     inline iohcSystemTable::Objects::iterator iohcSystemTable::begin() {

@@ -35,7 +35,7 @@ namespace IOHC {
             using Objects = std::map<std::string, iohcObject *>;
 
             static iohcSystemTable *getInstance();
-            virtual ~iohcSystemTable() = default;
+            virtual ~iohcSystemTable();
             
             bool addObject(address node, address backbone, uint8_t actuator[2], uint8_t manufacturer, uint8_t flags);
             bool addObject(iohcObject *obj);
