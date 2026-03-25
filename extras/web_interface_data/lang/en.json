@@ -174,8 +174,8 @@
   "log.failed_add_remote": "Failed to add remote.",
   "log.error_adding_remote": "Error adding remote: {message}",
 
-  "help.device": "Step 1: Devices -> (+)\nCreate a new screen.\nStep 2: Open Edit\nGo to that screen's settings.\nStep 3: Put the physical remote in pairing mode\nThe screen will briefly move up and down.\nStep 4: In Edit -> Pair\nClick Pair in the web page. The screen will move up and down again.\nStep 5: Paired.",
-  "help.remote": "Step 1: Remotes -> (+)\nCreate a new remote.\nStep 2: Check the ID\nThe ID must match that of the physical remote.\n(It is pre-filled based on the last command.)\nStep 3: Click Edit\nLink the previously created screen to this remote here.\nStep 4: Done.",
+  "help.device": "Step 1: Devices -> (+)\nCreate a new screen.\nStep 2: Open Edit\nGo to that screen's settings.\nStep 3: Activate programming mode on the physical remote\nPress and hold the programming button until the screen or shutter moves briefly. As soon as you see that short movement, the remote is in pairing mode.\nStep 4: In Edit -> Pair\nClick Pair in the web page. The screen will move up and down again.\nStep 5: Paired.",
+  "help.remote": "Step 1: Remotes -> (+)\nCreate a new remote.\nStep 2: Check the ID\nMake sure the entered ID matches the ID of the physical remote.\nYou can see the ID in the logs of the last received command.\nStep 3: Click Edit\nLink the previously created screen to this remote here.\nStep 4: Done.",
 
   "footer.rights": "MiOpen.IO 2025 - 2026 | djbenbe & rspaargaren. All Rights Reserved."
 }

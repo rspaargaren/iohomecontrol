@@ -79,7 +79,7 @@
   "popup.active": "Active",
   "popup.pair_label_device": "Add / Remove the device to the physical screen",
   "popup.delete_device_info": "Only use when the device is not linked to a physical screen.",
-  "popup.unpair_before_delete": "Unpair devices first before deleting.",
+  "popup.unpair_before_delete": "⚠️ Dissocie d'abord les appareils avant de supprimer.",
   "popup.edit_remote_title": "Modifier telecommande",
   "popup.adjust_name_devices": "Ajuster le nom/appareils:",
   "popup.remote_id": "Remote ID: {value}",
@@ -163,7 +163,7 @@
   "log.remote_added": "Remote added.",
   "log.failed_add_remote": "Failed to add remote.",
   "log.error_adding_remote": "Error adding remote: {message}",
-  "help.device": "Etape 1: Appareils -> (+)\nCreez un nouvel appareil.\nEtape 2: Ouvrir Modifier\nAllez dans les parametres de cet appareil.\nEtape 3: Mettre la telecommande physique en mode appairage\nL'appareil monte et descend brievement.\nEtape 4: Dans Modifier -> Associer\nCliquez Associer dans l'interface web. L'appareil bouge de nouveau.\nEtape 5: Associe.",
-  "help.remote": "Etape 1: Telecommandes -> (+)\nCreez une nouvelle telecommande.\nEtape 2: Verifier l'ID\nL'ID doit correspondre a la telecommande physique.\n(Pre-rempli selon la derniere commande.)\nEtape 3: Cliquez Modifier\nLiez ici l'appareil cree precedemment a cette telecommande.\nEtape 4: Termine.",
+  "help.device": "Etape 1: Appareils -> (+)\nCreez un nouvel appareil.\nEtape 2: Ouvrir Modifier\nAllez dans les parametres de cet appareil.\nEtape 3: Activez le mode programmation sur la telecommande physique\nMaintenez le bouton de programmation enfonce jusqu'a ce que l'ecran ou le volet bouge brievement. Des que vous voyez ce court mouvement, la telecommande est en mode appairage.\nEtape 4: Dans Modifier -> Associer\nCliquez Associer dans l'interface web. L'appareil bouge de nouveau.\nEtape 5: Associe.",
+  "help.remote": "Etape 1: Telecommandes -> (+)\nCreez une nouvelle telecommande.\nEtape 2: Verifier l'ID\nVerifiez que l'ID renseigne correspond bien a celui de la telecommande physique.\nVous pouvez voir l'ID dans les logs de la derniere commande recue.\nEtape 3: Cliquez Modifier\nLiez ici l'appareil cree precedemment a cette telecommande.\nEtape 4: Termine.",
   "footer.rights": "MiOpen.IO 2025 - 2026 | djbenbe & rspaargaren. Tous droits reserves."
 }

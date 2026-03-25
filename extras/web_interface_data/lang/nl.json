@@ -91,7 +91,7 @@
   "popup.adjust_name_devices": "Pas de naam/schermen aan:",
   "popup.remote_id": "Remote ID: {value}",
   "popup.remote_name": "Naam: {value}",
-  "popup.link_unlink_remote": "Link / Unlink de remote",
+  "popup.link_unlink_remote": "Koppel / Ontkoppel de remote",
   "popup.help_title": "Help",
   "popup.help_device": "Help scherm",
   "popup.help_remote": "Help remote",
@@ -174,9 +174,8 @@
   "log.failed_add_remote": "Toevoegen van remote mislukt.",
   "log.error_adding_remote": "Fout bij toevoegen van remote: {message}",
 
-  "help.device": "Stap 1: Schermen -> (+)\nMaak een nieuw scherm aan.\nStap 2: Open Bewerk\nGa naar de instellingen van dat scherm.\nStap 3: Zet de fysieke remote in pair-modus\nHet scherm gaat kort op en neer.\nStap 4: In Bewerk -> Koppel\nKlik op Koppel in de webpagina. Het scherm gaat opnieuw op en neer.\nStap 5: Gekoppeld.",
-  "help.remote": "Stap 1: Remotes -> (+)\nMaak een nieuwe remote aan.\nStap 2: Controleer het ID\nHet ID moet overeenkomen met dat van de fysieke remote.\n(Standaard ingevuld op basis van het laatste commando.)\nStap 3: Klik op Bewerk\nLink hier het eerder aangemaakte scherm aan deze remote.\nStap 4: Klaar.",
+  "help.device": "Stap 1: Schermen -> (+)\nMaak een nieuw scherm aan.\nStap 2: Open Bewerk\nGa naar de instellingen van dat scherm.\nStap 3: Activeer de programmeermodus op de fysieke remote\nHoud de programmeerknop ingedrukt totdat het scherm of rolluik even kort beweegt. Zodra je die korte reactie ziet, staat de remote in pair-modus.\nStap 4: In Bewerk -> Koppel\nKlik op Koppel in de webpagina. Het scherm gaat opnieuw op en neer.\nStap 5: Gekoppeld.",
+  "help.remote": "Stap 1: Remotes -> (+)\nMaak een nieuwe remote aan.\nStap 2: Controleer het ID\nControleer of het ingevulde ID overeenkomt met dat van de fysieke remote.\nIn de logs kun je het ID zien van het laatst ontvangen commando.\nStap 3: Klik op Bewerk\nLink hier het eerder aangemaakte scherm aan deze remote.\nStap 4: Klaar.",
 
   "footer.rights": "MiOpen.IO 2025 - 2026 | djbenbe & rspaargaren. All Rights Reserved."
 }
-

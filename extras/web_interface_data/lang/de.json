@@ -79,7 +79,7 @@
   "popup.active": "Active",
   "popup.pair_label_device": "Add / Remove the device to the physical screen",
   "popup.delete_device_info": "Only use when the device is not linked to a physical screen.",
-  "popup.unpair_before_delete": "Unpair devices first before deleting.",
+  "popup.unpair_before_delete": "⚠️ Entkopple erst die Geraete, bevor du loeschst.",
   "popup.edit_remote_title": "Remote bearbeiten",
   "popup.adjust_name_devices": "Name/Geraete anpassen:",
   "popup.remote_id": "Remote ID: {value}",
@@ -163,7 +163,7 @@
   "log.remote_added": "Remote added.",
   "log.failed_add_remote": "Failed to add remote.",
   "log.error_adding_remote": "Error adding remote: {message}",
-  "help.device": "Schritt 1: Geraete -> (+)\nNeues Geraet anlegen.\nSchritt 2: Bearbeiten oeffnen\nGehe zu den Einstellungen dieses Geraets.\nSchritt 3: Physische Fernbedienung in den Pairing-Modus setzen\nDas Geraet bewegt sich kurz hoch und runter.\nSchritt 4: In Bearbeiten -> Koppeln\nKlicke auf Koppeln in der Weboberflaeche. Das Geraet bewegt sich erneut.\nSchritt 5: Gekoppelt.",
-  "help.remote": "Schritt 1: Remotes -> (+)\nNeue Remote anlegen.\nSchritt 2: ID pruefen\nDie ID muss zur physischen Fernbedienung passen.\n(Sie wird standardmaessig vom letzten Befehl vorausgefuellt.)\nSchritt 3: Bearbeiten klicken\nVerknuepfe hier das zuvor angelegte Geraet mit dieser Remote.\nSchritt 4: Fertig.",
+  "help.device": "Schritt 1: Geraete -> (+)\nNeues Geraet anlegen.\nSchritt 2: Bearbeiten oeffnen\nGehe zu den Einstellungen dieses Geraets.\nSchritt 3: Aktiviere den Programmiermodus auf der physischen Fernbedienung\nHalte die Programmiertaste gedrueckt, bis sich der Screen oder Rollladen kurz bewegt. Sobald du diese kurze Bewegung siehst, befindet sich die Fernbedienung im Pairing-Modus.\nSchritt 4: In Bearbeiten -> Koppeln\nKlicke auf Koppeln in der Weboberflaeche. Das Geraet bewegt sich erneut.\nSchritt 5: Gekoppelt.",
+  "help.remote": "Schritt 1: Remotes -> (+)\nNeue Remote anlegen.\nSchritt 2: ID pruefen\nPruefe, ob die eingetragene ID mit der ID der physischen Fernbedienung uebereinstimmt.\nIn den Logs kannst du die ID des zuletzt empfangenen Befehls sehen.\nSchritt 3: Bearbeiten klicken\nVerknuepfe hier das zuvor angelegte Geraet mit dieser Remote.\nSchritt 4: Fertig.",
   "footer.rights": "MiOpen.IO 2025 - 2026 | djbenbe & rspaargaren. Alle Rechte vorbehalten."
 }
