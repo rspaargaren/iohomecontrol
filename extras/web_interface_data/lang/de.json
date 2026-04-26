@@ -77,6 +77,7 @@
   "popup.info_position": "Position: {value}%",
   "popup.info_paired": "Paired: {value}",
   "popup.active": "Active",
+  "popup.active_blocks_destructive": "Deaktiviere Active, bevor du entkoppelst oder loeschst.",
   "popup.pair_label_device": "Add / Remove the device to the physical screen",
   "popup.delete_device_info": "Only use when the device is not linked to a physical screen.",
   "popup.unpair_before_delete": "⚠️ Entkopple erst die Geraete, bevor du loeschst.",

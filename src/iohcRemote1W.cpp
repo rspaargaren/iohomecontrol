@@ -108,14 +108,13 @@ namespace IOHC {
                  return description == r.description;
               } );
 
-        // auto&[node, sequence, key, type, manufacturer, description] = *it;
-        remote& r = *it;
-        bool found = true;
         if (it == remotes.end()) {
             printf("ERROR %s NOT IN JSON", description.c_str());
-            found = false;
-            // return;
+            return;
         }
+
+        // auto&[node, sequence, key, type, manufacturer, description] = *it;
+        remote& r = *it;
         r.positionTracker.update();
 /*
         int value = 0;
@@ -156,7 +155,6 @@ namespace IOHC {
                 packets2send.clear();
 
 //                for (auto&r: remotes) {
-                if (!found) break;
 
                     auto* packet = new iohcPacket;
                     IOHC::iohcRemote1W::forgePacket(packet, r.type[0]);
@@ -205,7 +203,6 @@ namespace IOHC {
                 packets2send.clear();
 
 //                for (auto&r: remotes) {
-                if (!found) break;
 
 
                     auto* packet = new iohcPacket;
@@ -255,7 +252,6 @@ namespace IOHC {
                 packets2send.clear();
 
 //                for (auto&r: remotes) {
-                if (!found) break;
 
                     auto* packet = new iohcPacket;
                     IOHC::iohcRemote1W::forgePacket(packet, r.type[0]);
@@ -293,6 +289,7 @@ namespace IOHC {
                 display1WAction(r.node, remoteButtonToString(cmd), "TX", r.name.c_str());
                 Serial.printf("%s position: %.0f%%\n", r.name.c_str(), r.positionTracker.getPosition());
                 display1WPosition(r.node, r.positionTracker.getPosition(), r.name.c_str());
+                r.paired = true;
                 break;
             }
            default: {
@@ -300,7 +297,6 @@ namespace IOHC {
 
                 // 0x00: 0x1600 + target broadcast + source + 0x00 + Originator + ACEI + Main Param + FP1 + FP2 + sequence + hmac
 //                for (auto&r: remotes) {
-                if (!found) break;
 
                     auto* packet = new iohcPacket;
                     IOHC::iohcRemote1W::forgePacket(packet, r.type[0]);

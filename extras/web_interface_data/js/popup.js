@@ -38,6 +38,8 @@
         const popupOptions = options || {};
         popupTitle.textContent = title;
         labelInput.textContent = label;
+        const protectedMessage = popupOptions.protectedMessage ||
+            app.i18nText("popup.active_blocks_destructive", "Disable Active before unpairing or deleting.");
 
         const showDevicePopup = !!popupOptions.showDevicePopup;
         devicePopupLabel.style.display = showDevicePopup ? "block" : "none";
@@ -56,6 +58,7 @@
         boolRow.style.display = showBoolean ? "flex" : "none";
         boolInput.checked = !!popupOptions.defaultBoolean;
         boolLabel.textContent = popupOptions.booleanLabel || app.i18nText("popup.boolean_label_default", "solar energy");
+        boolInput.onchange = null;
 
         const showInput = !!popupOptions.showInput;
         input.style.display = showInput ? "block" : "none";
@@ -86,6 +89,30 @@
             pairLabelEl.style.display = "none";
         }
 
+        const destructiveActionsBlocked = function () {
+            return !!popupOptions.blockDestructiveWhenBoolean && showBoolean && boolInput.checked;
+        };
+        const showProtectedMessage = function () {
+            deleteInfo.style.display = "block";
+            deleteInfo.textContent = protectedMessage;
+        };
+        const updateDestructiveButtons = function () {
+            const blocked = destructiveActionsBlocked();
+            unPairBtn.disabled = blocked;
+            deleteBtn.disabled = blocked;
+            unPairBtn.title = blocked ? protectedMessage : "";
+            deleteBtn.title = blocked ? protectedMessage : "";
+            if (blocked) {
+                showProtectedMessage();
+            } else if (deleteInfo.textContent === protectedMessage) {
+                deleteInfo.style.display = "none";
+                deleteInfo.textContent = "";
+            }
+        };
+        if (showBoolean && popupOptions.blockDestructiveWhenBoolean) {
+            boolInput.onchange = updateDestructiveButtons;
+        }
+
         if (popupOptions.onPair) {
             pairBtn.style.display = "block";
             pairBtn.textContent = popupOptions.pairBtnName || "Pair";
@@ -103,6 +130,10 @@
             unPairBtn.style.display = "block";
             unPairBtn.textContent = popupOptions.unpairBtnName || "Unpair";
             unPairBtn.onclick = function () {
+                if (destructiveActionsBlocked()) {
+                    showProtectedMessage();
+                    return;
+                }
                 const selectedDevice = showDevicePopup ? devicePopup.value : undefined;
                 closePopup();
                 popupOptions.onUnpair(selectedDevice);
@@ -120,9 +151,14 @@
                 confirmBtn.style.display = "none";
                 pairBtn.style.display = popupOptions.onPair ? "block" : "none";
                 unPairBtn.style.display = popupOptions.onUnpair ? "block" : "none";
+                updateDestructiveButtons();
             };
 
             deleteBtn.onclick = function () {
+                if (destructiveActionsBlocked()) {
+                    showProtectedMessage();
+                    return;
+                }
                 pairBtn.style.display = "none";
                 unPairBtn.style.display = "none";
                 deleteBtn.style.display = "none";
@@ -132,6 +168,11 @@
                 confirmBtn.style.display = "inline-block";
                 confirmBtn.textContent = "Confirm";
                 confirmBtn.onclick = async function () {
+                    if (destructiveActionsBlocked()) {
+                        showProtectedMessage();
+                        exitDeleteMode();
+                        return;
+                    }
                     try {
                         await popupOptions.onDelete();
                         closePopup();
@@ -148,6 +189,8 @@
         } else {
             deleteBtn.onclick = null;
         }
+
+        updateDestructiveButtons();
 
         saveBtn.onclick = function () {
             const value = showInput ? input.value : true;

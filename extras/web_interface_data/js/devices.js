@@ -71,7 +71,20 @@
                     });
                 }));
 
-                listItem.appendChild(createDeviceButton(app.i18nText("button.edit", "edit"), "edit", function () {
+                listItem.appendChild(createDeviceButton(app.i18nText("button.edit", "edit"), "edit", async function () {
+                    try {
+                        const freshDevices = await window.MiOpenApi.requestJson("/api/devices");
+                        app.state.devicesCache = freshDevices;
+                        const freshDevice = freshDevices.find(function (candidate) {
+                            return candidate.id === device.id;
+                        });
+                        if (freshDevice) {
+                            device = freshDevice;
+                        }
+                    } catch (error) {
+                        app.logStatus("Error refreshing device: " + error.message, true);
+                    }
+
                     app.openPopup(
                         app.i18nText("popup.edit_device_title", "Edit Device"),
                         app.i18nText("popup.adjust_name", "Adjust the name:"),
@@ -94,7 +107,12 @@
                             defaultTiming: device.travel_time,
                             showBoolean: true,
                             booleanLabel: app.i18nText("popup.active", "Active"),
-                            defaultBoolean: device.active,
+                            defaultBoolean: !!device.active,
+                            blockDestructiveWhenBoolean: true,
+                            protectedMessage: app.i18nText(
+                                "popup.active_blocks_destructive",
+                                "Disable Active before unpairing or deleting."
+                            ),
                             pairLabel: app.i18nText("popup.pair_label_device", "Add / Remove the device to the physical screen"),
                             deleteInfo: app.i18nText("popup.delete_device_info", "Only use when the device is not linked to a physical screen."),
                             onSave: async function (newName, newTiming) {
@@ -128,6 +146,7 @@
                                         command: "add"
                                     });
                                     app.logStatus(result.message || "Device added.");
+                                    await fetchAndDisplayDevices(app);
                                 } catch (error) {
                                     app.logStatus("Error adding device: " + error.message, true);
                                 }
@@ -139,6 +158,7 @@
                                         command: "remove"
                                     });
                                     app.logStatus(result.message || "Device unpaired.");
+                                    await fetchAndDisplayDevices(app);
                                 } catch (error) {
                                     app.logStatus("Error unpairing device: " + error.message, true);
                                 }

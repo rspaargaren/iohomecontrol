@@ -84,6 +84,7 @@
   "popup.info_position": "Positie: {value}%",
   "popup.info_paired": "Gekoppeld: {value}",
   "popup.active": "Actief",
+  "popup.active_blocks_destructive": "Zet Actief uit voor je ontkoppelt of verwijdert.",
   "popup.pair_label_device": "Koppel / Ontkoppel het scherm met de fysieke remote",
   "popup.delete_device_info": "Alleen gebruiken als het scherm niet aan een fysieke remote gekoppeld is.",
   "popup.unpair_before_delete": "Ontkoppel eerst de schermen voor je verwijdert.",

@@ -6,7 +6,17 @@
     }
 
     async function requestJson(url, options) {
-        const response = await fetch(url, options);
+        const requestOptions = options || {};
+        const method = (requestOptions.method || "GET").toUpperCase();
+        const requestUrl = method === "GET"
+            ? url + (url.indexOf("?") === -1 ? "?" : "&") + "_=" + Date.now()
+            : url;
+
+        if (method === "GET") {
+            requestOptions.cache = "no-store";
+        }
+
+        const response = await fetch(requestUrl, requestOptions);
         const data = await ensureJson(response);
         if (!response.ok) {
             throw new Error(data.message || ("HTTP error " + response.status));

@@ -590,6 +590,11 @@ void IRAM_ATTR iohcRadio::packetSender(iohcRadio *radio) {
  */
     bool IRAM_ATTR iohcRadio::sent(iohcPacket *packet) {
         bool ret = false;
+        if (packet) {
+            packetStamp = esp_timer_get_time();
+            packet->decode(true);
+            addLogMessage(String(packet->decodeToString(true).c_str()));
+        }
         if (txCB) {
             ret = txCB(packet);
         }
