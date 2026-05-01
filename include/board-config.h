@@ -25,6 +25,17 @@
  * Board pins definitions
  */
 // OK Heltec Wifi ESP32 Lora v2.1
+#if defined(LILYGO_T3S3)
+#define RADIO_SCLK_PIN       5
+#define RADIO_MISO_PIN       3
+#define RADIO_MOSI_PIN       6
+#define RADIO_CS_PIN         7
+#define RADIO_DIO0_PIN       9
+#define RADIO_RST_PIN        8
+#define BOARD_LED_PIN       37
+#define RADIO_DIO1_PIN      33
+#define RADIO_DIO2_PIN      34
+#elif defined(LILYGO)
 #define RADIO_SCLK_PIN       5
 #define RADIO_MISO_PIN      19
 #define RADIO_MOSI_PIN      27
@@ -32,17 +43,35 @@
 #define RADIO_DIO0_PIN      26
 #define RADIO_RST_PIN       14
 #define BOARD_LED_PIN       25
-#ifdef LILYGO
 #define RADIO_DIO1_PIN      33 //LILYGO
 #define RADIO_DIO2_PIN      32 //LILYGO
 #elif defined(HELTEC)
+#define RADIO_SCLK_PIN       5
+#define RADIO_MISO_PIN      19
+#define RADIO_MOSI_PIN      27
+#define RADIO_CS_PIN        18
+#define RADIO_DIO0_PIN      26
+#define RADIO_RST_PIN       14
+#define BOARD_LED_PIN       25
 #define RADIO_DIO1_PIN      35 //HELTEC
 #define RADIO_DIO2_PIN      34 //HELTEC
 #define RADIO_BUSY_PIN      32
+#else
+#define RADIO_SCLK_PIN       5
+#define RADIO_MISO_PIN      19
+#define RADIO_MOSI_PIN      27
+#define RADIO_CS_PIN        18
+#define RADIO_DIO0_PIN      26
+#define RADIO_RST_PIN       14
+#define BOARD_LED_PIN       25
 #endif
 
 // I2C pin definitions for OLED or peripherals
-#if defined(LILYGO)
+#if defined(LILYGO_T3S3)
+#define I2C_SDA_PIN 18
+#define I2C_SCL_PIN 17
+#define DISPLAY_OLED_RST_PIN -1
+#elif defined(LILYGO)
 #define I2C_SDA_PIN 21
 #define I2C_SCL_PIN 22
 #define DISPLAY_OLED_RST_PIN -1

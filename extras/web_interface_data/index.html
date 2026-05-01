@@ -4,21 +4,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MiOpen.IO - Device Control</title>
+    <title data-i18n="page.title">MiOpen.IO - Device Control</title>
     <link rel="icon" href="img/logo.png">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="css/style.css">
 </head>
 
 <body>
     <header>
         <img src="img/logo.png" alt="MiOpen.IO Logo" class="logo">
-        <h1>Device Control</h1>
+        <h1 data-i18n="header.title">Device Control</h1>
         <nav>
-            <a onclick="showPage('devices')" class="items">Devices</a>
-            <a onclick="showPage('help')" class="items">Help</a>
-            <a onclick="showPage('settings')" class="items">Settings</a>
+            <a onclick="showPage('devices')" class="items" data-i18n="nav.devices">Devices</a>
+            <a onclick="showPage('help')" class="items" data-i18n="nav.help">Log</a>
+            <a onclick="showPage('settings')" class="items" data-i18n="nav.settings">Settings</a>
+            <select class="items" id="lang" onchange="setLang(this.value)">
+                <option value="nl">NL</option>
+                <option value="en">EN</option>
+                <option value="de">DE</option>
+                <option value="fr">FR</option>
+            </select>
+            <a class="items"id="toggle-theme"></a>
         </nav>
-        <div id="toggle-theme"></div>
+        
     </header>
 
     <main>
@@ -27,7 +34,7 @@
                 <section id="device-list-section">
 
                     <div class="title">
-                        <h2>Devices</h2>
+                        <h2 data-i18n="section.devices">Devices</h2>
                         <div class="btn help" id="help-device"></div>
                         <div class="btn add" id="add-popup"></div>
                     </div>
@@ -43,7 +50,7 @@
             <div class="right">
                 <section id="status-section">
                     <div class="title">
-                        <h2>remote</h2>
+                        <h2 data-i18n="section.remotes">remote</h2>
                         <div class="btn help" id="help-remote"></div>
                         <div class="btn add" id="remote-popup"></div>
                     </div>
@@ -51,10 +58,10 @@
                         <table id="remote-table">
                             <thead>
                                 <tr>
-                                    <th>Remote ID</th>
-                                    <th>Remote Name</th>
-                                    <th>Linked Devices</th>
-                                    <th>Edit</th>
+                                    <th data-i18n="table.remote_id">Remote ID</th>
+                                    <th data-i18n="table.remote_name">Remote Name</th>
+                                    <th data-i18n="table.linked_devices">Linked Devices</th>
+                                    <th data-i18n="table.edit">Edit</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -68,13 +75,35 @@
         </div>
         <div id="help-page" style="display:none;">
             <div class="left">
-                <section id="help-section">
+                <section id="status-section">
                     <div class="title">
-                        <h2>Help</h2>
+                        <h2 data-i18n="section.status_logs">Status / Log </h2>
+                        <select id="select-log">
+                            <option value="all" data-i18n="filter.all">All</option>
+                            <option value="info" data-i18n="filter.info">Info</option>
+                            <option value="warning" data-i18n="filter.warning">Warning</option>
+                            <option value="error" data-i18n="filter.error">Error</option>
+                        </select>
                     </div>
                     <div class="card">
-                        <p>
-                        </p>
+                        <div class="device-selection">
+                            <label for="device-select" data-i18n="label.select_device">Select Device:</label>
+                            <select id="device-select">
+                                <!-- Options will be populated by JavaScript -->
+                            </select>
+                            <label for="last-address" data-i18n="label.last_address">Last Address:</label>
+                            <input type="text" id="last-address" readonly>
+                        </div>
+
+                        <div id="status-messages">
+                            <!-- Status messages will be populated by JavaScript -->
+                        </div>
+                        <div class="send-messages">
+                            <input type="text" id="command-input" data-i18n-placeholder="placeholder.type_here" placeholder="Typ hier..." autocomplete="off">
+                            <select id="suggestions"></select>
+                            <button id="send-command-button" data-i18n="button.send">Send</button>
+                        </div>
+
                     </div>
                 </section>
             </div>
@@ -83,97 +112,49 @@
             <div class="left">
                 <section id="mqtt-settings-section">
                     <div class="title">
-                        <h2>MQTT settings</h2>
+                        <h2 data-i18n="section.mqtt_settings">MQTT settings</h2>
                     </div>
                     <div class="card">
-                        <label for="mqtt-client-id">Client ID:</label>
-                        <input type="text" id="mqtt-client-id" placeholder="MQTT Client ID">
-                        <label for="mqtt-user">User:</label>
-                        <input type="text" id="mqtt-user" placeholder="MQTT User">
-                        <label for="mqtt-server">Server:</label>
-                        <input type="text" id="mqtt-server" placeholder="MQTT Server">
-                        <label for="mqtt-port">Port:</label>
-                        <input type="number" id="mqtt-port" placeholder="MQTT Port" min="1" max="65535">
-                        <label for="mqtt-password">Password:</label>
-                        <input type="password" id="mqtt-password" placeholder="MQTT Password">
-                        <label for="mqtt-discovery">Discovery Topic:</label>
-                        <input type="text" id="mqtt-discovery" placeholder="Discovery Topic">
-                        <button id="mqtt-update">Update</button>
+                        <label for="mqtt-user" data-i18n="label.user">User:</label>
+                        <input type="text" id="mqtt-user" data-i18n-placeholder="placeholder.mqtt_user" placeholder="MQTT User">
+                        <label for="mqtt-server" data-i18n="label.server">Server:</label>
+                        <input type="text" id="mqtt-server" data-i18n-placeholder="placeholder.mqtt_server" placeholder="MQTT Server">
+                        <label for="mqtt-port" data-i18n="label.port">MQTT Port:</label>
+                        <input type="text" id="mqtt-port" data-i18n-placeholder="placeholder.mqtt_port" placeholder="MQTT Port">
+                        <label for="mqtt-password" data-i18n="label.password">Password:</label>
+                        <input type="password" id="mqtt-password" data-i18n-placeholder="placeholder.mqtt_password" placeholder="MQTT Password">
+                        <label for="mqtt-discovery" data-i18n="label.discovery_topic">Discovery Topic:</label>
+                        <input type="text" id="mqtt-discovery" data-i18n-placeholder="placeholder.discovery_topic" placeholder="Discovery Topic">
+                        <button id="mqtt-update" data-i18n="button.update">Update</button>
                     </div>
                 </section>
-                <section id="syslog-settings-section">
-                    <div class="title">
-                        <h2>Syslog settings</h2>
-                    </div>
-                    <div class="card">
-                        <label class="checkbox-inline" for="syslog-enabled">
-                            <input type="checkbox" id="syslog-enabled">
-                            Enable syslog forwarding
-                        </label>
-                        <label for="syslog-server">Server:</label>
-                        <input type="text" id="syslog-server" placeholder="Syslog Server">
-                        <label for="syslog-port">Port:</label>
-                        <input type="number" id="syslog-port" placeholder="Syslog Port" min="1" max="65535">
-                        <button id="syslog-update">Update</button>
-                    </div>
-                </section>
-                <section id="update-section">
-                    <div class="title">
-                        <h2>Update</h2>
-                    </div>
-                    <div class="card">
-                        <label for="firmware-file">Firmware:</label>
-                        <div class="firmware-line"><input type="file" id="firmware-file" accept=".bin">
-                        <button id="upload-firmware">Upload Firmware</button></div>
-                        <label for="filesystem-file">Filesystem:</label>
-                        <div class="filesystem-line"><input type="file" id="filesystem-file" accept=".bin">
-                        <button id="upload-filesystem">Upload Filesystem</button></div>
-                        <label for="devices-file">Devices:</label>
-                        <div class="devices-line">
-                            <input type="file" id="devices-file" accept=".json"> 
-                            <button id="upload-devices">Upload Devices</button>
-                            <button id="download-devices">Download Devices</button>
-                        </div>
-                        <label for="remotes-file">Remotes:</label>
-                        <div class="remotes-line">
-                            <input type="file" id="remotes-file" accept=".json">
-                            <button id="upload-remotes">Upload Remotes</button>
-                            <button id="download-remotes">Download Remotes</button>
-                        </div>
-                    </div>
-                </section>
+                
             </div>
 
             <div class="right">
-                <section id="status-section">
+                <section id="update-section">
                     <div class="title">
-                        <h2>Status / Log </h2>
-                        <select id="select-log">
-                            <option value="all">All</option>
-                            <option value="info">Info</option>
-                            <option value="warning">Warning</option>
-                            <option value="error">Error</option>
-                        </select>
+                        <h2 data-i18n="section.update">Update</h2>
                     </div>
                     <div class="card">
-                        <div class="device-selection">
-                            <label for="device-select">Select Device:</label>
-                            <select id="device-select">
-                                <!-- Options will be populated by JavaScript -->
-                            </select>
-                            <label for="last-address">Last Address:</label>
-                            <input type="text" id="last-address" readonly>
+                        <label for="firmware-file" data-i18n="label.firmware">Firmware:</label>
+                        <div class="firmware-line"><input type="file" id="firmware-file" accept=".bin">
+                        <button id="upload-firmware" data-i18n="button.upload_firmware">Upload Firmware</button></div>
+                        <label for="filesystem-file" data-i18n="label.filesystem">Filesystem:</label>
+                        <div class="filesystem-line"><input type="file" id="filesystem-file" accept=".bin">
+                        <button id="upload-filesystem" data-i18n="button.upload_filesystem">Upload Filesystem</button></div>
+                        <label for="devices-file" data-i18n="label.devices">Devices:</label>
+                        <div class="devices-line">
+                            <input type="file" id="devices-file" accept=".json"> 
+                            <button id="upload-devices" data-i18n="button.upload_devices">Upload Devices</button>
+                            <button id="download-devices" data-i18n="button.download_devices">Download Devices</button>
                         </div>
-
-                        <div id="status-messages">
-                            <!-- Status messages will be populated by JavaScript -->
+                        <label for="remotes-file" data-i18n="label.remotes">Remotes:</label>
+                        <div class="remotes-line">
+                            <input type="file" id="remotes-file" accept=".json">
+                            <button id="upload-remotes" data-i18n="button.upload_remotes">Upload Remotes</button>
+                            <button id="download-remotes" data-i18n="button.download_remotes">Download Remotes</button>
                         </div>
-                        <div class="send-messages">
-                            <input type="text" id="command-input" placeholder="Typ hier..." autocomplete="off">
-                            <select id="suggestions" style="width:112px"></select>
-                            <button id="send-command-button" style="width:61px">Send</button>
-                        </div>
-
                     </div>
                 </section>
             </div>
@@ -182,39 +163,43 @@
     </main>
 
     <footer>
-        <p>© MiOpen.IO 2025 - 2026 | djbenbe & rspaargaren. All Rights Reserved. </p>
+        <p data-i18n="footer.rights">MiOpen.IO 2025 - 2026 | djbenbe & rspaargaren. All Rights Reserved.</p>
     </footer>
     <!-- Popup container (standaard verborgen) -->
     <div id="popup">
         <div class="popup-container">
             <div class="title">
-                <h2 id="popup-title">Popup Title</h2>
-                <div class="btn close" onclick="closePopup()">Sluiten</div>
+                <h2 id="popup-title" data-i18n="popup.title_default">Popup Title</h2>
+                <div class="btn close" onclick="closePopup()" data-i18n="button.close">Sluiten</div>
             </div>
             <div class="card-popup">
                 <div id="left">
                     <p id="popup-content-left">  </p>
-                    <label for="popup-input" id="label-input">device:</label>
-                    <input type="text" id="popup-input" placeholder="Typ hier..." autocomplete="off">
-                    <label for="popup-input-timing" id="label-timing">timing:</label>
-                    <input type="text" id="popup-input-timing" placeholder="Typ hier..." autocomplete="off">
+                    <label for="popup-input" id="label-input" data-i18n="popup.label_device">device:</label>
+                    <input type="text" id="popup-input" data-i18n-placeholder="placeholder.type_here" placeholder="Typ hier..." autocomplete="off">
+                    <label for="popup-input-timing" id="label-timing" data-i18n="popup.label_timing">timing:</label>
+                    <input type="text" id="popup-input-timing" data-i18n-placeholder="placeholder.type_here" placeholder="Typ hier..." autocomplete="off">
                     <label id="popup-boolean-row" style="display:none; gap:8px; align-items:center;">
-                        <span id="popup-boolean-label">solar energy</span>
+                        <span id="popup-boolean-label" data-i18n="popup.boolean_label_default">active</span>
                         <input type="checkbox" id="popup-boolean">
                     </label>
-                    <label for="select-device" class="device-popup-label">device-select:</label>
-                    <select id="device-select" class="device-popup">
+                    <label id="popup-repeat-row" style="display:none; gap:8px; align-items:center;">
+                        <span id="popup-repeat-label" data-i18n="popup.repeat_on_no_response">Herhaal commando als rolluik niet reageert</span>
+                        <input type="checkbox" id="popup-repeat">
+                    </label>
+                    <label for="select-device" class="device-popup-label" data-i18n="popup.device_select">device-select:</label>
+                    <select id="popup-device-select" class="device-popup">
                         <!-- Options will be populated by JavaScript -->
                     </select>  
-                    <button id="popup-save" class="save">Save</button>
+                    <button id="popup-save" class="save" data-i18n="button.save">Save</button>
                     <p id="delete-info" style="display:none; color:red; font-weight:bold;"></p>
-                    <p id="pair-label">Pair / Unpair the device to the physical screen</p>
+                    <p id="pair-label" data-i18n="popup.pair_label_default">Pair / Unpair the device to the physical screen</p>
                     <div class="popup-buttons">
-                            <button id="popup-add" class="pair">pair</button>
-                            <button id="popup-remove" class="unpair">unpair</button>
-                            <button id="popup-delete" type="button" class="danger">Delete</button>
-                            <button id="popup-confirm" type="button">OK</button>
-                            <button id="popup-cancel"  type="button">Cancel</button>
+                            <button id="popup-add" class="pair" data-i18n="button.pair">pair</button>
+                            <button id="popup-remove" class="unpair" data-i18n="button.unpair">unpair</button>
+                            <button id="popup-delete" type="button" class="danger" data-i18n="button.delete">Delete</button>
+                            <button id="popup-confirm" type="button" data-i18n="button.confirm">OK</button>
+                            <button id="popup-cancel"  type="button" data-i18n="button.cancel">Cancel</button>
                     </div>
                 </div>
                 <div id="right">
@@ -226,7 +211,13 @@
             </div>
         </div>
     </div>
-    <script src="script.js"></script>
+    <script src="js/i18n.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/popup.js"></script>
+    <script src="js/devices.js"></script>
+    <script src="js/remotes.js"></script>
+    <script src="js/settings.js"></script>
+    <script src="js/app.js"></script>
     <script>
         function showPage(page) {
             document.getElementById('devices-page').style.display = (page === 'devices') ? 'grid' : 'none';

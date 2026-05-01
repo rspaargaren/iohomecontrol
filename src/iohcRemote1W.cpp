@@ -108,14 +108,13 @@ namespace IOHC {
                  return description == r.description;
               } );
 
-        // auto&[node, sequence, key, type, manufacturer, description] = *it;
-        remote& r = *it;
-        bool found = true;
         if (it == remotes.end()) {
             printf("ERROR %s NOT IN JSON", description.c_str());
-            found = false;
-            // return;
+            return;
         }
+
+        // auto&[node, sequence, key, type, manufacturer, description] = *it;
+        remote& r = *it;
         r.positionTracker.update();
 /*
         int value = 0;
@@ -156,7 +155,6 @@ namespace IOHC {
                 packets2send.clear();
 
 //                for (auto&r: remotes) {
-                if (!found) break;
 
                     auto* packet = new iohcPacket;
                     IOHC::iohcRemote1W::forgePacket(packet, r.type[0]);
@@ -205,7 +203,6 @@ namespace IOHC {
                 packets2send.clear();
 
 //                for (auto&r: remotes) {
-                if (!found) break;
 
 
                     auto* packet = new iohcPacket;
@@ -255,7 +252,6 @@ namespace IOHC {
                 packets2send.clear();
 
 //                for (auto&r: remotes) {
-                if (!found) break;
 
                     auto* packet = new iohcPacket;
                     IOHC::iohcRemote1W::forgePacket(packet, r.type[0]);
@@ -293,6 +289,7 @@ namespace IOHC {
                 display1WAction(r.node, remoteButtonToString(cmd), "TX", r.name.c_str());
                 Serial.printf("%s position: %.0f%%\n", r.name.c_str(), r.positionTracker.getPosition());
                 display1WPosition(r.node, r.positionTracker.getPosition(), r.name.c_str());
+                r.paired = true;
                 break;
             }
            default: {
@@ -300,7 +297,6 @@ namespace IOHC {
 
                 // 0x00: 0x1600 + target broadcast + source + 0x00 + Originator + ACEI + Main Param + FP1 + FP2 + sequence + hmac
 //                for (auto&r: remotes) {
-                if (!found) break;
 
                     auto* packet = new iohcPacket;
                     IOHC::iohcRemote1W::forgePacket(packet, r.type[0]);
@@ -647,7 +643,6 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
 
    bool iohcRemote1W::load() {
         _radioInstance = iohcRadio::getInstance();
-        remotes.clear();
 
         if (LittleFS.exists(IOHC_1W_REMOTE))
             Serial.printf("Loading 1W remote settings from %s\n", IOHC_1W_REMOTE);
@@ -664,12 +659,14 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
         if (error) {
             Serial.print("Failed to parse JSON: ");
             Serial.println(error.c_str());
+            f.close();
             return false;
         }
         f.close();
 
         // Iterate through the JSON object
         bool updateFile = false;
+        std::vector<remote> loadedRemotes;
         for (JsonPair kv: doc.as<JsonObject>()) {
             remote r;
             // hexStringToBytes(kv.key().c_str(), _node);
@@ -734,11 +731,17 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
                 r.paired = false;
                 updateFile = true;
             }
+            if (jobj["repeatOnNoResponse"].is<bool>()) {
+                r.repeatOnNoResponse = jobj["repeatOnNoResponse"].as<bool>();
+            } else {
+                r.repeatOnNoResponse = false;
+            }
             r.positionTracker.setTravelTime(r.travelTime);
 
-            remotes.push_back(r);
+            loadedRemotes.push_back(r);
         }
 
+        remotes = loadedRemotes;
         Serial.printf("Loaded %d x 1W remotes\n", remotes.size()); // _type.size());
         // Ensure JSON reflects the latest sequence values and persist defaults
         if (updateFile) {
@@ -748,6 +751,11 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
         return true;
     }
    bool iohcRemote1W::save() {
+        if (remotes.empty()) {
+            Serial.printf("Refusing to save empty 1W remote list to %s\n", IOHC_1W_REMOTE);
+            return false;
+        }
+
         fs::File f = LittleFS.open(IOHC_1W_REMOTE, "w+");
         JsonDocument doc;
         for (const auto&r: remotes) {
@@ -780,6 +788,7 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
             jobj["travel_time"] = r.travelTime;
 
             jobj["paired"] = r.paired;
+            jobj["repeatOnNoResponse"] = r.repeatOnNoResponse;
         }
         serializeJson(doc, f);
         f.close();
@@ -814,6 +823,7 @@ const std::vector<iohcRemote1W::remote>& iohcRemote1W::getRemotes() const {
         r.name = name;
         r.travelTime = DEFAULT_TRAVEL_TIME_SEC;
         r.paired = false;
+        r.repeatOnNoResponse = false;
 
         // Generate unique description
         const char letters[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -968,6 +978,19 @@ const std::vector<iohcRemote1W::remote>& iohcRemote1W::getRemotes() const {
         }
         it->travelTime = travelTime;
         it->positionTracker.setTravelTime(travelTime);
+        save();
+        return true;
+    }
+
+    bool iohcRemote1W::setRepeatOnNoResponse(const std::string &description, bool repeatOnNoResponse) {
+        auto it = std::find_if(remotes.begin(), remotes.end(), [&](const remote &e) {
+            return e.description == description;
+        });
+        if (it == remotes.end()) {
+            Serial.printf("Device %s not found\n", description.c_str());
+            return false;
+        }
+        it->repeatOnNoResponse = repeatOnNoResponse;
         save();
         return true;
     }

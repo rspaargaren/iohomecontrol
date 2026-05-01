@@ -58,15 +58,18 @@ main > div, .card-popup {
     padding: 0;
     display: grid;
     color: var(--color-text);
+    gap: 10px;
 }
 main > div {
     margin: 10px;
 }
 nav{
     display: flex;
+    flex-wrap: wrap;
 }
 nav .items {
     padding: 12px 8px;
+    margin: 0 8px 0 0;
     border-radius: var(--radius);
     transition: background 0.3s;
 }
@@ -100,33 +103,33 @@ nav .items:hover {
   top: 2px;
 }
 #settings {
-  background: url("img/settings.svg") no-repeat;
+  background: url("../img/settings.svg") no-repeat;
   height: 40px;
   width: 40px;
 }
 #toggle-theme {
-  background: url("img/dark_mode.svg") no-repeat;
+  background: url("../img/dark_mode.svg") no-repeat;
   height: 40px;
   width: 40px;
 }
 .dark-mode #toggle-theme {
-  background: url("img/light_mode.svg") no-repeat;
+  background: url("../img/light_mode.svg") no-repeat;
 }
 ul#device-list {
   list-style-type: none;
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
   font-size: 1em;
   padding: 2px;
-  flex-wrap: wrap;
-  flex-direction: row;
 }
 ul#device-list li {
   background: var(--color-input); /* #fefefe5e */
-  margin: 5px;
+  margin: 0;
   padding: 5px;
   border-radius: var(--radius);
   color: #fff;
-  width: calc(93% / 2);
+  width: auto;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -170,20 +173,20 @@ th {
   font-size: 0;
 }
 .btn.open {
-  background: url("img/up.svg") no-repeat;
+  background: url("../img/up.svg") no-repeat;
 }
 .btn.stop {
-  background: url("img/stop.svg") no-repeat;
+  background: url("../img/stop.svg") no-repeat;
 }
 .btn.down {
-  background: url("img/down.svg") no-repeat;
+  background: url("../img/down.svg") no-repeat;
 }
 .btn.bg {
   background-color: var(--color-accent2);
   margin: 9px;
 }
 .btn.edit {
-  background: url("img/settings.svg") center no-repeat;
+  background: url("../img/settings.svg") center no-repeat;
     background-color: rgba(0, 0, 0, 0);
   position: absolute;
   bottom: 6px;
@@ -192,16 +195,19 @@ th {
   width: 25px;
 }
 .btn.add {
-  background: url("img/add.svg") no-repeat;
+  background: url("../img/add.svg") no-repeat;
 }
 .btn.close {
-  background: url("img/close.svg") no-repeat;
+  background: url("../img/close.svg") no-repeat;
 }
 .btn.help {
-  background: url("img/help.svg") no-repeat;
+  background: url("../img/help.svg") no-repeat;
 }
 .title .help {
     right: 50px;
+}
+.device-selection label {
+    line-height: 50px;
 }
 #remote-table .btn.edit.bg {
   top: -2px;
@@ -222,7 +228,7 @@ button {
   font-size: 14px;
   border-radius: var(--radius);
   cursor: pointer;
-  margin-left: 5px;
+  margin-left: 0;
 }
 button:hover {
     background-color: var(--color-accent2);
@@ -245,11 +251,41 @@ input, select {
     border-radius: var(--radius);
     white-space: pre-wrap; /* So that newlines in messages are respected */
 }
-#suggestions {
-  width: 6.75dvw;
+.device-selection {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+  align-items: end;
 }
-#command-input {
-  width: calc(100% - 187px);
+.send-messages {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(120px, 180px) auto;
+  gap: 8px;
+  align-items: center;
+  margin-top: 12px;
+}
+#command-input,
+#suggestions,
+#send-command-button {
+  width: 100%;
+  min-width: 0;
+}
+.firmware-line,
+.filesystem-line,
+.devices-line,
+.remotes-line,
+.popup-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.firmware-line input,
+.filesystem-line input,
+.devices-line input,
+.remotes-line input {
+  flex: 1 1 220px;
+  min-width: 0;
 }
 footer {
   text-align: center;
@@ -272,9 +308,10 @@ footer {
     backdrop-filter: blur(0.7rem);
 }
 .popup-container{
-  min-width: 350px;
-  width: 50%;
+  width: clamp(320px, 92vw, 760px);
+  max-height: 90vh;
   color: var(--color-text);
+  overflow: auto;
 }
 .popup-container > .card-popup {
   background: var(--popup-background);
@@ -289,7 +326,7 @@ footer {
   padding-bottom: 15px;
 }
 .popup-buttons {
-  display: flex;
+  justify-content: flex-start;
 }
 #popup.open {
   display: flex;
@@ -305,12 +342,32 @@ header h1 {
 @media (min-width: 1280px) {
     main > div, .card-popup {
         grid-template-columns: repeat(2, 1fr);
-        gap: 10px;
     }
     header h1 {
       display: block;
     }
-    ul#device-list li {
-      width: calc(93% / 6);
+    ul#device-list {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+}
+@media (max-width: 640px) {
+    header {
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    nav {
+      width: 100%;
+    }
+    .send-messages {
+      grid-template-columns: 1fr;
+    }
+    .popup-container {
+      width: min(94vw, 420px);
+    }
+    table {
+      display: block;
+      overflow-x: auto;
+      white-space: nowrap;
     }
 }
