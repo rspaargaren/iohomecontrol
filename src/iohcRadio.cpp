@@ -321,14 +321,23 @@ namespace IOHC {
     }
     */
 
-void iohcRadio::send(std::vector<iohcPacket *> &iohcTx) {
-    if (radioState == RadioState::TX) {
-        ets_printf("TX: Already transmitting. Ignoring send()\n");
+void iohcRadio::queueSend(std::vector<iohcPacket *> &iohcTx) {
+    if (iohcTx.empty()) {
+        return;
+    }
+    sendQueue.push(std::move(iohcTx));
+    ets_printf("TX: Queued send batch. Queue depth=%d\n", static_cast<int>(sendQueue.size()));
+}
+
+void iohcRadio::startQueuedSend() {
+    if (radioState == RadioState::TX || packets2send.size() > 0 || sendQueue.empty()) {
         return;
     }
 
-    packets2send = std::move(iohcTx);
+    packets2send = std::move(sendQueue.front());
+    sendQueue.pop();
     txCounter = 0;
+    txComplete = false;
     ets_printf("TX: Preparing %d packet(s)\n", packets2send.size());
     setRadioState(RadioState::TX);
 
@@ -355,6 +364,11 @@ void iohcRadio::send(std::vector<iohcPacket *> &iohcTx) {
     Sender.attach_ms(iohc->repeatTime, &iohcRadio::onTxTicker, (void*)this);
 }
 
+void iohcRadio::send(std::vector<iohcPacket *> &iohcTx) {
+    queueSend(iohcTx);
+    startQueuedSend();
+}
+
 
  
 void iohcRadio::onTxTicker(void *arg) {
@@ -376,6 +390,7 @@ void iohcRadio::onTxTicker(void *arg) {
         radio->packets2send.clear();
         Radio::setRx();
         radio->setRadioState(RadioState::RX);
+        radio->startQueuedSend();
         return;
     }
 
@@ -412,6 +427,7 @@ void iohcRadio::onTxTicker(void *arg) {
         radio->packets2send.clear();
         Radio::setRx();
         radio->setRadioState(RadioState::RX);
+        radio->startQueuedSend();
         return;
     } else {
         //Radio::setRx();

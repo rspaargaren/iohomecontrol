@@ -84,6 +84,7 @@
   "popup.info_position": "Position: {value}%",
   "popup.info_paired": "Paired: {value}",
   "popup.active": "Active",
+  "popup.repeat_on_no_response": "Repeat command if shutter does not respond",
   "popup.active_blocks_destructive": "Disable Active before unpairing or deleting.",
   "popup.pair_label_device": "Add / Remove the device to the physical screen",
   "popup.delete_device_info": "Only use when the device is not linked to a physical screen.",

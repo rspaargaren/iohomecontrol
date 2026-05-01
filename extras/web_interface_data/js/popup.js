@@ -31,6 +31,9 @@
         const boolRow = document.getElementById("popup-boolean-row");
         const boolInput = document.getElementById("popup-boolean");
         const boolLabel = document.getElementById("popup-boolean-label");
+        const repeatRow = document.getElementById("popup-repeat-row");
+        const repeatInput = document.getElementById("popup-repeat");
+        const repeatLabel = document.getElementById("popup-repeat-label");
         const contentText = document.getElementById("popup-content");
         const leftContent = document.getElementById("popup-content-left");
         const popupTitle = document.getElementById("popup-title");
@@ -59,6 +62,12 @@
         boolInput.checked = !!popupOptions.defaultBoolean;
         boolLabel.textContent = popupOptions.booleanLabel || app.i18nText("popup.boolean_label_default", "solar energy");
         boolInput.onchange = null;
+
+        const showRepeat = !!popupOptions.showRepeatOnNoResponse;
+        repeatRow.style.display = showRepeat ? "flex" : "none";
+        repeatInput.checked = !!popupOptions.defaultRepeatOnNoResponse;
+        repeatLabel.textContent = popupOptions.repeatOnNoResponseLabel ||
+            app.i18nText("popup.repeat_on_no_response", "Repeat command if shutter does not respond");
 
         const showInput = !!popupOptions.showInput;
         input.style.display = showInput ? "block" : "none";
@@ -196,9 +205,10 @@
             const value = showInput ? input.value : true;
             const timingValue = showTiming ? inputTiming.value : undefined;
             const deviceValue = showDevicePopup ? devicePopup.value : undefined;
+            const repeatValue = showRepeat ? repeatInput.checked : undefined;
             closePopup();
             if (popupOptions.onSave) {
-                popupOptions.onSave(value, timingValue, deviceValue);
+                popupOptions.onSave(value, timingValue, deviceValue, repeatValue);
             }
         };
 
