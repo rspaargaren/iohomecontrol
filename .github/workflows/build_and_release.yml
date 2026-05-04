@@ -43,16 +43,16 @@ jobs:
         run: esptool --chip esp32s3 merge-bin -o HeltecLoraV2ESP32.bin --flash-size 4MB 0x1000 .pio/build/HeltecLoraV2ESP32/bootloader.bin 0x8000 .pio/build/HeltecLoraV2ESP32/partitions.bin 0x10000 .pio/build/HeltecLoraV2ESP32/firmware.bin 0x210000 .pio/build/HeltecLoraV2ESP32/littlefs.bin
 
       - name: "✏️ Generate release changelog"
-        uses: janheinrichmerker/action-github-changelog-generator@v2.3
+        uses: janheinrichmerker/action-github-changelog-generator@v2.4
         with:
           token: ${{ secrets.GITHUB_TOKEN }} 
-          output: build/release/changelog.md
+          output: changelog.md
 
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
           name: Release ${{ steps.parse.outputs.app_version }}
-          body_path: build/release/changelog.md
+          body_path: changelog.md
           prerelease: github.ref != 'refs/heads/main'
           files: |
             LilyGoLoraESP32.bin
@@ -62,4 +62,7 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
          name: build-artifacts
-         path: build/release/
+         path: |
+           LilyGoLoraESP32.bin
+           HeltecLoraV2ESP32.bin
+           changelog.md
