@@ -5,9 +5,7 @@ on:
   push:
     # run on every branch
     branches:
-      - '**'
-    tags:
-      - 'release/*'
+      - 'main'
 
 jobs:
   build-and-release:
