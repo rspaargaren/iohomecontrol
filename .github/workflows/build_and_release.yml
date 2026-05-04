@@ -45,15 +45,23 @@ jobs:
       - name: "✏️ Generate release changelog"
         uses: janheinrichmerker/action-github-changelog-generator@v2.4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }} 
+          token: ${{ secrets.GITHUB_TOKEN }}
           output: changelog.md
+
+      - name: Generate release tag
+        id: generate_release_tag
+        uses: alexvingg/next-release-tag@v1.0.3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          tag_prefix: ''
 
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
-          name: Release ${{ steps.parse.outputs.app_version }}
+          name: Release ${{ steps.generate_release_tag.outputs.release_tag }}
           body_path: changelog.md
           prerelease: github.ref != 'refs/heads/main'
+          tag_name: ${{ steps.generate_release_tag.outputs.release_tag }}
           files: |
             LilyGoLoraESP32.bin
             HeltecLoraV2ESP32.bin
