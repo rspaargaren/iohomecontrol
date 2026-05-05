@@ -1,0 +1,74 @@
+name: Build and Release
+
+on:
+  workflow_dispatch:
+  push:
+    # run on every branch
+    branches:
+      - 'main'
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup PlatformIO
+        uses: n-vr/setup-platformio-action@v1
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.14'
+
+      - name: install esptools
+        run: pip install -U esptool
+
+      - name: Build PlatformIO project
+        run: pio run
+
+      - name: Build filesystem
+        run: pio run -t buildfs
+
+      - name: Merge bin files together for LilyGoLoraESP32
+        run: esptool --chip esp32s3 merge-bin -o LilyGoLoraESP32.bin --flash-size 4MB 0x1000 .pio/build/LilyGoLoraESP32/bootloader.bin 0x8000 .pio/build/LilyGoLoraESP32/partitions.bin 0x10000 .pio/build/LilyGoLoraESP32/firmware.bin 0x210000 .pio/build/LilyGoLoraESP32/littlefs.bin
+
+      - name: Merge bin files together for HeltecLoraV2ESP32
+        run: esptool --chip esp32s3 merge-bin -o HeltecLoraV2ESP32.bin --flash-size 4MB 0x1000 .pio/build/HeltecLoraV2ESP32/bootloader.bin 0x8000 .pio/build/HeltecLoraV2ESP32/partitions.bin 0x10000 .pio/build/HeltecLoraV2ESP32/firmware.bin 0x210000 .pio/build/HeltecLoraV2ESP32/littlefs.bin
+
+      - name: "✏️ Generate release changelog"
+        uses: janheinrichmerker/action-github-changelog-generator@v2.4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          output: changelog.md
+
+      - name: Generate release tag
+        id: generate_release_tag
+        uses: alexvingg/next-release-tag@v1.0.4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          tag_prefix: ''
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Release ${{ steps.generate_release_tag.outputs.release_tag }}
+          body_path: changelog.md
+          prerelease: github.ref != 'refs/heads/main'
+          tag_name: ${{ steps.generate_release_tag.outputs.release_tag }}
+          files: |
+            LilyGoLoraESP32.bin
+            HeltecLoraV2ESP32.bin
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v6
+        with:
+         name: build-artifacts
+         path: |
+           LilyGoLoraESP32.bin
+           HeltecLoraV2ESP32.bin
+           changelog.md
