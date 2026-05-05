@@ -364,6 +364,11 @@ void iohcRadio::startQueuedSend() {
     Sender.attach_ms(iohc->repeatTime, &iohcRadio::onTxTicker, (void*)this);
 }
 
+void iohcRadio::send(iohcPacket *packet) {
+    std::vector<iohcPacket *> packets = { packet };
+    send(packets);
+}
+
 void iohcRadio::send(std::vector<iohcPacket *> &iohcTx) {
     queueSend(iohcTx);
     startQueuedSend();
