@@ -214,6 +214,61 @@ void publishCoverPosition(const std::string &id, float position) {
     mqttClient.publish(topic.c_str(), 0, true, buf);
 }
 
+static void publishIohcFrameDiscovery() {
+    JsonDocument configDoc;
+    configDoc["name"] = "IOHC Frame";
+    configDoc["state_topic"] = mqtt_discovery_topic + "/sensor/iohc_frame/state";
+    configDoc["unique_id"] = "iohc_frame";
+    configDoc["json_attributes_topic"] = mqtt_discovery_topic + "/sensor/iohc_frame/state";
+
+    JsonObject device = configDoc["device"].to<JsonObject>();
+    device["identifiers"] = GATEWAY_ID;
+    device["name"] = "My Open IO Gateway";
+    device["manufacturer"] = "Somfy";
+    device["model"] = "IO Blind Bridge";
+    device["sw_version"] = "1.0.0";
+
+    std::string cfg;
+    size_t cfgLen = serializeJson(configDoc, cfg);
+    mqttClient.publish((mqtt_discovery_topic + "/sensor/iohc_frame/config").c_str(),
+                       0, true, cfg.c_str(), cfgLen);
+}
+
+static void handleMqttConnectImpl() {
+    // Discovery van de ‘frame’ sensor eerst, zodat state pub direct een entity heeft
+    publishIohcFrameDiscovery();
+    const auto &remotes = IOHC::iohcRemote1W::getInstance()->getRemotes();
+    for (const auto &r : remotes) {
+        std::string id = bytesToHexString(r.node, sizeof(r.node));
+        std::string key = bytesToHexString(r.key, sizeof(r.key));
+        std::string name = r.name.empty() ? r.description : r.name;
+        publishDiscovery(id, name, key);
+        publishTravelTimeDiscovery(id, name, key, r.travelTime);
+        //std::string t = "iown/" + id + "/set";
+        //mqttClient.subscribe(t.c_str(), 0);
+        //mqttClient.subscribe(("iown/" + id + "/pair").c_str(), 0);
+        //mqttClient.subscribe(("iown/" + id + "/add").c_str(), 0);
+        //mqttClient.subscribe(("iown/" + id + "/remove").c_str(), 0);
+        //mqttClient.subscribe(("iown/" + id + "/travel_time/set").c_str(), 0);
+        vTaskDelay(pdMS_TO_TICKS(200)); // throttle per device
+    }
+    if (!heartbeatTimer)
+        heartbeatTimer = xTimerCreate("hb", pdMS_TO_TICKS(60000), pdTRUE, nullptr, publishHeartbeat);
+    xTimerStart(heartbeatTimer, 0);
+    publishHeartbeat(nullptr);
+}
+
+
+static void mqttPostConnectTask(void* /*arg*/) {
+    handleMqttConnectImpl();     // oude body van handleMqttConnect()
+
+    taskENTER_CRITICAL(&s_connectMux);
+    s_mqttPostConnectTask = nullptr;
+    taskEXIT_CRITICAL(&s_connectMux);
+
+    vTaskDelete(nullptr);
+}
+
 // ==== BELANGRIJK: scheduler die het zware werk in een eigen task zet ====
 void handleMqttConnect() {
     if (mqttStatus != ConnState::Connected) return;
@@ -240,40 +295,6 @@ void handleMqttConnect() {
         s_mqttPostConnectTask = nullptr;
         taskEXIT_CRITICAL(&s_connectMux);
     }
-}
-
-static void mqttPostConnectTask(void* /*arg*/) {
-    handleMqttConnectImpl();     // oude body van handleMqttConnect()
-
-    taskENTER_CRITICAL(&s_connectMux);
-    s_mqttPostConnectTask = nullptr;
-    taskEXIT_CRITICAL(&s_connectMux);
-
-    vTaskDelete(nullptr);
-}
-
-static void handleMqttConnectImpl() {
-    // Discovery van de ‘frame’ sensor eerst, zodat state pub direct een entity heeft
-    publishIohcFrameDiscovery();
-    const auto &remotes = IOHC::iohcRemote1W::getInstance()->getRemotes();
-    for (const auto &r : remotes) {
-        std::string id = bytesToHexString(r.node, sizeof(r.node));
-        std::string key = bytesToHexString(r.key, sizeof(r.key));
-        std::string name = r.name.empty() ? r.description : r.name;
-        publishDiscovery(id, name, key);
-        publishTravelTimeDiscovery(id, name, key, r.travelTime);
-        //std::string t = "iown/" + id + "/set";
-        //mqttClient.subscribe(t.c_str(), 0);
-        //mqttClient.subscribe(("iown/" + id + "/pair").c_str(), 0);
-        //mqttClient.subscribe(("iown/" + id + "/add").c_str(), 0);
-        //mqttClient.subscribe(("iown/" + id + "/remove").c_str(), 0);
-        //mqttClient.subscribe(("iown/" + id + "/travel_time/set").c_str(), 0);
-        vTaskDelay(pdMS_TO_TICKS(200)); // throttle per device
-    }
-    if (!heartbeatTimer)
-        heartbeatTimer = xTimerCreate("hb", pdMS_TO_TICKS(60000), pdTRUE, nullptr, publishHeartbeat);
-    xTimerStart(heartbeatTimer, 0);
-    publishHeartbeat(nullptr);
 }
 
 void connectToMqtt() {
@@ -340,27 +361,6 @@ void onMqttDisconnect(AsyncMqttClientDisconnectReason reason) {
         xTimerStart(mqttReconnectTimer, 0);
     }
 }
-
-static void publishIohcFrameDiscovery() {
-    JsonDocument configDoc;
-    configDoc["name"] = "IOHC Frame";
-    configDoc["state_topic"] = mqtt_discovery_topic + "/sensor/iohc_frame/state";
-    configDoc["unique_id"] = "iohc_frame";
-    configDoc["json_attributes_topic"] = mqtt_discovery_topic + "/sensor/iohc_frame/state";
-
-    JsonObject device = configDoc["device"].to<JsonObject>();
-    device["identifiers"] = GATEWAY_ID;
-    device["name"] = "My Open IO Gateway";
-    device["manufacturer"] = "Somfy";
-    device["model"] = "IO Blind Bridge";
-    device["sw_version"] = "1.0.0";
-
-    std::string cfg;
-    size_t cfgLen = serializeJson(configDoc, cfg);
-    mqttClient.publish((mqtt_discovery_topic + "/sensor/iohc_frame/config").c_str(),
-                       0, true, cfg.c_str(), cfgLen);
-}
-
 
 void mqttFuncHandler(const char *cmd) {
     constexpr char delim = ' ';
