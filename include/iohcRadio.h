@@ -65,6 +65,7 @@ namespace IOHC {
                 ERROR        ///< Error or unknown state
             };
             void start(uint8_t num_freqs, uint32_t *scan_freqs, uint32_t scanTimeUs, IohcPacketDelegate rxCallback, IohcPacketDelegate txCallback);
+            void send(iohcPacket *packet);
             void send(std::vector<iohcPacket*>&iohcTx);
             void sendAuto(std::vector<iohcPacket*>&iohcTx); // Nieuwe versie voor AutoTxRx
             static void setRadioState(RadioState newState);

@@ -84,7 +84,6 @@ namespace IOHC {
             case DeviceButton::associate: {
                 std::vector<uint8_t> toSend = {};
 
-                packets2send.clear();
                 auto* packet = new iohcPacket;
                 forgePacket(packet, toSend);
 
@@ -98,15 +97,13 @@ namespace IOHC {
                 memcpy(packet->payload.packet.header.source, gateway, 3);
                 memcpy(packet->payload.packet.header.target, master_to, 3);
 
-                packets2send.push_back(packet);
                 digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
-                _radioInstance->send(packets2send);
+                _radioInstance->send(packet);
                 break;
             }
             case DeviceButton::powerOn: {
                 std::vector<uint8_t> toSend = {0x0C, 0x60, 0x01, 0x2C};
 
-                packets2send.clear();
                 auto* packet = new iohcPacket;
                 forgePacket(packet, toSend);
 
@@ -119,9 +116,8 @@ namespace IOHC {
                 memcpy(packet->payload.packet.header.source, gateway, 3);
                 memcpy(packet->payload.packet.header.target, master_to, 3);
 
-                packets2send.push_back(packet);
                 digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
-                _radioInstance->send(packets2send);
+                _radioInstance->send(packet);
 
                 break;
             }
@@ -135,7 +131,6 @@ namespace IOHC {
                 if (data->size() == 2) addr = 0;
                 else addr = std::stoi(data->at(2));
 
-                packets2send.clear();
                 auto* packet = new iohcPacket;
                 forgePacket(packet, toSend);
 
@@ -150,9 +145,8 @@ namespace IOHC {
 
                 packet->delayed = 50;
 
-                packets2send.push_back(packet);
                 digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
-                _radioInstance->send(packets2send);
+                _radioInstance->send(packet);
                 //                mqttClient.publish("iown/Frame", 0, false, message.c_str(), messageSize);
 
                 break;
@@ -173,18 +167,19 @@ namespace IOHC {
 
                 size_t dest = 0;
 
-                packets2send.clear();
+                std::vector<iohcPacket *> packets2send;
                 for (const auto &addr: addresses) {
-                    packets2send.push_back(new iohcPacket);
-                    forgePacket(packets2send.back(), toSend);
+                    auto* packet = new iohcPacket;
+                    packets2send.push_back(packet);
+                    forgePacket(packet, toSend);
 
-                    packets2send.back()->payload.packet.header.cmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
+                    packet->payload.packet.header.cmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
                     memorizeSend.memorizedData = toSend;
                     memorizeSend.memorizedCmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
 
-                    packets2send.back()->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
-                    memcpy(packets2send.back()->payload.packet.header.source, gateway, 3);
-                    memcpy(packets2send.back()->payload.packet.header.target,
+                    packet->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
+                    memcpy(packet->payload.packet.header.source, gateway, 3);
+                    memcpy(packet->payload.packet.header.target,
                            addresses.at(dest/*addr*/).data()/* 0 Master_to*/, 3);
 
                     dest++;
@@ -203,21 +198,20 @@ namespace IOHC {
                 if (strcasecmp(dat, "on") == 0) toSend[4] = 0x01;
                 if (strcasecmp(dat, "off") == 0) toSend[4] = 0x00;
 
-                packets2send.clear();
-                packets2send.push_back(new iohcPacket);
-                forgePacket(packets2send.back(), toSend);
+                auto* packet = new iohcPacket;
+                forgePacket(packet, toSend);
 
-                packets2send.back()->payload.packet.header.cmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
+                packet->payload.packet.header.cmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
                 memorizeSend.memorizedData = toSend;
                 memorizeSend.memorizedCmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
 
-                packets2send.back()->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
+                packet->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
 
-                memcpy(packets2send.back()->payload.packet.header.source, gateway, 3);
-                memcpy(packets2send.back()->payload.packet.header.target, master_to, 3);
+                memcpy(packet->payload.packet.header.source, gateway, 3);
+                memcpy(packet->payload.packet.header.target, master_to, 3);
 
                 digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
-                _radioInstance->send(packets2send);
+                _radioInstance->send(packet);
                 break;
             }
             case DeviceButton::setWindow: {
@@ -231,23 +225,22 @@ namespace IOHC {
                 if (data->size() == 2) addr = 0;
                 else addr = std::stoi(data->at(2));
 
-                packets2send.clear();
-                packets2send.push_back(new iohcPacket);
-                forgePacket(packets2send.back(), toSend);
+                auto* packet = new iohcPacket;
+                forgePacket(packet, toSend);
 
-                packets2send.back()->payload.packet.header.cmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
+                packet->payload.packet.header.cmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
                 memorizeSend.memorizedData = toSend;
                 memorizeSend.memorizedCmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
 
-                packets2send.back()->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
+                packet->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
 
-                memcpy(packets2send.back()->payload.packet.header.source, gateway, 3);
-                memcpy(packets2send.back()->payload.packet.header.target, addresses.at(addr).data()/* 0 Master_to*/, 3);
+                memcpy(packet->payload.packet.header.source, gateway, 3);
+                memcpy(packet->payload.packet.header.target, addresses.at(addr).data()/* 0 Master_to*/, 3);
 
-                packets2send.back()->delayed = 50;
+                packet->delayed = 50;
 
                 digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
-                _radioInstance->send(packets2send);
+                _radioInstance->send(packet);
                 break;
             }
             case DeviceButton::midnight: {
@@ -255,21 +248,20 @@ namespace IOHC {
                 std::vector<uint8_t> toSend = {0x0c, 0x60, 0x01, 0x30};
                 //, 0x2b, 0x05, 0x00, 0x0f, 0x04, 0x0c, 0xe7, 0x07};
 
-                packets2send.clear();
-                packets2send.push_back(new iohcPacket);
-                forgePacket(packets2send.back(), toSend);
+                auto *packet = new iohcPacket;
+                forgePacket(packet, toSend);
 
-                packets2send.back()->payload.packet.header.cmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
+                packet->payload.packet.header.cmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
                 memorizeSend.memorizedData = toSend;
                 memorizeSend.memorizedCmd = iohcDevice::SEND_WRITE_PRIVATE_0x20;
 
-                packets2send.back()->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
+                packet->payload.packet.header.CtrlByte1.asStruct.StartFrame = 1;
 
-                memcpy(packets2send.back()->payload.packet.header.source, gateway, 3);
-                memcpy(packets2send.back()->payload.packet.header.target, master_to, 3);
+                memcpy(packet->payload.packet.header.source, gateway, 3);
+                memcpy(packet->payload.packet.header.target, master_to, 3);
 
                 digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
-                _radioInstance->send(packets2send);
+                _radioInstance->send(packet);
 
                 break;
             }
