@@ -19,6 +19,8 @@
 AsyncMqttClient mqttClient;
 TimerHandle_t mqttReconnectTimer;
 TimerHandle_t heartbeatTimer;
+TaskHandle_t s_mqttPostConnectTask = nullptr;
+static portMUX_TYPE s_connectMux = portMUX_INITIALIZER_UNLOCKED;
 const char AVAILABILITY_TOPIC[] = "iown/status";
 static const char GATEWAY_ID[] = "MyOpenIO";
 
@@ -215,8 +217,16 @@ void publishCoverPosition(const std::string &id, float position) {
 // ==== BELANGRIJK: scheduler die het zware werk in een eigen task zet ====
 void handleMqttConnect() {
     if (mqttStatus != ConnState::Connected) return;
-    if (s_mqttPostConnectTask) return; // al bezig
-    xTaskCreatePinnedToCore(
+
+    taskENTER_CRITICAL(&s_connectMux);
+    bool shouldSpawn = (s_mqttPostConnectTask == nullptr);
+    if (shouldSpawn)
+        s_mqttPostConnectTask = (TaskHandle_t)1; // placeholder to block re-entry
+    taskEXIT_CRITICAL(&s_connectMux);
+
+    if (!shouldSpawn) return;
+
+    BaseType_t result = xTaskCreatePinnedToCore(
         mqttPostConnectTask,
         "mqttPostConnect",
         4096,      // stack
@@ -225,11 +235,20 @@ void handleMqttConnect() {
         &s_mqttPostConnectTask,
         tskNO_AFFINITY
     );
+    if (result != pdPASS) {
+        taskENTER_CRITICAL(&s_connectMux);
+        s_mqttPostConnectTask = nullptr;
+        taskEXIT_CRITICAL(&s_connectMux);
+    }
 }
 
 static void mqttPostConnectTask(void* /*arg*/) {
     handleMqttConnectImpl();     // oude body van handleMqttConnect()
+
+    taskENTER_CRITICAL(&s_connectMux);
     s_mqttPostConnectTask = nullptr;
+    taskEXIT_CRITICAL(&s_connectMux);
+
     vTaskDelete(nullptr);
 }
 
