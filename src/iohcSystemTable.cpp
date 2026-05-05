@@ -94,8 +94,14 @@ namespace IOHC {
 
         fs::File f = LittleFS.open(IOHC_SYS_TABLE, "r", true);
         /*Dynamic*/JsonDocument doc; //(2048);
-        deserializeJson(doc, f);
+        DeserializationError error = deserializeJson(doc, f);
         f.close();
+
+        if (error) {
+            Serial.print("Failed to parse JSON: ");
+            Serial.println(error.c_str());
+            return false;
+        }
 
         // Iterate through the JSON object
         for (JsonPair kv : doc.as<JsonObject>())  {

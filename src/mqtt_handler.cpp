@@ -555,8 +555,10 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
     }
 
     JsonDocument doc;
-    if (deserializeJson(doc, buf) != DeserializationError::Ok) {
-        Serial.println(F("Failed to parse JSON"));
+    DeserializationError error = deserializeJson(doc, buf);
+    if (error) {
+        Serial.print("Failed to parse JSON: ");
+        Serial.println(error.c_str());
         return;
     }
 

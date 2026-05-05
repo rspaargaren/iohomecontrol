@@ -658,14 +658,13 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
         JsonDocument doc; 
 
         DeserializationError error = deserializeJson(doc, f); 
+        f.close();
 
         if (error) {
             Serial.print("Failed to parse JSON: ");
             Serial.println(error.c_str());
-            f.close();
             return false;
         }
-        f.close();
 
         // Iterate through the JSON object
         bool updateFile = false;

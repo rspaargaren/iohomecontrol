@@ -537,8 +537,14 @@ namespace IOHC {
 
         fs::File f = LittleFS.open(OTHER_2W_FILE, "r", true);
         JsonDocument doc;
-        deserializeJson(doc, f);
+        DeserializationError error = deserializeJson(doc, f);
         f.close();
+
+        if (error) {
+            Serial.print("Failed to parse JSON: ");
+            Serial.println(error.c_str());
+            return false;
+        }
 
         // Iterate through the JSON object
         for (JsonPair kv: doc.as<JsonObject>()) {
