@@ -28,6 +28,7 @@ void initMqtt() {
     if (!nvs_read_string(NVS_KEY_MQTT_SERVER, mqtt_server)) {
         if (mqtt_server.empty()) {
             Serial.println("MQTT server not set");
+            return; // no need to continue
         } else {
             nvs_write_string(NVS_KEY_MQTT_SERVER, mqtt_server);
         }
@@ -72,7 +73,7 @@ void initMqtt() {
     mqttClient.onConnect(onMqttConnect);
     mqttClient.onDisconnect(onMqttDisconnect);
     mqttClient.onMessage(onMqttMessage);
-    mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(5000), pdFALSE,
+    mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(5000), pdTRUE,
                                       nullptr,
                                       reinterpret_cast<TimerCallbackFunction_t>(connectToMqtt));
     if (WiFi.status() == WL_CONNECTED) {
@@ -301,14 +302,8 @@ void connectToMqtt() {
     if (mqttClient.connected() || mqttStatus == ConnState::Connecting) {
         return;  // Avoid parallel connection attempts
     }
-    if (mqttReconnectTimer) {
-        xTimerStop(mqttReconnectTimer, 0);
-    }
     if (WiFi.status() != WL_CONNECTED) {
         Serial.println("WiFi not connected, delaying MQTT connection");
-        if (mqttReconnectTimer) {
-            xTimerStart(mqttReconnectTimer, pdMS_TO_TICKS(5000));
-        }
         return;
     }
     if (mqtt_server.empty()) {
@@ -357,9 +352,6 @@ void onMqttDisconnect(AsyncMqttClientDisconnectReason reason) {
     addLogMessage(String("Disconnected from MQTT (reason ") + String(static_cast<uint8_t>(reason)) + ")");
     mqttStatus = ConnState::Disconnected;
     updateDisplayStatus();
-    if (WiFi.status() == WL_CONNECTED && mqttReconnectTimer) {
-        xTimerStart(mqttReconnectTimer, 0);
-    }
 }
 
 void mqttFuncHandler(const char *cmd) {

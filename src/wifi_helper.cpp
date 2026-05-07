@@ -103,15 +103,9 @@ void checkWifiConnection() {
             wifiStatus = { ConnState::Disconnected, 0 };
             updateDisplayStatus();
 
-#if defined(MQTT)
-            Serial.println("Stopping MQTT reconnect timer");
-            if (mqttReconnectTimer) {
-                xTimerStop(mqttReconnectTimer, 0);
-            }
-#endif
             if (wifiReconnectTimer) {
                 xTimerStart(wifiReconnectTimer, 0);
-            }
-        }
+            }   
+        }     
     }
 }
