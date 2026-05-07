@@ -24,9 +24,11 @@
 #include <WiFi.h>
 #include <display_helpers.h>
 #include <chrono>
+#include <freertos/semphr.h>
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RST);
 DisplayBuffer displayBuffer;
+SemaphoreHandle_t displayBufferMutex = xSemaphoreCreateMutex();
 TimerHandle_t displayUpdateTimer;
 std::chrono::time_point<std::chrono::system_clock> startTime;
 std::chrono::time_point<std::chrono::system_clock> timeSinceNoData;
@@ -190,13 +192,17 @@ const char* getRemoteName(const uint8_t *remote, const char *name) {
 }
 
 void display1WAction(const uint8_t *remote, const char *action, const char *dir, const char *name) {
+    xSemaphoreTake(displayBufferMutex, portMAX_DELAY);
     displayBuffer.addLine(format("%s: %s", dir, getRemoteName(remote, name)), action);
+    xSemaphoreGive(displayBufferMutex);
 
     setTimerSpeed(fast);
 }
 
 void display1WPosition(const uint8_t *remote, float position, const char *name) {
+    xSemaphoreTake(displayBufferMutex, portMAX_DELAY);
     displayBuffer.addLine(getRemoteName(remote, name), format("%d%%", static_cast<int>(position)));
+    xSemaphoreGive(displayBufferMutex);
 
     setTimerSpeed(fast);
 }
@@ -242,7 +248,9 @@ bool drawContents() {
     const int width = SCREEN_WIDTH / 6; // char width is 5 + 1 pixel space
     const int height = (SCREEN_HEIGHT - 20 - 8) / 8; // char height is 7 + 1 pixel space and 20 pixels (12 pixels + an empty line) for the header + 8 for the footer
 
+    xSemaphoreTake(displayBufferMutex, portMAX_DELAY);
     const auto lines = displayBuffer.getTextToDisplay(width, height);
+    xSemaphoreGive(displayBufferMutex);
     for(auto &line : lines) {
         display.println(line.c_str());
     }
