@@ -17,6 +17,7 @@
 #ifndef IOHC_PACKET_H
 #define IOHC_PACKET_H
 
+#include <atomic>
 #include <vector>
 #include <string>
 
@@ -33,6 +34,12 @@
 
 namespace IOHC {
     typedef uint8_t address[3];
+
+    struct Address3 {
+        uint8_t b[3] = {0};
+        uint8_t _pad = 0;  // pad to 4 bytes for lock-free atomic on Xtensa ESP32
+        bool operator==(const Address3 &o) const { return b[0]==o.b[0] && b[1]==o.b[1] && b[2]==o.b[2]; }
+    };
 
     struct CB1 {
         uint8_t MsgLen: 5; //1
@@ -205,10 +212,10 @@ namespace IOHC {
         std::vector<uint8_t> memorizedData;
     } Memorize;
 
-    inline unsigned long packetStamp = 0L;
-    inline unsigned long relStamp = 0L;
-    inline size_t lastSendCmd = 0xFF;
-    inline address lastFromAddress = {0};
+    inline std::atomic<unsigned long> packetStamp = 0L;
+    inline std::atomic<unsigned long> relStamp = 0L;
+    inline std::atomic<size_t> lastSendCmd = 0xFF;
+    inline std::atomic<Address3> lastFromAddress = {};
     /**
     Class implementing the IOHC packet received/sent, including some additional members useful to track/control Radio parameters and timings
     */

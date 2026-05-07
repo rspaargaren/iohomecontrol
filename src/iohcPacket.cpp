@@ -27,7 +27,7 @@ namespace IOHC {
 
         if (packetStamp - relStamp > 500000L) {
             printf("\n");
-            relStamp = packetStamp; // - this->relStamp;
+            relStamp.store(packetStamp.load()); // - this->relStamp;
             // for (uint8_t i = 0; i < 3; i++)
             //     source_originator[i] = this->payload.packet.header.source[i];
         }
@@ -73,11 +73,19 @@ else _dir[0] = ' ';
         if (verbosity) printf(" +%03.3f\t", static_cast<float>(packetStamp - relStamp)/1000.0);        
         printf(" %s ", _dir);
 
+        if (this->buffer_length <= 9) {
+            printf(" INVALID BUFFER LENGTH %u (expected >9)\n", this->buffer_length);
+            return;
+        }
         uint8_t dataLen = this->buffer_length - 9;
         printf(" DATA(%2.2u) ", dataLen);
 
         // 1W fields
         if (this->payload.packet.header.CtrlByte1.asStruct.Protocol) {
+            if (dataLen < 8) {
+                printf(" INVALID 1W DATA LENGTH %u (expected >=8)\n", dataLen);
+                return;
+            }
             unsigned data_length = dataLen - 8;
 
             std::string msg_data = bitrow_to_hex_string(this->payload.buffer + 9, dataLen/*data_length*/);
@@ -236,7 +244,7 @@ else _dir[0] = ' ';
 
         printf("\n");
 
-        relStamp = packetStamp;
+        relStamp.store(packetStamp.load());
     }
 
     std::string iohcPacket::decodeToString(bool verbosity) {
@@ -263,6 +271,10 @@ else _dir[0] = ' ';
            << (int)this->payload.packet.header.target[2]
            << " CMD " << (int)this->payload.packet.header.cmd;
 
+        if (this->buffer_length <= 9) {
+            ss << " INVALID BUFFER LENGTH " << (int)this->buffer_length;
+            return ss.str();
+        }
         uint8_t dataLen = this->buffer_length - 9;
         ss << " DATA(" << std::dec << (int)dataLen << ") ";
         if (dataLen)

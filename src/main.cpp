@@ -69,7 +69,6 @@ uint8_t keyCap[16] = {};
 //uint8_t source_originator[3] = {0};
 
 IOHC::iohcRadio *radioInstance;
-IOHC::iohcPacket *radioPackets[IOHC_INBOUND_MAX_PACKETS];
 
 uint8_t nextPacket = 0;
 
@@ -193,9 +192,9 @@ void IRAM_ATTR forgePacket(iohcPacket* packet, const std::vector<uint8_t> &toSen
 bool msgRcvd(IOHC::iohcPacket *iohc) {
     JsonDocument doc;
     doc["type"] = "Unk";
-    memcpy(IOHC::lastFromAddress, iohc->payload.packet.header.source, sizeof(IOHC::lastFromAddress));
+    { IOHC::Address3 _a; memcpy(_a.b, iohc->payload.packet.header.source, 3); IOHC::lastFromAddress.store(_a); }
 #if defined(WEBSERVER)
-    broadcastLastAddress(bytesToHexString(IOHC::lastFromAddress, sizeof(IOHC::lastFromAddress)).c_str());
+    broadcastLastAddress(bytesToHexString(iohc->payload.packet.header.source, sizeof(address)).c_str());
 #endif
     String deviceId =
         bytesToHexString(iohc->payload.packet.header.source,
@@ -388,7 +387,7 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
                 std::vector<uint8_t> challengeAsked;
                 //                    challengeAsked.assign(iohc->payload.packet.msg.variableData.data, iohc->payload.packet.msg.variableData.data + iohc->payload.packet.msg.variableData.size);
                 challengeAsked.assign(iohc->payload.buffer + 9, iohc->payload.buffer + 15);
-                printf("Challenge asked after LastSend Command %2.2X\n", IOHC::lastSendCmd);
+                printf("Challenge asked after LastSend Command %2.2X\n", IOHC::lastSendCmd.load());
                 printf("Challenge asked after Memorized Command %2.2X\n", cozyDevice2W->memorizeSend.memorizedCmd);
 
                 if (Cmd::scanMode) {
@@ -634,48 +633,6 @@ bool publishMsg(IOHC::iohcPacket *iohc) {
     mqttClient.publish((mqtt_discovery_topic + "/sensor/iohc_frame/state").c_str(), 0, false, message.c_str(), messageSize);
 #endif
     return false;
-}
-
-/**
- * @deprecated
- * The function copies data from one `iohcPacket` object to another and stores it in an
- * array, returning true if successful and false if there are not enough buffers available.
- * 
- * @param iohc The `iohc` parameter in the `msgArchive` function is a pointer to an object of type
- * `IOHC::iohcPacket`. This object contains information such as buffer length, frequency, RSSI
- * (Received Signal Strength Indication), and payload data. The function `msgArchive` is
- * 
- * @return The function `msgArchive` returns a boolean value - `true` if the operation is successful
- * and `false` if there is a failure condition detected during the execution of the function.
- */
-bool msgArchive(IOHC::iohcPacket *iohc) {
-    if (radioPackets[nextPacket]) {
-        delete radioPackets[nextPacket];
-        radioPackets[nextPacket] = nullptr;
-    }
-    radioPackets[nextPacket] = new IOHC::iohcPacket;
-    if (!radioPackets[nextPacket]) {
-        Serial.printf("*** Malloc failed!\n");
-        return false;
-    }
-
-    radioPackets[nextPacket]->buffer_length = iohc->buffer_length;
-    radioPackets[nextPacket]->frequency = iohc->frequency;
-    //    radioPackets[nextPacket]->stamp = iohc->stamp;
-    radioPackets[nextPacket]->rssi = iohc->rssi;
-
-    for (uint8_t i = 0; i < iohc->buffer_length; i++)
-        radioPackets[nextPacket]->payload.buffer[i] = iohc->payload.buffer[i];
-
-    nextPacket += 1;
-    Serial.printf("-> %d\r", nextPacket);
-    if (nextPacket >= IOHC_INBOUND_MAX_PACKETS) {
-        nextPacket = IOHC_INBOUND_MAX_PACKETS - 1;
-        Serial.printf("*** Not enough buffers available. Please erase current ones\n");
-        return false;
-    }
-
-    return true;
 }
 
 /**

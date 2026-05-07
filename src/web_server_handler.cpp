@@ -401,7 +401,8 @@ void handleApiLogs(AsyncWebServerRequest *request, JsonArray &root) {
 }
 
 void handleApiLastAddr(AsyncWebServerRequest *request, JsonObject &root) {
-  root["address"] = bytesToHexString(IOHC::lastFromAddress, sizeof(IOHC::lastFromAddress)).c_str();
+  const auto _a = IOHC::lastFromAddress.load();
+  root["address"] = bytesToHexString(_a.b, sizeof(_a.b)).c_str();
 }
 
 #if defined(SYSLOG)

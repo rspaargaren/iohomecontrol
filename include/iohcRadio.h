@@ -85,8 +85,8 @@ namespace IOHC {
             static iohcRadio *_iohcRadio;
             static uint8_t _flags[2];
 
-            volatile uint32_t tickCounter = 0;
-            volatile uint32_t preCounter = 0;
+            std::atomic<uint32_t> tickCounter = 0;
+            std::atomic<uint32_t> preCounter = 0;
             void transmitPacket(uint16_t preambleLen, iohcPacket *iohc);
             static void IRAM_ATTR onTxTicker(void *arg);
 

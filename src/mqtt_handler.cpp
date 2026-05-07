@@ -288,7 +288,7 @@ void handleMqttConnect() {
         4096,      // stack
         nullptr,
         1,         // prioriteit laag
-        &s_mqttPostConnectTask,
+        nullptr,   // handle not needed; task clears s_mqttPostConnectTask itself
         tskNO_AFFINITY
     );
     if (result != pdPASS) {
@@ -299,7 +299,7 @@ void handleMqttConnect() {
 }
 
 void connectToMqtt() {
-    if (mqttClient.connected() || mqttStatus == ConnState::Connecting) {
+    if (mqttClient.connected()) {
         return;  // Avoid parallel connection attempts
     }
     if (WiFi.status() != WL_CONNECTED) {

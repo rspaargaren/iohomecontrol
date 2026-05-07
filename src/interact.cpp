@@ -46,17 +46,17 @@ void tokenize(std::string const &str, const char delim, Tokens &out) {
 
 
 namespace Cmd {
-bool verbosity = true;
-bool pairMode = false;
-bool scanMode = false;
+std::atomic<bool> verbosity = true;
+std::atomic<bool> pairMode = false;
+std::atomic<bool> scanMode = false;
 #if defined(ESP32)
 TimersUS::TickerUsESP32 kbd_tick;
 #endif
 TimerHandle_t consoleTimer;
 
 static char _rxbuffer[512];
-static uint8_t _len = 0;
-static uint8_t _avail = 0;
+static uint16_t _len = 0;
+static uint16_t _avail = 0;
 /**
  * The function `createCommands()` initializes and adds various command handlers for controlling
  * different devices and functionalities.
@@ -308,7 +308,8 @@ void createCommands() {
     Cmd::addHandler((char *) "cat", (char *) "Print file content", [](Tokens *cmd)-> void { cat(cmd->at(1).c_str()); });
     Cmd::addHandler((char *) "rm", (char *) "Remove file", [](Tokens *cmd)-> void { rm(cmd->at(1).c_str()); });
     Cmd::addHandler((char *) "lastAddr", (char *) "Show last received address", [](Tokens *cmd)-> void {
-        Serial.println(bytesToHexString(IOHC::lastFromAddress, sizeof(IOHC::lastFromAddress)).c_str());
+        const auto _a = IOHC::lastFromAddress.load();
+        Serial.println(bytesToHexString(_a.b, sizeof(_a.b)).c_str());
     });
 #if defined(MQTT)
     Cmd::addHandler((char *) "mqttIp", (char *) "Set MQTT server IP", [](Tokens *cmd)-> void {
@@ -481,6 +482,10 @@ bool addHandler(char *cmd, char *description, void (*handler)(Tokens*)) {
 char *cmdReceived(bool echo) {
   _avail = Serial.available();
   if (_avail) {
+    if ((_len + _avail) > 512) {
+        _avail = 512 - _len;
+        Serial.println("Too much data, truncating it at 512 bytes");
+    }
     _len += Serial.readBytes(&_rxbuffer[_len], _avail);
     if (echo) {
       _rxbuffer[_len] = '\0';

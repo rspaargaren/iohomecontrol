@@ -3,6 +3,8 @@
 #include <Arduino.h>
 #include <log_buffer.h>
 #include <user_config.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
 
 #if defined(WEBSERVER)
 #include <web_server_handler.h>
@@ -14,13 +16,17 @@
 namespace {
     std::deque<String> logDeque;
     const size_t MAX_LOG_ENTRIES = 50;
+    SemaphoreHandle_t logMutex = xSemaphoreCreateMutex();
 }
 
 void addLogMessage(const String &msg) {
-    if (logDeque.size() >= MAX_LOG_ENTRIES) {
-        logDeque.pop_front();
+    if (xSemaphoreTake(logMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
+        if (logDeque.size() >= MAX_LOG_ENTRIES) {
+            logDeque.pop_front();
+        }
+        logDeque.push_back(msg);
+        xSemaphoreGive(logMutex);
     }
-    logDeque.push_back(msg);
 #if defined(WEBSERVER)
     //broadcastLog(msg);
 #endif
@@ -30,5 +36,10 @@ void addLogMessage(const String &msg) {
 }
 
 std::vector<String> getLogMessages() {
-    return std::vector<String>(logDeque.begin(), logDeque.end());
+    std::vector<String> result;
+    if (xSemaphoreTake(logMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
+        result = std::vector<String>(logDeque.begin(), logDeque.end());
+        xSemaphoreGive(logMutex);
+    }
+    return result;
 }

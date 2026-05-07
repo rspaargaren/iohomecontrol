@@ -22,6 +22,7 @@
 #include <board-config.h>
 #include <user_config.h>
 
+#include <atomic>
 #include <vector>
 #include <sstream>
 #include <cstring>
@@ -80,9 +81,9 @@ extern uint8_t lastEntry;
 
 namespace Cmd {
 
-extern bool verbosity;
-extern bool pairMode;
-extern bool scanMode;
+extern std::atomic<bool> verbosity;
+extern std::atomic<bool> pairMode;
+extern std::atomic<bool> scanMode;
 
 #if defined(ESP32)
   extern TimersUS::TickerUsESP32 kbd_tick;
