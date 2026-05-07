@@ -20,6 +20,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
+#include <atomic>
 #include <Delegate.h>
 #include <cstdint>
 #include <queue>
@@ -67,13 +68,11 @@ namespace IOHC {
             void start(uint8_t num_freqs, uint32_t *scan_freqs, uint32_t scanTimeUs, IohcPacketDelegate rxCallback, IohcPacketDelegate txCallback);
             void send(iohcPacket *packet);
             void send(std::vector<iohcPacket*>&iohcTx);
-            void sendAuto(std::vector<iohcPacket*>&iohcTx); // Nieuwe versie voor AutoTxRx
             static void setRadioState(RadioState newState);
             static const char* radioStateToString(RadioState state);
-            volatile static RadioState radioState;
             static void tickerCounter(iohcRadio *radio);
-            static TaskHandle_t txTaskHandle; // TX Task handle
-            static volatile bool txComplete;
+            static std::atomic<RadioState> radioState;
+            static std::atomic<bool> txComplete;
             //static void setPreambleLength(uint16_t preambleLen);
 
         private:
@@ -85,16 +84,10 @@ namespace IOHC {
 
             static iohcRadio *_iohcRadio;
             static uint8_t _flags[2];
-            volatile static unsigned long _g_payload_millis;
-            
-            volatile static bool send_lock;
 
             volatile uint32_t tickCounter = 0;
             volatile uint32_t preCounter = 0;
-            volatile uint8_t txCounter = 0;
-            static void txTaskLoop(void *pvParameters);
-            static void lightTxTask(void *pvParameters);
-            //TaskHandle_t txTaskHandle = nullptr;
+            void transmitPacket(uint16_t preambleLen, iohcPacket *iohc);
             static void IRAM_ATTR onTxTicker(void *arg);
 
             uint8_t num_freqs = 0;
@@ -110,18 +103,16 @@ namespace IOHC {
             TimersUS::TickerUsESP32 TickTimer;
             TimersUS::TickerUsESP32 Sender;
         #endif
-            iohcPacket *iohc{};
-            iohcPacket *delayed{};
             
             IohcPacketDelegate rxCB = nullptr;
             IohcPacketDelegate txCB = nullptr;
-            std::vector<iohcPacket*> packets2send{};
+            std::queue<iohcPacket*> packets2send{};
             std::queue<std::vector<iohcPacket*>> sendQueue{};
+
+            template<typename T>
+            T accessInMutex(std::function<T()> handler);
         protected:
             static void i_preamble();
-            static void i_payload();
-            static void packetSender(iohcRadio *radio);
-            static void configureAutoTxRx(iohcPacket *packet); // Hulpfunctie om AutoTxRx te activeren
 
         #if defined(CC1101)
             uint8_t lenghtFrame=0;
