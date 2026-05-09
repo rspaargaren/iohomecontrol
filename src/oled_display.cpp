@@ -23,7 +23,9 @@
 #include <wifi_helper.h>
 #include <WiFi.h>
 #include <display_helpers.h>
+#include <atomic>
 #include <chrono>
+#include <esp_timer.h>
 #include <freertos/semphr.h>
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RST);
@@ -31,7 +33,7 @@ DisplayBuffer displayBuffer;
 SemaphoreHandle_t displayBufferMutex = xSemaphoreCreateMutex();
 TimerHandle_t displayUpdateTimer;
 std::chrono::time_point<std::chrono::system_clock> startTime;
-std::chrono::time_point<std::chrono::system_clock> timeSinceNoData;
+std::atomic<int64_t> lastDataTime = 0;
 void handleTimerTick(TimerHandle_t);
 
 const int MILLIS_BETWEEN_DISPLAY_UPDATE_SLOW = 5000;
@@ -129,7 +131,7 @@ int mqttStatusToIconIndex() {
 
 const bool fast = true;
 const bool slow = false;
-bool timerIsFast = false;
+std::atomic<bool> timerIsFast = false;
 void setTimerSpeed(bool needsFast) {
     if (needsFast != timerIsFast) {
         xTimerChangePeriod(displayUpdateTimer, pdMS_TO_TICKS(needsFast ? MILLIS_BETWEEN_DISPLAY_UPDATE_FAST : MILLIS_BETWEEN_DISPLAY_UPDATE_SLOW), 0);
@@ -145,7 +147,7 @@ bool initDisplay() {
     }
 
     startTime = std::chrono::system_clock::now();
-    timeSinceNoData = startTime;
+    lastDataTime = esp_timer_get_time();
     displayUpdateTimer = xTimerCreate(
         "displayTimer",
         pdMS_TO_TICKS(MILLIS_BETWEEN_DISPLAY_UPDATE_FAST),
@@ -171,7 +173,7 @@ int getSecondsSinceStart() {
 }
 
 int getSecondsSinceNoData() {
-    return getSecondsSince(timeSinceNoData);
+    return (esp_timer_get_time() - lastDataTime.load()) / 1000000LL;
 }
 
 template<typename ... Args>
@@ -196,6 +198,7 @@ void display1WAction(const uint8_t *remote, const char *action, const char *dir,
     displayBuffer.addLine(format("%s: %s", dir, getRemoteName(remote, name)), action);
     xSemaphoreGive(displayBufferMutex);
 
+    lastDataTime.store(esp_timer_get_time());
     setTimerSpeed(fast);
 }
 
@@ -204,10 +207,13 @@ void display1WPosition(const uint8_t *remote, float position, const char *name) 
     displayBuffer.addLine(getRemoteName(remote, name), format("%d%%", static_cast<int>(position)));
     xSemaphoreGive(displayBufferMutex);
 
+    lastDataTime.store(esp_timer_get_time());
     setTimerSpeed(fast);
 }
 
 void updateDisplayStatus() {
+    lastDataTime.store(esp_timer_get_time());
+
     setTimerSpeed(fast);
 }
 
@@ -260,7 +266,6 @@ bool drawContents() {
 void handleTimerTick(TimerHandle_t) {
     display.clearDisplay();
 
-    timeSinceNoData = timerIsFast ? std::chrono::system_clock::now() : timeSinceNoData;
     const auto secondsSinceNoData = getSecondsSinceNoData();
 
     if (timerIsFast || secondsSinceNoData < SECONDS_BEFORE_SCREENSAVER) {
