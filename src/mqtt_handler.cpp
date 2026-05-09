@@ -22,6 +22,7 @@ TimerHandle_t heartbeatTimer;
 TaskHandle_t s_mqttPostConnectTask = nullptr;
 static portMUX_TYPE s_connectMux = portMUX_INITIALIZER_UNLOCKED;
 const char AVAILABILITY_TOPIC[] = "iown/status";
+const char FREE_MEM_TOPIC[] = "iown/free_mem";
 static const char GATEWAY_ID[] = "MyOpenIO";
 
 void initMqtt() {
@@ -201,6 +202,7 @@ void removeDiscovery(const std::string &id) {
 
 void publishHeartbeat(TimerHandle_t) {
     mqttClient.publish(AVAILABILITY_TOPIC, 0, true, "online");
+    mqttClient.publish(FREE_MEM_TOPIC, 0, true, std::to_string(esp_get_free_heap_size()).c_str());
 }
 
 void publishCoverState(const std::string &id, const char *state) {
@@ -235,9 +237,30 @@ static void publishIohcFrameDiscovery() {
                        0, true, cfg.c_str(), cfgLen);
 }
 
+static void publishFreeMemoryDiscovery() {
+    JsonDocument configDoc;
+    configDoc["name"] = "Free Memory";
+    configDoc["state_topic"] = FREE_MEM_TOPIC;
+    configDoc["unique_id"] = "free_mem";
+    configDoc["unit_of_measurement"] = "B";
+
+    JsonObject device = configDoc["device"].to<JsonObject>();
+    device["identifiers"] = GATEWAY_ID;
+    device["name"] = "My Open IO Gateway";
+    device["manufacturer"] = "Somfy";
+    device["model"] = "IO Blind Bridge";
+    device["sw_version"] = "1.0.0";
+
+    std::string cfg;
+    size_t cfgLen = serializeJson(configDoc, cfg);
+    mqttClient.publish((mqtt_discovery_topic + "/sensor/free_mem/config").c_str(),
+                       0, true, cfg.c_str(), cfgLen);
+}
+
 static void handleMqttConnectImpl() {
     // Discovery van de ‘frame’ sensor eerst, zodat state pub direct een entity heeft
     publishIohcFrameDiscovery();
+    publishFreeMemoryDiscovery();
     const auto &remotes = IOHC::iohcRemote1W::getInstance()->getRemotes();
     for (const auto &r : remotes) {
         std::string id = bytesToHexString(r.node, sizeof(r.node));
