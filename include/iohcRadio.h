@@ -22,6 +22,7 @@
 
 #include <Delegate.h>
 #include <cstdint>
+#include <queue>
 
 #include <board-config.h>
 #include <iohcCryptoHelpers.h>
@@ -78,6 +79,8 @@ namespace IOHC {
             iohcRadio();
             bool receive(bool stats);
             bool sent(iohcPacket *packet);
+            void queueSend(std::vector<iohcPacket*> &iohcTx);
+            void startQueuedSend();
 
             static iohcRadio *_iohcRadio;
             static uint8_t _flags[2];
@@ -112,6 +115,7 @@ namespace IOHC {
             IohcPacketDelegate rxCB = nullptr;
             IohcPacketDelegate txCB = nullptr;
             std::vector<iohcPacket*> packets2send{};
+            std::queue<std::vector<iohcPacket*>> sendQueue{};
         protected:
             static void i_preamble();
             static void i_payload();
@@ -123,5 +127,4 @@ namespace IOHC {
         #endif
     };
 }
-
 #endif

@@ -23,6 +23,7 @@
 #include <wifi_helper.h>
 #include <oled_display.h>
 #include <iohcCryptoHelpers.h>
+#include <algorithm>
 #include <cstdlib>
 #if defined(MQTT)
 #include <mqtt_handler.h>
@@ -172,14 +173,25 @@ void createCommands() {
         uint32_t t = strtoul(cmd->at(2).c_str(), nullptr, 10);
         IOHC::iohcRemote1W::getInstance()->setTravelTime(cmd->at(1), t);
     });
+    Cmd::addHandler((char *) "repeat1W", (char *) "Set 1W device retry on no response", [](Tokens *cmd)-> void {
+        if (cmd->size() < 3) {
+            Serial.println("Usage: repeat1W <description> <0|1>");
+            return;
+        }
+        std::string value = cmd->at(2);
+        std::transform(value.begin(), value.end(), value.begin(), ::tolower);
+        bool enabled = value == "1" || value == "true" || value == "yes" || value == "on";
+        IOHC::iohcRemote1W::getInstance()->setRepeatOnNoResponse(cmd->at(1), enabled);
+    });
     Cmd::addHandler((char *) "list1W", (char *) "List 1W devices", [](Tokens *cmd)-> void {
         const auto &remotes = IOHC::iohcRemote1W::getInstance()->getRemotes();
         for (const auto &r : remotes) {
-            Serial.printf("%s: %s %u %s\n",
+            Serial.printf("%s: %s %u %s repeatOnNoResponse=%s\n",
                           r.description.c_str(),
                           r.name.c_str(),
                           r.travelTime,
-                          r.paired ? "paired" : "unpaired");
+                          r.paired ? "paired" : "unpaired",
+                          r.repeatOnNoResponse ? "true" : "false");
         }
     });
     // Remote map

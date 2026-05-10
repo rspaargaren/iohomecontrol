@@ -58,6 +58,7 @@ namespace IOHC {
             std::string description;
             std::string name;
             uint32_t travelTime{}; // seconds to fully open or close
+            bool repeatOnNoResponse{false};
             BlindPosition positionTracker{};
             enum class Movement { Idle, Opening, Closing } movement{Movement::Idle};
             float lastPublishedPosition{0.0f};
@@ -81,6 +82,7 @@ namespace IOHC {
         bool removeRemote(const std::string &description);
         bool renameRemote(const std::string &description, const std::string &name);
         bool setTravelTime(const std::string &description, uint32_t travelTime);
+        bool setRepeatOnNoResponse(const std::string &description, bool repeatOnNoResponse);
         void updatePositions();
 
     private:

@@ -83,6 +83,8 @@ IOHC::iohcOtherDevice2W *otherDevice2W;
 IOHC::iohcRemoteMap *remoteMap;
 
 uint32_t frequencies[] = FREQS2SCAN;
+constexpr uint8_t kNumScanFrequencies =
+    static_cast<uint8_t>(sizeof(frequencies) / sizeof(frequencies[0]));
 
 using namespace IOHC;
 
@@ -126,7 +128,8 @@ void setup() {
     remote1W = IOHC::iohcRemote1W::getInstance();
 
     radioInstance = IOHC::iohcRadio::getInstance();
-    radioInstance->start(MAX_FREQS, frequencies, 0, msgRcvd, publishMsg); //msgArchive); //, msgRcvd);
+    radioInstance->start(kNumScanFrequencies, frequencies, 0, msgRcvd,
+                         publishMsg); //msgArchive); //, msgRcvd);
 
     sysTable = IOHC::iohcSystemTable::getInstance();
 
