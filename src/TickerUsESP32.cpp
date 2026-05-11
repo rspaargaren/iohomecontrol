@@ -42,6 +42,7 @@ namespace TimersUS {
         _timerConfig.dispatch_method = ESP_TIMER_TASK;
         _timerConfig.skip_unhandled_events = true;//false; //true;
         _timerConfig.name = "TickerMsESP32";
+        _currentTimerMicros = milliseconds * 1000;
         if (_timer) {
             ESP_ERROR_CHECK(esp_timer_stop(_timer));
             ESP_ERROR_CHECK(esp_timer_delete(_timer));
@@ -67,6 +68,7 @@ namespace TimersUS {
         _timerConfig.dispatch_method = ESP_TIMER_TASK;
         //    _timerConfig.skip_unhandled_events = true;
         _timerConfig.name = "TickerMsESP32Delay";
+        _currentTimerMicros = milliseconds * 1000;
         if (_timer_delayed) {
             ESP_ERROR_CHECK(esp_timer_delete(_timer_delayed));
         }
@@ -84,7 +86,8 @@ namespace TimersUS {
         _timerConfig.dispatch_method = ESP_TIMER_TASK;
         _timerConfig.skip_unhandled_events = true;
         _timerConfig.name = "TickerUsESP32";
-
+        _currentTimerMicros = microseconds;
+        
         if (_timer) {
             ESP_ERROR_CHECK(esp_timer_stop(_timer));
             ESP_ERROR_CHECK(esp_timer_delete(_timer));

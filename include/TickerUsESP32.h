@@ -28,76 +28,81 @@ void system_timer_reinit();
 
 namespace TimersUS {
     class TickerUsESP32 {
-    public:
-    TickerUsESP32();
-    ~TickerUsESP32();
-    typedef void (*callback_t)();
-    typedef void (*callback_with_arg_t)(void*);
+        public:
+            TickerUsESP32();
+            ~TickerUsESP32();
+            typedef void (*callback_t)();
+            typedef void (*callback_with_arg_t)(void*);
 
-    void setMaxIterations(uint32_t maxIterations) {
-        _maxIterations = maxIterations;
-    }
+            void setMaxIterations(uint32_t maxIterations) {
+                _maxIterations = maxIterations;
+            }
 
-    void attach(uint32_t seconds, callback_t callback) {
-        _attach_ms(seconds * 1000, true, reinterpret_cast<callback_with_arg_t>(callback), 0);
-    }
-    void attach_ms(uint32_t milliseconds, callback_t callback) {
-        _attach_ms(milliseconds, true, reinterpret_cast<callback_with_arg_t>(callback), 0);
-    }
-    // Added delayed task
-    void delay_ms(uint32_t milliseconds, callback_t callback) {
-        _delay_ms(milliseconds, false, reinterpret_cast<callback_with_arg_t>(callback), 0);
-    }
-    // Added as uS
-    void attach_us(uint64_t microseconds, callback_t callback) {
-        _attach_us(microseconds, true, reinterpret_cast<callback_with_arg_t>(callback), 0);
-    }
-    template<typename TArg>
-    void attach(uint32_t seconds, void (*callback)(TArg), TArg arg) {
-        static_assert(sizeof(TArg) <= sizeof(uint32_t), "attach() callback argument size must be <= 4 bytes");
-        // C-cast serves two purposes:
-        // static_cast for smaller integer types,
-        // reinterpret_cast + const_cast for pointer types
-        auto arg32 = (uint32_t)arg;
-        _attach_ms(seconds * 1000, true, reinterpret_cast<callback_with_arg_t>(callback), arg32);
-    }
-    template<typename TArg>
-    void attach_ms(uint32_t milliseconds, void (*callback)(TArg), TArg arg) {
-        static_assert(sizeof(TArg) <= sizeof(uint32_t), "attach_ms() callback argument size must be <= 4 bytes");
-        auto arg32 = (uint32_t)arg;
-        _attach_ms(milliseconds, true, reinterpret_cast<callback_with_arg_t>(callback), arg32);
-    }
-    // Added delayed task
-    template<typename TArg>
-    void delay_ms(uint32_t milliseconds, void (*callback)(TArg), TArg arg) {
-        static_assert(sizeof(TArg) <= sizeof(uint32_t), "delay_ms() callback argument size must be <= 4 bytes");
-        auto arg32 = (uint32_t)arg;
-        _delay_ms(milliseconds, false, reinterpret_cast<callback_with_arg_t>(callback), arg32);
-    }
-    // Added as uS
-    template<typename TArg>
-    void attach_us(uint64_t microseconds, void (*callback)(TArg), TArg arg) {
-        static_assert(sizeof(TArg) <= sizeof(uint32_t), "attach_us() callback argument size must be <= 4 bytes");
-        auto arg32 = (uint32_t)arg;
-        _attach_us(microseconds, true, reinterpret_cast<callback_with_arg_t>(callback), arg32);
-    }
+            void attach(uint32_t seconds, callback_t callback) {
+                _attach_ms(seconds * 1000, true, reinterpret_cast<callback_with_arg_t>(callback), 0);
+            }
+            void attach_ms(uint32_t milliseconds, callback_t callback) {
+                _attach_ms(milliseconds, true, reinterpret_cast<callback_with_arg_t>(callback), 0);
+            }
+            // Added delayed task
+            void delay_ms(uint32_t milliseconds, callback_t callback) {
+                _delay_ms(milliseconds, false, reinterpret_cast<callback_with_arg_t>(callback), 0);
+            }
+            // Added as uS
+            void attach_us(uint64_t microseconds, callback_t callback) {
+                _attach_us(microseconds, true, reinterpret_cast<callback_with_arg_t>(callback), 0);
+            }
+            template<typename TArg>
+            void attach(uint32_t seconds, void (*callback)(TArg), TArg arg) {
+                static_assert(sizeof(TArg) <= sizeof(uint32_t), "attach() callback argument size must be <= 4 bytes");
+                // C-cast serves two purposes:
+                // static_cast for smaller integer types,
+                // reinterpret_cast + const_cast for pointer types
+                auto arg32 = (uint32_t)arg;
+                _attach_ms(seconds * 1000, true, reinterpret_cast<callback_with_arg_t>(callback), arg32);
+            }
+            template<typename TArg>
+            void attach_ms(uint32_t milliseconds, void (*callback)(TArg), TArg arg) {
+                static_assert(sizeof(TArg) <= sizeof(uint32_t), "attach_ms() callback argument size must be <= 4 bytes");
+                auto arg32 = (uint32_t)arg;
+                _attach_ms(milliseconds, true, reinterpret_cast<callback_with_arg_t>(callback), arg32);
+            }
+            // Added delayed task
+            template<typename TArg>
+            void delay_ms(uint32_t milliseconds, void (*callback)(TArg), TArg arg) {
+                static_assert(sizeof(TArg) <= sizeof(uint32_t), "delay_ms() callback argument size must be <= 4 bytes");
+                auto arg32 = (uint32_t)arg;
+                _delay_ms(milliseconds, false, reinterpret_cast<callback_with_arg_t>(callback), arg32);
+            }
+            // Added as uS
+            template<typename TArg>
+            void attach_us(uint64_t microseconds, void (*callback)(TArg), TArg arg) {
+                static_assert(sizeof(TArg) <= sizeof(uint32_t), "attach_us() callback argument size must be <= 4 bytes");
+                auto arg32 = (uint32_t)arg;
+                _attach_us(microseconds, true, reinterpret_cast<callback_with_arg_t>(callback), arg32);
+            }
 
-    void detach();
-    bool active();
+            void detach();
+            bool active();
 
-    private:
-        uint32_t _iterationCount = 0;
-        uint32_t _maxIterations = UINT32_MAX;  // Par défaut, pas de limite d'itérations
+            uint32_t currentTimerMicros() { return active() ? _currentTimerMicros : -1; }
+            uint32_t currentTimerMillis() { return active() ? _currentTimerMicros / 1000 : -1; }
 
-    protected:
-    void _attach_ms(uint32_t milliseconds, bool repeat, callback_with_arg_t callback, uint32_t arg);
-    // Added delayed task
-    void _delay_ms(uint32_t milliseconds, bool repeat, callback_with_arg_t callback, uint32_t arg);
-    // Added as uS
-    void _attach_us(uint64_t microseconds, bool repeat, callback_with_arg_t callback, uint32_t arg);
+        private:
+            uint32_t _iterationCount = 0;
+            uint32_t _maxIterations = UINT32_MAX;  // Par défaut, pas de limite d'itérations
 
-    esp_timer_handle_t _timer;
-    esp_timer_handle_t _timer_delayed{};
+            uint32_t _currentTimerMicros = 0;
+
+        protected:
+            void _attach_ms(uint32_t milliseconds, bool repeat, callback_with_arg_t callback, uint32_t arg);
+            // Added delayed task
+            void _delay_ms(uint32_t milliseconds, bool repeat, callback_with_arg_t callback, uint32_t arg);
+            // Added as uS
+            void _attach_us(uint64_t microseconds, bool repeat, callback_with_arg_t callback, uint32_t arg);
+
+            esp_timer_handle_t _timer;
+            esp_timer_handle_t _timer_delayed{};
     };
 }
 

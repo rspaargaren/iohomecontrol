@@ -304,6 +304,7 @@ namespace IOHC {
         Radio::setTx();
         setRadioState(RadioState::TX); 
 
+        txTimestamp = esp_timer_get_time();
         //packetStamp = esp_timer_get_time();
         //iohc->decode(true); //false);
         //IOHC::lastSendCmd = iohc->payload.packet.header.cmd;
@@ -349,8 +350,15 @@ namespace IOHC {
 
         // ⏳ Wait for TXDONE
         if (!radio->txComplete) {
+            auto now = esp_timer_get_time();
+            if ((now - radio->txTimestamp) > 4*1000*1000) {
+                // 4 seconds since last transmit, something must be wrong! To avoid waiting forever, assuming txComplete and hope for the best
+                ets_printf("TX: Waiting for TXDONE timed out, assuming TXDONE... (state=%s)\n", radioStateToString(radio->radioState));
+                radio->txComplete = true;
+            } else {
             ets_printf("TX: Waiting for TXDONE... (state=%s)\n", radioStateToString(radio->radioState));
             return;
+            }
         }
 
         // ✅ TXDONE received
@@ -396,8 +404,10 @@ namespace IOHC {
                 // 📡 Send packet (short preamble)
                 radio->transmitPacket(SHORT_PREAMBLE_MS, nextIohc);
 
+                if (radio->Sender.currentTimerMillis() != nextIohc->repeatTime) {
                 radio->Sender.detach();
                 radio->Sender.attach_ms(nextIohc->repeatTime, &iohcRadio::onTxTicker, (void*)radio);
+                }
             }
         }
     }
