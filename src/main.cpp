@@ -454,26 +454,23 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
                 doc["type"] = "1W";
                 uint16_t main = (iohc->payload.packet.msg.p0x00_14.main[0] << 8) | iohc->payload.packet.msg.p0x00_14.main[1];
                 const char *action = "unknown";
+                IOHC::RemoteButton btn;
+                bool unknown = false;
                 switch (main) {
-                    case 0x0000: action = "OPEN"; break;
-                    case 0xC800: action = "CLOSE"; break;
-                    case 0xD200: action = "STOP"; break;
-                    case 0xD803: action = "VENT"; break;
-                    case 0x6400: action = "FORCE"; break;
-                    default: break;
+                    case 0x0000: action = "OPEN"; btn = IOHC::RemoteButton::Open; break;
+                    case 0xC800: action = "CLOSE"; btn = IOHC::RemoteButton::Close; break;
+                    case 0xD200: action = "STOP"; btn = IOHC::RemoteButton::Stop; break;
+                    case 0xD803: action = "VENT"; btn = IOHC::RemoteButton::Vent; break;
+                    case 0x6400: action = "FORCE"; btn = IOHC::RemoteButton::ForceOpen; break;
+                    default: unknown = true; break;
                 }
                 doc["action"] = action;
                 display1WAction(iohc->payload.packet.header.source, action, "RX");
-                if (const auto *map = remoteMap->find(iohc->payload.packet.header.source)) {
-                    IOHC::RemoteButton btn;
-                    if (!strcmp(action, "OPEN")) btn = IOHC::RemoteButton::Open;
-                    else if (!strcmp(action, "CLOSE")) btn = IOHC::RemoteButton::Close;
-                    else if (!strcmp(action, "STOP")) btn = IOHC::RemoteButton::Stop;
-                    else if (!strcmp(action, "VENT")) btn = IOHC::RemoteButton::Vent;
-                    else if (!strcmp(action, "FORCE")) btn = IOHC::RemoteButton::ForceOpen;
-                    else btn = IOHC::RemoteButton::Stop; // default to avoid uninitialized
-                    for (const auto &desc : map->devices) {
-                        iohcRemote1W::getInstance()->handleRemoteAction(btn, desc);
+                if (!unknown) {
+                    if (const auto *map = remoteMap->find(iohc->payload.packet.header.source)) {
+                        for (const auto &desc : map->devices) {
+                            iohcRemote1W::getInstance()->handleRemoteAction(btn, desc);
+                        }
                     }
                 }
             } else {
