@@ -77,6 +77,7 @@ void initMqtt() {
     mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(5000), pdTRUE,
                                       nullptr,
                                       reinterpret_cast<TimerCallbackFunction_t>(connectToMqtt));
+    xTimerStart(mqttReconnectTimer, 0);
     if (WiFi.status() == WL_CONNECTED) {
         connectToMqtt();
     }
@@ -399,15 +400,12 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
                    size_t len, size_t index, size_t total) {
     if (!topic || !payload || len == 0) return;
 
-    // Safe copy of payload
-    char buf[len + 1];
-    memcpy(buf, payload, len);
-    buf[len] = '\0';
+    // Safe copy of payload — use std::string to avoid VLA stack overflow on large payloads
+    std::string payloadStr(payload, len);
 
-    Serial.printf("Received MQTT %s %s %d\n", topic, buf, len);
+    Serial.printf("Received MQTT %s %s %d\n", topic, payloadStr.c_str(), len);
 
     std::string topicStr(topic);
-    std::string payloadStr(buf);
 
     if (topicStr.rfind("iown/", 0) == 0 && topicStr.find("/travel_time/set", 5) != std::string::npos) {
         std::string id = topicStr.substr(5, topicStr.find("/travel_time/set", 5) - 5);
@@ -570,7 +568,7 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
     }
 
     JsonDocument doc;
-    DeserializationError error = deserializeJson(doc, buf);
+    DeserializationError error = deserializeJson(doc, payloadStr);
     if (error) {
         Serial.print("Failed to parse JSON: ");
         Serial.println(error.c_str());
@@ -578,12 +576,8 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
     }
 
     const char *data = doc["_data"];
-    size_t bufferSize = strlen(topic) + (data ? strlen(data) : 0) + 7;
-    char message[bufferSize];
-    if (!data)
-        snprintf(message, sizeof(message), "MQTT %s", topic);
-    else
-        snprintf(message, sizeof(message), "MQTT %s %s", topic, data);
-    mqttFuncHandler(message);
+    std::string message = data ? (std::string("MQTT ") + topic + " " + data)
+                               : (std::string("MQTT ") + topic);
+    mqttFuncHandler(message.c_str());
 }
 #endif // MQTT
