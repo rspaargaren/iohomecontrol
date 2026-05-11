@@ -291,7 +291,7 @@ namespace IOHC {
             sendQueue.push(std::move(iohcTx));
             return static_cast<int>(sendQueue.size());
         });
-        
+
         ets_printf("TX: Queued send batch. Queue depth=%d\n", size);
     }
 
@@ -331,8 +331,8 @@ namespace IOHC {
 
         txComplete = false;
 
-        // 🟢 Sent package with short preamble for first packet
-        transmitPacket(SHORT_PREAMBLE_MS, iohc);
+        // 🟢 Sent package with long preamble for first packet (required for battery powered devices to wake up)
+        transmitPacket(LONG_PREAMBLE_MS, iohc);
 
         // Start ticker for repeats (short preamble)
         Sender.attach_ms(iohc->repeatTime, &iohcRadio::onTxTicker, (void*)this);
@@ -356,8 +356,8 @@ namespace IOHC {
                 ets_printf("TX: Waiting for TXDONE timed out, assuming TXDONE... (state=%s)\n", radioStateToString(radio->radioState));
                 radio->txComplete = true;
             } else {
-            ets_printf("TX: Waiting for TXDONE... (state=%s)\n", radioStateToString(radio->radioState));
-            return;
+                ets_printf("TX: Waiting for TXDONE... (state=%s)\n", radioStateToString(radio->radioState));
+                return;
             }
         }
 
@@ -394,10 +394,10 @@ namespace IOHC {
                 // 👇 Only go RX after all packets
                 ets_printf("TX: All repeats done. Switching to RX\n");
 
-                radio->Sender.detach();
-                Radio::setRx();
-                radio->setRadioState(RadioState::RX);
-                radio->startQueuedSend();
+                        radio->Sender.detach();
+                        Radio::setRx();
+                        radio->setRadioState(RadioState::RX);
+                    radio->startQueuedSend();
             } else {
                 ets_printf("TX: Moving to next packet\n");
      
@@ -405,8 +405,8 @@ namespace IOHC {
                 radio->transmitPacket(SHORT_PREAMBLE_MS, nextIohc);
 
                 if (radio->Sender.currentTimerMillis() != nextIohc->repeatTime) {
-                radio->Sender.detach();
-                radio->Sender.attach_ms(nextIohc->repeatTime, &iohcRadio::onTxTicker, (void*)radio);
+                    radio->Sender.detach();
+                    radio->Sender.attach_ms(nextIohc->repeatTime, &iohcRadio::onTxTicker, (void*)radio);
                 }
             }
         }
