@@ -80,6 +80,20 @@ static void wifiConnectTask(void * /*arg*/) {
         // ensure to have all channels available so it connects to the AP with strongest signal if you have multiple with the same name
         WiFi.setScanMethod(WIFI_ALL_CHANNEL_SCAN); 
 
+        // safety measures
+        wifi_config_t conf;
+        if (esp_wifi_get_config(WIFI_IF_STA, &conf) == ESP_OK) {
+#ifdef REQUIRE_MINIMUM_WPA2_PSK  
+            // This is necessary to prevent the device from Evil Twin attacks, where an attacker creates an additional network with the same
+            // SSID as the one selected. WPA2_PSK will detect that and even prevent sending the password. 
+
+            // Enable minimal WPA2_PSK level (also allows WPA3 or other more secure modes)
+            conf.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
+#else
+            conf.sta.threshold.authmode = WIFI_AUTH_OPEN;
+#endif
+            esp_wifi_set_config(WIFI_IF_STA, &conf);
+        }
 
         // Try the stored credentials quickly first
         WiFi.mode(WIFI_STA);
@@ -225,12 +239,6 @@ void initWifi() {
     if (s_rssiTimer) xTimerStart(s_rssiTimer, 0);
 
     // Kick the initial connection attempt
-    if (s_wifiTaskHandle) xTaskNotifyGive(s_wifiTaskHandle);
-}
-
-void connectToWifi(TimerHandle_t /*timer*/) {
-    // Legacy call-site compatibility (called from connectToWifi(nullptr) pattern).
-    // Simply wake the task.
     if (s_wifiTaskHandle) xTaskNotifyGive(s_wifiTaskHandle);
 }
 

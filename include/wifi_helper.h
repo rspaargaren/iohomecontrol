@@ -29,7 +29,6 @@ extern struct WiFiStatus {
 
 
 void initWifi();
-void connectToWifi(TimerHandle_t timer = nullptr);
 void checkWifiConnection();
 
 #endif // WIFI_HELPER_H

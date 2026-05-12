@@ -48,6 +48,9 @@ inline uint16_t syslog_port = 514;     // Syslog server port
 // Comment out the next line to disable the built-in web server
 #define WEBSERVER
 
+// Comment out the next line to lower WiFi security in order to allow connecting to open WiFi networks
+#define REQUIRE_MINIMUM_WPA2_PSK
+
 #define HTTP_LISTEN_PORT    80
 #define HTTP_USERNAME       "admin"
 #define HTTP_PASSWORD       "admin"
