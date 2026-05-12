@@ -27,6 +27,7 @@ void updateDisplayStatus();
 #else
 inline bool initDisplay() { return true; }
 inline void display1WAction(const uint8_t *, const char *, const char *, const char * = nullptr) {}
+inline void display1WPosition(const uint8_t *, float, const char * = nullptr) {}
 inline void updateDisplayStatus() {}
 #endif
 
