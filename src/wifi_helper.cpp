@@ -77,6 +77,10 @@ static void wifiConnectTask(void * /*arg*/) {
         wifiStatus = { ConnState::Connecting, 0 };
         updateDisplayStatus();
 
+        // ensure to have all channels available so it connects to the AP with strongest signal if you have multiple with the same name
+        WiFi.setScanMethod(WIFI_ALL_CHANNEL_SCAN); 
+
+
         // Try the stored credentials quickly first
         WiFi.mode(WIFI_STA);
         WiFi.begin();
