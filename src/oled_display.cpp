@@ -24,17 +24,20 @@
 #include <WiFi.h>
 #include <display_helpers.h>
 #include <chrono>
+#include <freertos/semphr.h>
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RST);
 DisplayBuffer displayBuffer;
+SemaphoreHandle_t displayBufferMutex = xSemaphoreCreateMutex();
 TimerHandle_t displayUpdateTimer;
 std::chrono::time_point<std::chrono::system_clock> startTime;
 std::chrono::time_point<std::chrono::system_clock> timeSinceNoData;
 void handleTimerTick(TimerHandle_t);
 
-const int MILLIS_BETWEEN_DISPLAY_UPDATE_SLOW = 5000;
+const int MILLIS_BETWEEN_DISPLAY_UPDATE_SLOW = 30000;
 const int MILLIS_BETWEEN_DISPLAY_UPDATE_FAST = 100;
-const int SECONDS_BEFORE_SCREENSAVER = 60;
+const uint32_t MILLIS_BEFORE_IDLE_SCREEN = 60000;
+uint32_t lastDisplayActivityMs = 0;
 
 const uint8_t PROGMEM miopenioLogo[] =
 {
@@ -129,6 +132,9 @@ const bool fast = true;
 const bool slow = false;
 bool timerIsFast = false;
 void setTimerSpeed(bool needsFast) {
+    if (!displayUpdateTimer) {
+        return;
+    }
     if (needsFast != timerIsFast) {
         xTimerChangePeriod(displayUpdateTimer, pdMS_TO_TICKS(needsFast ? MILLIS_BETWEEN_DISPLAY_UPDATE_FAST : MILLIS_BETWEEN_DISPLAY_UPDATE_SLOW), 0);
 
@@ -144,6 +150,7 @@ bool initDisplay() {
 
     startTime = std::chrono::system_clock::now();
     timeSinceNoData = startTime;
+    lastDisplayActivityMs = millis();
     displayUpdateTimer = xTimerCreate(
         "displayTimer",
         pdMS_TO_TICKS(MILLIS_BETWEEN_DISPLAY_UPDATE_FAST),
@@ -190,18 +197,25 @@ const char* getRemoteName(const uint8_t *remote, const char *name) {
 }
 
 void display1WAction(const uint8_t *remote, const char *action, const char *dir, const char *name) {
+    xSemaphoreTake(displayBufferMutex, portMAX_DELAY);
     displayBuffer.addLine(format("%s: %s", dir, getRemoteName(remote, name)), action);
+    xSemaphoreGive(displayBufferMutex);
 
+    lastDisplayActivityMs = millis();
     setTimerSpeed(fast);
 }
 
 void display1WPosition(const uint8_t *remote, float position, const char *name) {
+    xSemaphoreTake(displayBufferMutex, portMAX_DELAY);
     displayBuffer.addLine(getRemoteName(remote, name), format("%d%%", static_cast<int>(position)));
+    xSemaphoreGive(displayBufferMutex);
 
+    lastDisplayActivityMs = millis();
     setTimerSpeed(fast);
 }
 
 void updateDisplayStatus() {
+    lastDisplayActivityMs = millis();
     setTimerSpeed(fast);
 }
 
@@ -210,6 +224,21 @@ void drawLogo(int x, int y) {
     display.drawBitmap(x+1, y+1, miopenioLogo, 16, 10, SSD1306_WHITE);
     display.setCursor(x+20, y+4);
     display.print("MiOpen.IO");
+}
+
+void drawIdleScreen() {
+    constexpr int logoWidth = 74;
+    constexpr int logoHeight = 12;
+    drawLogo((SCREEN_WIDTH - logoWidth) / 2, (SCREEN_HEIGHT - logoHeight) / 2);
+}
+
+void enterIdleScreen() {
+    xSemaphoreTake(displayBufferMutex, portMAX_DELAY);
+    displayBuffer.clear();
+    xSemaphoreGive(displayBufferMutex);
+
+    drawIdleScreen();
+    setTimerSpeed(slow);
 }
 
 void drawHeader() {
@@ -242,7 +271,9 @@ bool drawContents() {
     const int width = SCREEN_WIDTH / 6; // char width is 5 + 1 pixel space
     const int height = (SCREEN_HEIGHT - 20 - 8) / 8; // char height is 7 + 1 pixel space and 20 pixels (12 pixels + an empty line) for the header + 8 for the footer
 
+    xSemaphoreTake(displayBufferMutex, portMAX_DELAY);
     const auto lines = displayBuffer.getTextToDisplay(width, height);
+    xSemaphoreGive(displayBufferMutex);
     for(auto &line : lines) {
         display.println(line.c_str());
     }
@@ -252,27 +283,25 @@ bool drawContents() {
 void handleTimerTick(TimerHandle_t) {
     display.clearDisplay();
 
-    timeSinceNoData = timerIsFast ? std::chrono::system_clock::now() : timeSinceNoData;
-    const auto secondsSinceNoData = getSecondsSinceNoData();
+    display.setTextSize(1);
+    display.setTextColor(SSD1306_WHITE);
 
-    if (timerIsFast || secondsSinceNoData < SECONDS_BEFORE_SCREENSAVER) {
-        display.setTextSize(1);
-        display.setTextColor(SSD1306_WHITE);
+    if (millis() - lastDisplayActivityMs >= MILLIS_BEFORE_IDLE_SCREEN) {
+        enterIdleScreen();
+        return;
+    }
 
-        drawHeader();
+    drawHeader();
 
-        display.setCursor(0, 20);
-        const bool hasData = drawContents();
-        if (!hasData) {
-            setTimerSpeed(slow);
-        }
+    display.setCursor(0, 20);
+    const bool hasData = drawContents();
 
+    if (hasData) {
+        timeSinceNoData = std::chrono::system_clock::now();
         drawFooter();
     } else {
-        // draw logo at random position to avoid burn-in
-        const int x = 50.0 * std::rand() / RAND_MAX; // number between 0 and 50
-        const int y = 48.0 * std::rand() / RAND_MAX; // number between 0 and 48
-        drawLogo(x, y);
+        enterIdleScreen();
+        return;
     }
 
     display.display();
