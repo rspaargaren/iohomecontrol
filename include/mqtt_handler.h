@@ -12,8 +12,6 @@
 #include <ArduinoJson.h>
 
 extern AsyncMqttClient mqttClient;
-extern TimerHandle_t mqttReconnectTimer;
-extern TimerHandle_t heartbeatTimer;
 extern const char AVAILABILITY_TOPIC[];
 
 void initMqtt();
@@ -28,7 +26,7 @@ void publishDiscovery(const std::string &id, const std::string &name, const std:
 void publishTravelTimeDiscovery(const std::string &id, const std::string &name,
                                 const std::string &key, uint32_t travelTime);
 void handleMqttConnect();
-void publishHeartbeat(TimerHandle_t timer);
+void publishHeartbeat();
 void mqttFuncHandler(const char *cmd);
 void publishCoverState(const std::string &id, const char *state);
 void publishCoverPosition(const std::string &id, float position);
@@ -40,4 +38,3 @@ static void handleMqttConnectImpl();
 #endif // MQTT
 
 #endif // MQTT_HANDLER_H
-

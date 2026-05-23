@@ -72,8 +72,7 @@ static void ensureWebServerStarted() {
 static void onMqttAfterWifi() {
 #if defined(MQTT)
         // Establish MQTT connection if needed and MQTT client is initialized
-        if (mqttReconnectTimer && !mqttClient.connected() &&
-            mqttStatus != ConnState::Connecting) {
+        if (!mqttClient.connected() && mqttStatus != ConnState::Connecting) {
             connectToMqtt();
         }
 #endif
