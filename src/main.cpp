@@ -146,9 +146,6 @@ void setup() {
 #if defined(MQTT)
     initMqtt();
 #endif
-#if defined(WEBSERVER)
-    setupWebServer();
-#endif
     Cmd::kbd_tick.attach_ms(500, Cmd::cmdFuncHandler);
 
 //    esp_timer_dump(stdout);
@@ -725,5 +722,4 @@ void txUserBuffer(Tokens *cmd) {
 
 void loop() {
     loopWebServer(); // For ESPAsyncWebServer, this is typically not needed.
-    checkWifiConnection();
 }
