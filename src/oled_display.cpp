@@ -25,14 +25,16 @@
 #include <display_helpers.h>
 #include <atomic>
 #include <chrono>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RST);
 DisplayBuffer displayBuffer;
 SemaphoreHandle_t displayBufferMutex = xSemaphoreCreateMutex();
-TimerHandle_t displayUpdateTimer;
+TaskHandle_t displayTaskHandle = nullptr;
 std::chrono::time_point<std::chrono::system_clock> startTime;
 std::atomic<int64_t> lastDataTime = 0;
-void handleTimerTick(TimerHandle_t);
+void displayTask(void *);
 
 const int MILLIS_BETWEEN_DISPLAY_UPDATE_SLOW = 5000;
 const int MILLIS_BETWEEN_DISPLAY_UPDATE_FAST = 100;
@@ -130,11 +132,17 @@ int mqttStatusToIconIndex() {
 const bool fast = true;
 const bool slow = false;
 std::atomic<bool> timerIsFast = false;
+
+static void notifyDisplayTask() {
+    if (displayTaskHandle != nullptr) {
+        xTaskNotifyGive(displayTaskHandle);
+    }
+}
+
 void setTimerSpeed(bool needsFast) {
     if (needsFast != timerIsFast) {
-        xTimerChangePeriod(displayUpdateTimer, pdMS_TO_TICKS(needsFast ? MILLIS_BETWEEN_DISPLAY_UPDATE_FAST : MILLIS_BETWEEN_DISPLAY_UPDATE_SLOW), 0);
-
         timerIsFast = needsFast;
+        notifyDisplayTask();
     }
 }
 
@@ -144,20 +152,15 @@ bool initDisplay() {
         return false;
     }
 
+    if (xTaskCreatePinnedToCore(displayTask, "DisplayTask", 4096, nullptr, 1,
+                                &displayTaskHandle, tskNO_AFFINITY) != pdPASS) {
+        Serial.println("Failed to create display task");
+        return false;
+    }
+
     startTime = std::chrono::system_clock::now();
     lastDataTime = esp_timer_get_time();
-    displayUpdateTimer = xTimerCreate(
-        "displayTimer",
-        pdMS_TO_TICKS(MILLIS_BETWEEN_DISPLAY_UPDATE_FAST),
-        pdTRUE,
-        nullptr,
-        handleTimerTick
-    );
-    if (displayUpdateTimer) {
-        xTimerStart(displayUpdateTimer, 0);
-    } else {
-        Serial.println("Failed to create display update timer");
-    }
+    xTaskNotifyGive(displayTaskHandle);
 
     return true;
 }
@@ -197,6 +200,7 @@ void displayCustomMessage(const char* message, const char* status) {
     xSemaphoreGive(displayBufferMutex);
 
     setTimerSpeed(fast);
+    notifyDisplayTask();
 }
 
 void clearDisplayMessages() {
@@ -211,6 +215,7 @@ void clearDisplayMessages() {
 
 void updateDisplayStatus() {
     setTimerSpeed(fast);
+    notifyDisplayTask();
 }
 
 void drawLogo(int x, int y) {
@@ -281,18 +286,24 @@ void drawLogo() {
     drawLogo(x, y);
 }
 
-void handleTimerTick(TimerHandle_t) {
-    display.clearDisplay();
+void displayTask(void *) {
+    while (true) {
+        const TickType_t waitTicks = pdMS_TO_TICKS(timerIsFast ? MILLIS_BETWEEN_DISPLAY_UPDATE_FAST
+                                                               : MILLIS_BETWEEN_DISPLAY_UPDATE_SLOW);
+        ulTaskNotifyTake(pdTRUE, waitTicks);
 
-    const auto secondsSinceNoData = getSecondsSinceNoData();
+        display.clearDisplay();
 
-    if (timerIsFast || secondsSinceNoData < SECONDS_BEFORE_SCREENSAVER) {
-        drawData();
-    } else {
-        drawLogo();
+        const auto secondsSinceNoData = getSecondsSinceNoData();
+
+        if (timerIsFast || secondsSinceNoData < SECONDS_BEFORE_SCREENSAVER) {
+            drawData();
+        } else {
+            drawLogo();
+        }
+
+        display.display();
     }
-
-    display.display();
 }
 
 #endif
