@@ -29,5 +29,6 @@ extern struct WiFiStatus {
 
 
 void initWifi();
+void clearWifi();
 
 #endif // WIFI_HELPER_H

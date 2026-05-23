@@ -285,3 +285,8 @@ void initWifi() {
 
     Serial.printf("WiFi MAC: %s\n", WiFi.macAddress().c_str());
 }
+
+void clearWifi() {
+    WiFi.eraseAP();
+    esp_restart();
+}
