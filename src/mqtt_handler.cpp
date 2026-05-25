@@ -15,12 +15,27 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <nvs_helpers.h>
+#include <atomic>
 
 AsyncMqttClient mqttClient;
-TimerHandle_t mqttReconnectTimer;
-TimerHandle_t heartbeatTimer;
 const char AVAILABILITY_TOPIC[] = "iown/status";
 static const char GATEWAY_ID[] = "MyOpenIO";
+static TaskHandle_t s_mqttSchedulerTask = nullptr;
+static std::atomic<bool> s_heartbeatEnabled{false};
+static std::atomic<uint32_t> s_nextHeartbeatAtMs{0};
+static uint32_t s_lastMqttConnectAttemptMs = 0;
+static constexpr uint32_t MQTT_RECONNECT_INTERVAL_MS = 5000;
+
+static void mqttSchedulerTask(void*);
+
+static void startHeartbeat() {
+    s_heartbeatEnabled.store(true);
+    s_nextHeartbeatAtMs.store(millis() + 60000UL);
+}
+
+static void stopHeartbeat() {
+    s_heartbeatEnabled.store(false);
+}
 
 void initMqtt() {
     if (!nvs_read_string(NVS_KEY_MQTT_SERVER, mqtt_server)) {
@@ -70,9 +85,14 @@ void initMqtt() {
     mqttClient.onConnect(onMqttConnect);
     mqttClient.onDisconnect(onMqttDisconnect);
     mqttClient.onMessage(onMqttMessage);
-    mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(5000), pdFALSE,
-                                      nullptr,
-                                      reinterpret_cast<TimerCallbackFunction_t>(connectToMqtt));
+
+    if (xTaskCreatePinnedToCore(mqttSchedulerTask, "mqttScheduler", 4096, nullptr,
+                                1, &s_mqttSchedulerTask, tskNO_AFFINITY) != pdPASS) {
+        Serial.println("Failed to create MQTT scheduler task");
+        s_mqttSchedulerTask = nullptr;
+        return;
+    }
+
     if (WiFi.status() == WL_CONNECTED) {
         connectToMqtt();
     }
@@ -196,7 +216,7 @@ void removeDiscovery(const std::string &id) {
     mqttClient.publish(t.c_str(), 0, true, "", 0);
 }
 
-void publishHeartbeat(TimerHandle_t) {
+void publishHeartbeat() {
     mqttClient.publish(AVAILABILITY_TOPIC, 0, true, "online");
 }
 
@@ -251,30 +271,23 @@ static void handleMqttConnectImpl() {
         //mqttClient.subscribe(("iown/" + id + "/travel_time/set").c_str(), 0);
         vTaskDelay(pdMS_TO_TICKS(200)); // throttle per device
     }
-    if (!heartbeatTimer)
-        heartbeatTimer = xTimerCreate("hb", pdMS_TO_TICKS(60000), pdTRUE, nullptr, publishHeartbeat);
-    xTimerStart(heartbeatTimer, 0);
-    publishHeartbeat(nullptr);
+    startHeartbeat();
+    publishHeartbeat();
 }
 
 void connectToMqtt() {
     if (mqttClient.connected() || mqttStatus == ConnState::Connecting) {
         return;  // Avoid parallel connection attempts
     }
-    if (mqttReconnectTimer) {
-        xTimerStop(mqttReconnectTimer, 0);
-    }
     if (WiFi.status() != WL_CONNECTED) {
-        Serial.println("WiFi not connected, delaying MQTT connection");
-        if (mqttReconnectTimer) {
-            xTimerStart(mqttReconnectTimer, pdMS_TO_TICKS(5000));
-        }
+        Serial.println("WiFi not connected, skipping MQTT connection");
         return;
     }
     if (mqtt_server.empty()) {
         Serial.println("MQTT server not configured");
         return;
     }
+    s_lastMqttConnectAttemptMs = millis();
     Serial.printf("Connecting to MQTT at %s:%u...\n", mqtt_server.c_str(), mqtt_port);
     addLogMessage(String("Connecting to MQTT at ") + mqtt_server.c_str() + ":" + String(mqtt_port));
     mqttStatus = ConnState::Connecting;
@@ -317,8 +330,27 @@ void onMqttDisconnect(AsyncMqttClientDisconnectReason reason) {
     addLogMessage(String("Disconnected from MQTT (reason ") + String(static_cast<uint8_t>(reason)) + ")");
     mqttStatus = ConnState::Disconnected;
     updateDisplayStatus();
-    if (WiFi.status() == WL_CONNECTED && mqttReconnectTimer) {
-        xTimerStart(mqttReconnectTimer, 0);
+    stopHeartbeat();
+}
+
+static void mqttSchedulerTask(void*) {
+    while (true) {
+        vTaskDelay(pdMS_TO_TICKS(1000));
+
+        const uint32_t now = millis();
+
+        if (mqttStatus == ConnState::Disconnected && WiFi.status() == WL_CONNECTED &&
+            static_cast<int32_t>(now - s_lastMqttConnectAttemptMs) >= static_cast<int32_t>(MQTT_RECONNECT_INTERVAL_MS)) {
+            connectToMqtt();
+        }
+
+        if (s_heartbeatEnabled.load() &&
+            static_cast<int32_t>(now - s_nextHeartbeatAtMs.load()) >= 0) {
+            s_nextHeartbeatAtMs.store(now + 60000UL);
+            if (mqttStatus == ConnState::Connected && mqttClient.connected()) {
+                publishHeartbeat();
+            }
+        }
     }
 }
 

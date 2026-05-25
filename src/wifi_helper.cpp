@@ -22,96 +22,270 @@
 #endif
 #include <WiFiManager.h>
 #include <ESPmDNS.h>
+#include <TickerUsESP32.h>
+#include <tuple>
 
-TimerHandle_t wifiReconnectTimer;
+const long PORTAL_TIMEOUT = 300000; // 5 minuten = 300.000 ms
+const uint32_t WIFI_NOTIFY_GOT_IP = BIT0;
+const uint32_t WIFI_NOTIFY_DISCONNECTED = BIT1;
+const uint32_t WIFI_NOTIFY_RECONNECT = BIT2;
 
+// below variables are thread safe because of the use of a single task that reads/modifies them (except for wifiStatus, but that one has atomic fields)
+TimersUS::TickerUsESP32 wifiReconnectTimer {};
+TimersUS::TickerUsESP32 rssiTimer {};
 WiFiStatus wifiStatus = { ConnState::Disconnected, 0 };
 
-void initWifi() {
-    wifiReconnectTimer = xTimerCreate(
-        "wifiTimer",
-        pdMS_TO_TICKS(10000),  // 10 seconds retry interval
-        pdFALSE,
-        nullptr,
-        connectToWifi
-    );
-    if (!wifiReconnectTimer) {
-        Serial.println("Failed to create WiFi reconnect timer");
-    }
-    connectToWifi(nullptr);
+TaskHandle_t wifiWorkerTaskHandle = NULL;
+bool mdnsStarted = false;
+bool webServerStarted = false;
+
+// Replicate WiFiManager::getRSSIasQuality() without constructing a WiFiManager object.
+static int rssiToQuality(int rssi) {
+    if (rssi <= -100) return 0;
+    if (rssi >= -50)  return 100;
+    return 2 * (rssi + 100);
 }
 
-void connectToWifi(TimerHandle_t /*timer*/) {
-    Serial.println("Connecting to Wi-Fi...");
-    wifiStatus = { ConnState::Connecting, 0 };
-
-    updateDisplayStatus();
-
-    WiFi.mode(WIFI_STA);
-    WiFi.setHostname("MIOPENIO");
-
-    unsigned long startTime = millis();
-    WiFi.begin();
-    wl_status_t result = static_cast<wl_status_t>(WiFi.waitForConnectResult(5000UL)); // ms
-
-    WiFiManager wm;
-    wm.setConnectTimeout(30);        // 10 sec voor verbinding met AP
-    wm.setConfigPortalTimeout(180);  // 3 min captive portal open
-
-    bool res = false;
-    if (result == WL_CONNECTED) {
-        res = true;
-    } else {
-        Serial.println("Stored WiFi credentials failed, launching WiFiManager portal");
-        res = wm.autoConnect("iohc-setup");
+static void notifyWiFiWorker(uint32_t bits) {
+    if (wifiWorkerTaskHandle != NULL) {
+        xTaskNotify(wifiWorkerTaskHandle, bits, eSetBits);
     }
+}
 
-    unsigned long duration = millis() - startTime;
+static void rssiTimerCb() {
+    if (WiFi.status() == WL_CONNECTED) {
+        wifiStatus.signalStrengthPercent = rssiToQuality(WiFi.RSSI());
+    }
+}
 
-    if (!res) {
-        Serial.printf("WiFi connection failed after %lu ms\n", duration);
-        wifiStatus = { ConnState::Disconnected, 0 };
+static void wifiReconnectTimerCb() {
+    notifyWiFiWorker(WIFI_NOTIFY_RECONNECT);
+}
 
-        // Retry later
-        if (wifiReconnectTimer) {
-            xTimerStart(wifiReconnectTimer, 0);
-        }
-    } else {
-        Serial.printf("Connected to WiFi in %lu ms. IP address: %s\n", duration,
-                      WiFi.localIP().toString().c_str());
-        wifiStatus = { ConnState::Connected, wm.getRSSIasQuality(WiFi.RSSI()) };
+static void ensureWebServerStarted() {
+    if (!webServerStarted) {
+        setupWebServer();
+        webServerStarted = true;
+    }
+}
 
-        if (!MDNS.begin("miopenio")) {
-            Serial.println("Error setting up MDNS responder!");
-        } else {
-            Serial.println("MDNS responder started at http://miopenio.local");
-        }
+static void onMqttAfterWifi() {
 #if defined(MQTT)
         // Establish MQTT connection if needed and MQTT client is initialized
-        if (mqttReconnectTimer && !mqttClient.connected() &&
-            mqttStatus != ConnState::Connecting) {
+        if (!mqttClient.connected() && mqttStatus != ConnState::Connecting) {
             connectToMqtt();
         }
 #endif
+}
+
+static void handleWifiConnected() {
+    if (WiFi.status() == WL_CONNECTED) {
+        wifiStatus.connectionStatus = ConnState::Connected;
+        wifiStatus.signalStrengthPercent = rssiToQuality(WiFi.RSSI());
+
+        wifiReconnectTimer.detach();
+        rssiTimer.attach(5, rssiTimerCb);
+        updateDisplayStatus();
+
+        if (!mdnsStarted) {
+            if (!MDNS.begin("miopenio")) {
+                Serial.println("WiFi: mDNS start failed");
+            } else {
+                mdnsStarted = true;
+                Serial.println("WiFi: mDNS started at http://miopenio.local");
+            }
+        }
+
+        ensureWebServerStarted();
+        onMqttAfterWifi();
     }
 }
 
-void checkWifiConnection() {
-    if (WiFi.status() != WL_CONNECTED) {
-        if (wifiStatus.connectionStatus == ConnState::Connected) {
-            Serial.println("WiFi connection lost");
-            wifiStatus = { ConnState::Disconnected, 0 };
-            updateDisplayStatus();
+static void configureWifiDisconnected() {
+    Serial.println("WiFi: connection lost (event)");
+    wifiStatus.connectionStatus = ConnState::Disconnected;
+    wifiStatus.signalStrengthPercent = 0;
+    rssiTimer.detach();
+    wifiReconnectTimer.attach(10, wifiReconnectTimerCb);
+    mdnsStarted = false;
+    updateDisplayStatus();
+}
 
-#if defined(MQTT)
-            Serial.println("Stopping MQTT reconnect timer");
-            if (mqttReconnectTimer) {
-                xTimerStop(mqttReconnectTimer, 0);
+static void handleWifiDisconnected() {
+    if (wifiStatus.connectionStatus == ConnState::Connected) {
+        configureWifiDisconnected();
+    }
+}
+
+static void applyAdvancedWiFiSettings() {
+    wifi_config_t config;
+    if (esp_wifi_get_config(WIFI_IF_STA, &config) == ESP_OK) {
+        config.sta.scan_method = WIFI_ALL_CHANNEL_SCAN;   
+#ifdef REQUIRE_MINIMUM_WPA2_PSK  
+        // This is necessary to prevent the device from Evil Twin attacks, where an attacker creates an additional network with the same
+        // SSID as the one selected. WPA2_PSK will detect that and even prevent sending the password. 
+
+        // Enable minimal WPA2_PSK level (also allows WPA3 or other more secure modes)
+        config.sta.threshold.authmode = WIFI_AUTH_WPA_PSK; 
+#endif // REQUIRE_MINIMUM_WPA2_PSK
+        esp_wifi_set_config(WIFI_IF_STA, &config);
+    }
+}
+
+static std::string getConfiguredSSID() {
+    wifi_config_t conf {};
+    if (esp_wifi_get_config(WIFI_IF_STA, &conf) != ESP_OK) {
+        return {};
+    }
+
+    return std::string(reinterpret_cast<const char*>(conf.sta.ssid));
+}
+
+static void triggerWiFiReconnect() {
+    if (WiFi.status() != WL_CONNECTED) {
+        Serial.println("WiFi: Trigger WiFi reconnect...");
+        applyAdvancedWiFiSettings(); 
+        WiFi.mode(WIFI_STA); 
+        WiFi.begin();
+    }
+}
+
+static std::tuple<int, int> millisToMinutesAndSeconds(long millis) {
+    auto secondsRemaining = millis / 1000;
+    return { secondsRemaining / 60, secondsRemaining % 60 };
+}
+
+static void runConfigPortal(const std::string& ssid, bool hasWifiConfiguration) {
+    if (hasWifiConfiguration) {
+        Serial.println("WiFi: Configured network not found, opening Config Portal...");
+    } else {
+        Serial.println("WiFi: No WiFi network configured, opening Config Portal...");
+    }
+
+    WiFiManager wm;
+
+    applyAdvancedWiFiSettings();
+    wm.setConfigPortalBlocking(false);
+    wm.setDisableConfigPortal(true); // allow config portal shutdown when previous configured wifi comes available.
+    wm.setConfigPortalTimeout(PORTAL_TIMEOUT / 1000);
+    wm.autoConnect("iohc-setup");
+
+    const unsigned long portalStartTime = millis();
+    bool portalClosed = false;
+    while (!portalClosed) {
+        // Keep telling this info to keep it visible on the display
+        if (hasWifiConfiguration) {
+            displayCustomMessage("WiFi not found.", ssid.c_str());
+        } else {
+            displayCustomMessage("WiFi not configured.");
+        }
+        displayCustomMessage("Custom WiFi AP", "iohc-setup");
+
+        const long millisRemaining = PORTAL_TIMEOUT - static_cast<long>(millis() - portalStartTime);
+        auto remainingTime = millisToMinutesAndSeconds(millisRemaining);
+        displayCustomMessage("Remaining time", format("%2dm %02ds", std::get<0>(remainingTime), std::get<1>(remainingTime)).c_str());
+
+        const bool connected = wm.process(); // Required for async config portal handling
+
+        vTaskDelay(pdMS_TO_TICKS(100));
+
+        if (connected || WiFi.status() == WL_CONNECTED) {
+            portalClosed = true;
+
+            if (connected) {
+                // workaround for bug in WiFiManager that causes the config portal webserver not to be shut down correctly (keeps port in use)
+                esp_restart();
             }
-#endif
-            if (wifiReconnectTimer) {
-                xTimerStart(wifiReconnectTimer, 0);
+        } else if (millisRemaining < 0) {
+            Serial.println("WiFi: Config portal timeout, closing portal...");
+            portalClosed = true;
+
+            if (hasWifiConfiguration) {
+                Serial.printf("WiFi: Device keeps waiting for connection on network: %s. Restart to re-open config portal.\n", ssid.c_str());
+            } else {
+                Serial.println("WiFi: Restart the device manually to re-open the config portal!");
             }
         }
     }
+
+    clearDisplayMessages();
+}
+
+static void wifiWorker(void * pvParameters) {
+    wl_status_t status = WL_DISCONNECTED;
+
+    WiFi.mode(WIFI_STA);
+
+    const std::string ssid = getConfiguredSSID();
+    const bool hasWifiConfiguration = !ssid.empty();
+    if (hasWifiConfiguration) {
+        applyAdvancedWiFiSettings();
+        WiFi.begin();
+
+        Serial.printf("WiFi: Attempt connection to '%s', try for max 30 seconds...\n", ssid.c_str());
+        status = (wl_status_t)WiFi.waitForConnectResult(30000);
+    }
+    if (status != WL_CONNECTED) {
+        runConfigPortal(ssid, hasWifiConfiguration);
+    }
+
+    if (WiFi.status() != WL_CONNECTED) {
+        configureWifiDisconnected();
+    }
+
+    uint32_t events = 0;
+    while (true) {
+        xTaskNotifyWait(0, UINT32_MAX, &events, portMAX_DELAY);
+
+        if ((events & WIFI_NOTIFY_DISCONNECTED) != 0) {
+            handleWifiDisconnected();
+        }
+
+        if ((events & WIFI_NOTIFY_RECONNECT) != 0) {
+            triggerWiFiReconnect();
+        }
+
+        if ((events & WIFI_NOTIFY_GOT_IP) != 0 &&
+            wifiStatus.connectionStatus != ConnState::Connected) {
+            handleWifiConnected();
+        }
+    }
+}
+
+static void onWiFiEvent(WiFiEvent_t event) {
+    switch (event) {
+        case ARDUINO_EVENT_WIFI_STA_GOT_IP:
+            notifyWiFiWorker(WIFI_NOTIFY_GOT_IP);
+            break;
+
+        case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
+            notifyWiFiWorker(WIFI_NOTIFY_DISCONNECTED);
+            break;
+            
+        default:
+            break;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
+
+void initWifi() {
+    // Set hostname before the WiFi stack initialises so the DHCP client
+    // advertises the correct name from the very first connection attempt,
+    // including after auto-reconnects where the connect task never runs.
+    WiFi.setHostname("MiOpenIO");
+
+    xTaskCreatePinnedToCore(wifiWorker, "WiFi_Worker", 8192, NULL, 3, &wifiWorkerTaskHandle, 1);
+
+    WiFi.onEvent(onWiFiEvent);
+    WiFi.setAutoReconnect(true);
+
+    Serial.printf("WiFi MAC: %s\n", WiFi.macAddress().c_str());
+}
+
+void clearWifi() {
+    WiFi.eraseAP();
+    esp_restart();
 }

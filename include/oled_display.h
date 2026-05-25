@@ -23,11 +23,25 @@ extern Adafruit_SSD1306 display;
 bool initDisplay();
 void display1WAction(const uint8_t *remote, const char *action, const char *dir, const char *name = nullptr);
 void display1WPosition(const uint8_t *remote, float position, const char *name = nullptr);
+void displayCustomMessage(const char* message, const char* status = nullptr);
+void clearDisplayMessages();
 void updateDisplayStatus();
 #else
 inline bool initDisplay() { return true; }
 inline void display1WAction(const uint8_t *, const char *, const char *, const char * = nullptr) {}
 inline void updateDisplayStatus() {}
+inline void displayCustomMessage(const char*, const char* = nullptr) {}
+inline void clearDisplayMessages() {}
 #endif
+
+
+template<typename ... Args>
+std::string format(const std::string &format, Args ... args)
+{
+    char buf[250];
+    snprintf(buf, 250, format.c_str(), args ...);
+    return std::string(buf);
+}
+
 
 #endif // OLED_DISPLAY_H

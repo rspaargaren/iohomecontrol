@@ -23,14 +23,18 @@
 #include <wifi_helper.h>
 #include <WiFi.h>
 #include <display_helpers.h>
+#include <atomic>
 #include <chrono>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RST);
 DisplayBuffer displayBuffer;
-TimerHandle_t displayUpdateTimer;
+SemaphoreHandle_t displayBufferMutex = xSemaphoreCreateMutex();
+TaskHandle_t displayTaskHandle = nullptr;
 std::chrono::time_point<std::chrono::system_clock> startTime;
-std::chrono::time_point<std::chrono::system_clock> timeSinceNoData;
-void handleTimerTick(TimerHandle_t);
+std::atomic<int64_t> lastDataTime = 0;
+void displayTask(void *);
 
 const int MILLIS_BETWEEN_DISPLAY_UPDATE_SLOW = 5000;
 const int MILLIS_BETWEEN_DISPLAY_UPDATE_FAST = 100;
@@ -127,12 +131,18 @@ int mqttStatusToIconIndex() {
 
 const bool fast = true;
 const bool slow = false;
-bool timerIsFast = false;
+std::atomic<bool> timerIsFast = false;
+
+static void notifyDisplayTask() {
+    if (displayTaskHandle != nullptr) {
+        xTaskNotifyGive(displayTaskHandle);
+    }
+}
+
 void setTimerSpeed(bool needsFast) {
     if (needsFast != timerIsFast) {
-        xTimerChangePeriod(displayUpdateTimer, pdMS_TO_TICKS(needsFast ? MILLIS_BETWEEN_DISPLAY_UPDATE_FAST : MILLIS_BETWEEN_DISPLAY_UPDATE_SLOW), 0);
-
         timerIsFast = needsFast;
+        notifyDisplayTask();
     }
 }
 
@@ -142,20 +152,15 @@ bool initDisplay() {
         return false;
     }
 
-    startTime = std::chrono::system_clock::now();
-    timeSinceNoData = startTime;
-    displayUpdateTimer = xTimerCreate(
-        "displayTimer",
-        pdMS_TO_TICKS(MILLIS_BETWEEN_DISPLAY_UPDATE_FAST),
-        pdTRUE,
-        nullptr,
-        handleTimerTick
-    );
-    if (displayUpdateTimer) {
-        xTimerStart(displayUpdateTimer, 0);
-    } else {
-        Serial.println("Failed to create display update timer");
+    if (xTaskCreatePinnedToCore(displayTask, "DisplayTask", 4096, nullptr, 1,
+                                &displayTaskHandle, tskNO_AFFINITY) != pdPASS) {
+        Serial.println("Failed to create display task");
+        return false;
     }
+
+    startTime = std::chrono::system_clock::now();
+    lastDataTime = esp_timer_get_time();
+    xTaskNotifyGive(displayTaskHandle);
 
     return true;
 }
@@ -169,15 +174,7 @@ int getSecondsSinceStart() {
 }
 
 int getSecondsSinceNoData() {
-    return getSecondsSince(timeSinceNoData);
-}
-
-template<typename ... Args>
-std::string format(const std::string &format, Args ... args)
-{
-    char buf[250];
-    snprintf(buf, 250, format.c_str(), args ...);
-    return std::string(buf);
+    return (esp_timer_get_time() - lastDataTime.load()) / 1000000LL;;
 }
 
 const char* getRemoteName(const uint8_t *remote, const char *name) {
@@ -190,19 +187,35 @@ const char* getRemoteName(const uint8_t *remote, const char *name) {
 }
 
 void display1WAction(const uint8_t *remote, const char *action, const char *dir, const char *name) {
-    displayBuffer.addLine(format("%s: %s", dir, getRemoteName(remote, name)), action);
-
-    setTimerSpeed(fast);
+    displayCustomMessage(format("%s: %s", dir, getRemoteName(remote, name)).c_str(), action);
 }
 
 void display1WPosition(const uint8_t *remote, float position, const char *name) {
-    displayBuffer.addLine(getRemoteName(remote, name), format("%d%%", static_cast<int>(position)));
+    displayCustomMessage(getRemoteName(remote, name), format("%d%%", static_cast<int>(position)).c_str());
+}
+
+void displayCustomMessage(const char* message, const char* status) {
+    xSemaphoreTake(displayBufferMutex, portMAX_DELAY);
+    displayBuffer.addLine(message, status ? status : "");
+    xSemaphoreGive(displayBufferMutex);
 
     setTimerSpeed(fast);
+    notifyDisplayTask();
 }
+
+void clearDisplayMessages() {
+    xSemaphoreTake(displayBufferMutex, portMAX_DELAY);
+    displayBuffer.clear();
+    xSemaphoreGive(displayBufferMutex);
+
+    lastDataTime.store(esp_timer_get_time());
+    setTimerSpeed(slow);
+}
+
 
 void updateDisplayStatus() {
     setTimerSpeed(fast);
+    notifyDisplayTask();
 }
 
 void drawLogo(int x, int y) {
@@ -222,7 +235,7 @@ void drawHeader() {
 #endif // MQTT
 
     // wifi icon is 8x7
-    const auto wifiIcon = wifiIcons[min(wifiStatus.signalStrengthPercent, 99) / 25];
+    const auto wifiIcon = wifiIcons[min(wifiStatus.signalStrengthPercent.load(), 99) / 25];
     display.drawBitmap(127-8, 3, wifiIcon, 8, 7, SSD1306_WHITE);
 }
 
@@ -242,40 +255,55 @@ bool drawContents() {
     const int width = SCREEN_WIDTH / 6; // char width is 5 + 1 pixel space
     const int height = (SCREEN_HEIGHT - 20 - 8) / 8; // char height is 7 + 1 pixel space and 20 pixels (12 pixels + an empty line) for the header + 8 for the footer
 
+    xSemaphoreTake(displayBufferMutex, portMAX_DELAY);
     const auto lines = displayBuffer.getTextToDisplay(width, height);
+    xSemaphoreGive(displayBufferMutex);
     for(auto &line : lines) {
         display.println(line.c_str());
     }
     return lines.size() > 0;
 }
 
-void handleTimerTick(TimerHandle_t) {
-    display.clearDisplay();
+void drawData() {
+    display.setTextSize(1);
+    display.setTextColor(SSD1306_WHITE);
 
-    timeSinceNoData = timerIsFast ? std::chrono::system_clock::now() : timeSinceNoData;
-    const auto secondsSinceNoData = getSecondsSinceNoData();
+    drawHeader();
 
-    if (timerIsFast || secondsSinceNoData < SECONDS_BEFORE_SCREENSAVER) {
-        display.setTextSize(1);
-        display.setTextColor(SSD1306_WHITE);
-
-        drawHeader();
-
-        display.setCursor(0, 20);
-        const bool hasData = drawContents();
-        if (!hasData) {
-            setTimerSpeed(slow);
-        }
-
-        drawFooter();
-    } else {
-        // draw logo at random position to avoid burn-in
-        const int x = 50.0 * std::rand() / RAND_MAX; // number between 0 and 50
-        const int y = 48.0 * std::rand() / RAND_MAX; // number between 0 and 48
-        drawLogo(x, y);
+    display.setCursor(0, 20);
+    const bool hasData = drawContents();
+    if (!hasData) {
+        setTimerSpeed(slow);
     }
 
-    display.display();
+    drawFooter();
+}
+
+void drawLogo() {
+    // draw logo at random position to avoid burn-in
+    const int x = 50.0 * std::rand() / RAND_MAX; // number between 0 and 50
+    const int y = 48.0 * std::rand() / RAND_MAX; // number between 0 and 48
+    drawLogo(x, y);
+}
+
+void displayTask(void *) {
+    while (true) {
+        const TickType_t waitTicks = pdMS_TO_TICKS(timerIsFast ? MILLIS_BETWEEN_DISPLAY_UPDATE_FAST
+                                                               : MILLIS_BETWEEN_DISPLAY_UPDATE_SLOW);
+        ulTaskNotifyTake(pdTRUE, waitTicks);
+
+        display.clearDisplay();
+
+        const auto secondsSinceNoData = getSecondsSinceNoData();
+
+        if (timerIsFast || secondsSinceNoData < SECONDS_BEFORE_SCREENSAVER) {
+            drawData();
+        } else {
+            drawLogo();
+        }
+
+        display.display();
+    }
 }
 
 #endif

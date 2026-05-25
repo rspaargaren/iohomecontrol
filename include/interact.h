@@ -53,7 +53,7 @@ namespace IOHC {
 
 #if defined(ESP32)
   #include <TickerUsESP32.h>
-  #define MAXCMDS 50
+  #define MAXCMDS 100
 #endif
 
 enum class ConnState { Connecting, Connected, Disconnected };
