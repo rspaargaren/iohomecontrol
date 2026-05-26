@@ -26,6 +26,8 @@
 inline const char *wifi_ssid = "";
 inline const char *wifi_passwd = "";
 
+#define REQUIRE_MINIMUM_WPA2_PSK        // Comment out to enable WEP/WPA1
+
 #define MQTT
 
 // Default MQTT configuration. These values can be changed at runtime through
