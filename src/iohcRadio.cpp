@@ -24,8 +24,6 @@
 #define LONG_PREAMBLE_MS 1920
 #define SHORT_PREAMBLE_MS 40
 
-TaskHandle_t IOHC::iohcRadio::txTaskHandle = nullptr;
-
 namespace IOHC {
     iohcRadio *iohcRadio::_iohcRadio = nullptr;
     volatile unsigned long iohcRadio::_g_payload_millis = 0L;
@@ -80,54 +78,18 @@ namespace IOHC {
             //} else {
                 iohcRadio::setRadioState(iohcRadio::RadioState::PAYLOAD);
             //}
-
-            // Notify TX task that TXDONE occurred so the next packet can be
-            // scheduled.
-            if (iohcRadio::txTaskHandle) {
-                BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-                vTaskNotifyGiveFromISR(iohcRadio::txTaskHandle,
-                                      &xHigherPriorityTaskWoken);
-                portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-            }
         } else if (preamble) {
             iohcRadio::setRadioState(iohcRadio::RadioState::PREAMBLE);
         } else {
             iohcRadio::setRadioState(iohcRadio::RadioState::RX);
         }
 
-    // Notify de RX state machine
-    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-    vTaskNotifyGiveFromISR(handle_interrupt, &xHigherPriorityTaskWoken);
-    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-}
-
-
-
-
-
-    void iohcRadio::txTaskLoop(void *pvParameters) {
-    iohcRadio *radio = static_cast<iohcRadio *>(pvParameters);
-
-    while (true) {
-        // Wacht tot ISR aangeeft dat TX klaar is
-        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-
-        // Delay tussen repeats
-        if (radio->iohc && radio->iohc->repeatTime > 0) {
-            vTaskDelay(pdMS_TO_TICKS(radio->iohc->repeatTime));
-        }
-
-        // Verstuur volgend pakket
-        packetSender(radio);
-
-        // Stop de task als alles klaar is
-        if (radio->txCounter >= radio->packets2send.size()) {
-            ets_printf("TX: Batch complete. Deleting TX task.\n");
-            radio->txTaskHandle = nullptr;
-            vTaskDelete(nullptr); // delete zichzelf
-        }
+        // Notify de RX state machine
+        BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+        vTaskNotifyGiveFromISR(handle_interrupt, &xHigherPriorityTaskWoken);
+        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
     }
-}
+
 
 
     iohcRadio::iohcRadio() {
@@ -449,150 +411,6 @@ void iohcRadio::onTxTicker(void *arg) {
                radio->packets2send.size(),
                esp_timer_get_time());
 }
-
-
- void iohcRadio::lightTxTask(void *pvParameters) {
-    iohcRadio *radio = static_cast<iohcRadio *>(pvParameters);
-    while (true) {
-        // Wacht tot er werk is
-        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-
-        while (radio->txCounter < radio->packets2send.size()) {
-            Radio::setStandby();
-            Radio::clearFlags();
-            Radio::writeBytes(REG_FIFO, radio->iohc->payload.buffer, radio->iohc->buffer_length);
-            Radio::setTx();
-            ets_printf("TX: lightTxTask sent packet at %llu us\n", esp_timer_get_time());
-
-            if (radio->iohc->repeat > 0) radio->iohc->repeat--;
-
-            if (radio->iohc->repeat == 0) radio->txCounter++;
-
-            if (radio->iohc->repeatTime > 0)
-                vTaskDelay(pdMS_TO_TICKS(radio->iohc->repeatTime));
-        }
-
-        // Alles verzonden — delete owned packets then clear
-        for (auto p : radio->packets2send) delete p;
-        radio->packets2send.clear();
-        Radio::setRx();
-        radio->setRadioState(iohcRadio::RadioState::RX);
-    }
-}
-
-
-
-     void iohcRadio::sendAuto(std::vector<iohcPacket *> &iohcTx) {
-         if (radioState == RadioState::TX) {
-             ets_printf("TX: Already transmitting. Ignoring sendAuto()\n");
-             return;
-         }
- 
-         packets2send = std::move(iohcTx);
-         txCounter = 0;
-         ets_printf("TX: Preparing %d packet(s) for AutoTxRx\n", packets2send.size());
-         setRadioState(RadioState::TX);
- 
-         // Configure AutoTxRx
-         configureAutoTxRx(packets2send[txCounter]);
- 
-         ets_printf("TX: AutoTxRx started\n");
-     }
-
-
-    void iohcRadio::configureAutoTxRx(iohcPacket *packet) {
-        ets_printf("TX: Configuring AutoTxRx for repeat=%d interval=%dms\n",
-                   packet->repeat, packet->repeatTime);
-
-        // Set DIO mapping for AutoTxRx (if required)
-        Radio::writeByte(REG_DIOMAPPING1, 0x40); // DIO0 = TxDone, DIO1 = RxDone
-
-        // Set packet payload
-        Radio::writeBytes(REG_FIFO, packet->payload.buffer, packet->buffer_length);
-
-        // Set repeat count (payload->repeat) and interval (payload->repeatTime)
-        //Radio::writeByte(REG_AUTOTX_REPEAT, packet->repeat);
-        //Radio::writeByte(REG_AUTOTX_INTERVAL, packet->repeatTime / 10); // 10ms steps
-
-        // Start AutoTxRx
-        //Radio::writeByte(REG_OPMODE, RF_OPMODE_AUTOTXRX);
-    }
-
-/**
- * The function `packetSender` in the `iohcRadio` class handles the transmission of packets using radio
- * communication, including frequency setting, packet preparation, and handling of repeated
- * transmissions.
- * 
- * @param radio The `radio` parameter in the `packetSender` function is a pointer to an object of type
- * `iohcRadio`. It is used to access and manipulate data and functions within the `iohcRadio` class.
- */
- 
-void IRAM_ATTR iohcRadio::packetSender(iohcRadio *radio) {
-    ets_printf("T1 packetSender() fired at %llu us\n", esp_timer_get_time());
-    if (!radio || radio->packets2send.empty()) {
-        ets_printf("TX: No packets to send. Forcing cleanup.\n");
-        for (auto p : radio->packets2send) delete p;
-        radio->packets2send.clear();
-        Radio::setRx(); // Go back to RX only after stop
-        radio->setRadioState(iohcRadio::RadioState::RX);
-        return;
-    }
-
-    // Check if all packets are sent
-    if (radio->txCounter >= radio->packets2send.size()) {
-        ets_printf("TX: All packets sent in batch.\n");
-        if (!radio->iohc || !radio->iohc->lock) {
-            ets_printf("TX: Unlocking radio and switching to RX.\n");
-            radio->Sender.detach();
-            for (auto p : radio->packets2send) delete p;
-            radio->packets2send.clear();
-            Radio::setRx();
-            radio->setRadioState(iohcRadio::RadioState::RX);
-        } else {
-            ets_printf("TX: Lock is active, keeping radio in STANDBY.\n");
-            radio->txCounter = 0; // Restart batch
-        }
-        return;
-    }
-
-    // Prepare and send next packet
-    radio->iohc = radio->packets2send[radio->txCounter];
-    ets_printf("TX: Sending packet %d/%d (repeat=%d, lock=%s)\n",
-               radio->txCounter + 1,
-               radio->packets2send.size(),
-               radio->iohc->repeat,
-               radio->iohc->lock ? "TRUE" : "FALSE");
-
-    // Set radio to standby, clear flags, and load payload
-    Radio::setStandby();
-    Radio::clearFlags();
-    Radio::writeBytes(REG_FIFO,
-                      radio->iohc->payload.buffer,
-                      radio->iohc->buffer_length);
-
-    packetStamp = esp_timer_get_time();
-
-    // Start transmission
-    Radio::setTx();
-    ets_printf("T2 after setTx() at %llu us\n", esp_timer_get_time());
-    radio->setRadioState(iohcRadio::RadioState::TX);
-
-    // Repeat logic
-    if (radio->iohc->repeat > 0) {
-        radio->iohc->repeat--;
-    }
-
-    if (radio->iohc->repeat == 0) {
-        // Finished this packet
-        radio->txCounter = radio->txCounter + 1;
-    }
-
-    // Toggle TX LED
-    digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
-}
-
-
-
 
 /**
  * The `sent` function in the `iohcRadio` class checks if a callback function `txCB` is set and calls

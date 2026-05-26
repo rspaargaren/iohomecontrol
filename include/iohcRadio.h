@@ -66,12 +66,10 @@ namespace IOHC {
             };
             void start(uint8_t num_freqs, uint32_t *scan_freqs, uint32_t scanTimeUs, IohcPacketDelegate rxCallback, IohcPacketDelegate txCallback);
             void send(std::vector<iohcPacket*>&iohcTx);
-            void sendAuto(std::vector<iohcPacket*>&iohcTx); // Nieuwe versie voor AutoTxRx
             static void setRadioState(RadioState newState);
             static const char* radioStateToString(RadioState state);
             volatile static RadioState radioState;
             static void tickerCounter(iohcRadio *radio);
-            static TaskHandle_t txTaskHandle; // TX Task handle
             static volatile bool txComplete;
             //static void setPreambleLength(uint16_t preambleLen);
 
@@ -91,9 +89,6 @@ namespace IOHC {
             volatile uint32_t tickCounter = 0;
             volatile uint32_t preCounter = 0;
             volatile uint8_t txCounter = 0;
-            static void txTaskLoop(void *pvParameters);
-            static void lightTxTask(void *pvParameters);
-            //TaskHandle_t txTaskHandle = nullptr;
             static void IRAM_ATTR onTxTicker(void *arg);
 
             uint8_t num_freqs = 0;
@@ -102,15 +97,11 @@ namespace IOHC {
             uint8_t currentFreqIdx = 0;
 
         #if defined(ESP8266)
-            Timers::TickerUs TickTimer;
             Timers::TickerUs Sender;
-//            Timers::TickerUs FreqScanner;
         #elif defined(ESP32)
-            TimersUS::TickerUsESP32 TickTimer;
             TimersUS::TickerUsESP32 Sender;
         #endif
             iohcPacket *iohc{};
-            iohcPacket *delayed{};
             
             IohcPacketDelegate rxCB = nullptr;
             IohcPacketDelegate txCB = nullptr;
@@ -119,8 +110,6 @@ namespace IOHC {
         protected:
             static void i_preamble();
             static void i_payload();
-            static void packetSender(iohcRadio *radio);
-            static void configureAutoTxRx(iohcPacket *packet); // Hulpfunctie om AutoTxRx te activeren
 
         #if defined(CC1101)
             uint8_t lenghtFrame=0;
