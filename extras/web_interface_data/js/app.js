@@ -85,6 +85,9 @@
             mqttServerInput: document.getElementById("mqtt-server"),
             mqttUpdateButton: document.getElementById("mqtt-update"),
             mqttUserInput: document.getElementById("mqtt-user"),
+            displayEnabledInput: document.getElementById("display-enabled"),
+            displayUpdateButton: document.getElementById("display-update"),
+            displayStatus: document.getElementById("display-status"),
             remotePopupButton: document.getElementById("remote-popup"),
             remotesFileInput: document.getElementById("remotes-file"),
             remotesUploadButton: document.getElementById("upload-remotes"),
@@ -224,6 +227,12 @@
         if (app.elements.mqttUpdateButton) {
             app.elements.mqttUpdateButton.addEventListener("click", app.updateMqttConfig);
         }
+        if (app.elements.displayUpdateButton) {
+            app.elements.displayUpdateButton.addEventListener("click", app.updateDisplayConfig);
+        }
+        if (app.elements.displayEnabledInput) {
+            app.elements.displayEnabledInput.addEventListener("change", app.updateDisplayConfig);
+        }
         if (app.elements.firmwareUploadButton) {
             app.elements.firmwareUploadButton.addEventListener("click", app.uploadFirmware);
         }
@@ -293,6 +302,7 @@
         app.logStatus("System started");
         app.logStatus("Loading devices...");
         app.loadMqttConfig();
+        app.loadDisplayConfig();
         app.fetchAndDisplayDevices();
         app.fetchAndDisplayRemotes();
         app.loadLastAddress();

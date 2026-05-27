@@ -23,6 +23,7 @@
 #include <wifi_helper.h>
 #include <WiFi.h>
 #include <display_helpers.h>
+#include <nvs_helpers.h>
 #include <atomic>
 #include <chrono>
 #include <freertos/FreeRTOS.h>
@@ -34,6 +35,7 @@ SemaphoreHandle_t displayBufferMutex = xSemaphoreCreateMutex();
 TaskHandle_t displayTaskHandle = nullptr;
 std::chrono::time_point<std::chrono::system_clock> startTime;
 std::atomic<int64_t> lastDataTime = 0;
+std::atomic<bool> displayEnabled = true;
 void displayTask(void *);
 
 const int MILLIS_BETWEEN_DISPLAY_UPDATE_SLOW = 5000;
@@ -147,6 +149,11 @@ void setTimerSpeed(bool needsFast) {
 }
 
 bool initDisplay() {
+    bool enabled = true;
+    if (nvs_read_bool(NVS_KEY_DISPLAY_ENABLED, enabled)) {
+        displayEnabled.store(enabled);
+    }
+
     Wire.begin(OLED_SDA, OLED_SCL);
     if (!display.begin(SSD1306_SWITCHCAPVCC, OLED_ADDRESS)) {
         return false;
@@ -195,6 +202,10 @@ void display1WPosition(const uint8_t *remote, float position, const char *name) 
 }
 
 void displayCustomMessage(const char* message, const char* status) {
+    if (!displayEnabled.load()) {
+        return;
+    }
+
     xSemaphoreTake(displayBufferMutex, portMAX_DELAY);
     displayBuffer.addLine(message, status ? status : "");
     xSemaphoreGive(displayBufferMutex);
@@ -214,7 +225,38 @@ void clearDisplayMessages() {
 
 
 void updateDisplayStatus() {
+    if (!displayEnabled.load()) {
+        return;
+    }
+
     setTimerSpeed(fast);
+    notifyDisplayTask();
+}
+
+bool isDisplayEnabled() {
+    return displayEnabled.load();
+}
+
+void setDisplayEnabled(bool enabled) {
+    if (enabled == displayEnabled.load()) {
+        return;
+    }
+
+    displayEnabled.store(enabled);
+    nvs_write_bool(NVS_KEY_DISPLAY_ENABLED, enabled);
+
+    if (!enabled) {
+        xSemaphoreTake(displayBufferMutex, portMAX_DELAY);
+        displayBuffer.clear();
+        xSemaphoreGive(displayBufferMutex);
+        lastDataTime.store(esp_timer_get_time());
+        setTimerSpeed(slow);
+    } else {
+        display.ssd1306_command(SSD1306_DISPLAYON);
+        lastDataTime.store(esp_timer_get_time());
+        setTimerSpeed(fast);
+    }
+
     notifyDisplayTask();
 }
 
@@ -291,6 +333,13 @@ void displayTask(void *) {
         const TickType_t waitTicks = pdMS_TO_TICKS(timerIsFast ? MILLIS_BETWEEN_DISPLAY_UPDATE_FAST
                                                                : MILLIS_BETWEEN_DISPLAY_UPDATE_SLOW);
         ulTaskNotifyTake(pdTRUE, waitTicks);
+
+        if (!displayEnabled.load()) {
+            display.clearDisplay();
+            display.display();
+            display.ssd1306_command(SSD1306_DISPLAYOFF);
+            continue;
+        }
 
         display.clearDisplay();
 

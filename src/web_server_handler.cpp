@@ -18,6 +18,7 @@
 #include <log_buffer.h>
 #include <mqtt_handler.h>
 #include <nvs_helpers.h>
+#include <oled_display.h>
 #if defined(SYSLOG)
 #include <syslog_helper.h>
 #endif
@@ -404,7 +405,6 @@ void handleApiLastAddr(AsyncWebServerRequest *request, JsonObject &root) {
   root["address"] = bytesToHexString(IOHC::lastFromAddress, sizeof(IOHC::lastFromAddress)).c_str();
 }
 
-#if defined(SYSLOG)
 static bool jsonToBool(JsonVariant variant, bool &value) {
   if (variant.is<bool>()) {
     value = variant.as<bool>();
@@ -436,6 +436,31 @@ static bool jsonToBool(JsonVariant variant, bool &value) {
   return false;
 }
 
+#if defined(SSD1306_DISPLAY)
+void handleApiDisplayGet(AsyncWebServerRequest *request, JsonObject &root) {
+  const bool enabled = isDisplayEnabled();
+  root["enabled"] = enabled;
+  Serial.printf("Display config requested: %s\n", enabled ? "enabled" : "disabled");
+}
+
+void handleApiDisplaySet(AsyncWebServerRequest *request, JsonObject &doc, JsonObject &root) {
+  bool enabled = isDisplayEnabled();
+  if (!doc["enabled"].is<JsonVariant>() || !jsonToBool(doc["enabled"], enabled)) {
+    request->send(400, "application/json",
+                  "{\"success\":false,\"message\":\"Invalid enabled value\"}");
+    return;
+  }
+
+  setDisplayEnabled(enabled);
+  Serial.printf("Display config updated: %s\n", enabled ? "enabled" : "disabled");
+
+  root["success"] = true;
+  root["message"] = "Display configuration updated";
+  root["enabled"] = isDisplayEnabled();
+}
+#endif
+
+#if defined(SYSLOG)
 void handleApiSyslogGet(AsyncWebServerRequest *request, JsonObject &root) {
   initSyslog();
 
@@ -596,8 +621,17 @@ void handleFirmwareUpdate(AsyncWebServerRequest *request) {
   } else {
     request->send(200, "application/json",
                   "{\"message\":\"Firmware update successful, rebooting\"}");
-    delay(100);
-    ESP.restart();
+    xTaskCreate(
+      [](void *) {
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        ESP.restart();
+      },
+      "reboot",
+      2048,
+      nullptr,
+      1,
+      nullptr
+    );
   }
 }
 
@@ -626,11 +660,21 @@ void handleFilesystemUpdate(AsyncWebServerRequest *request) {
   if (Update.hasError()) {
     request->send(500, "application/json",
                   "{\"message\":\"Filesystem update failed\"}");
+    LittleFS.begin();
   } else {
     request->send(200, "application/json",
                   "{\"message\":\"Filesystem update successful, rebooting\"}");
-    delay(100);
-    ESP.restart();
+    xTaskCreate(
+      [](void *) {
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        ESP.restart();
+      },
+      "reboot",
+      2048,
+      nullptr,
+      1,
+      nullptr
+    );
   }
 }
 
@@ -639,18 +683,22 @@ void handleFilesystemUpload(AsyncWebServerRequest *request, String filename,
                             bool final) {
   if (!index) {
     Serial.printf("Filesystem upload start: %s\n", filename.c_str());
+    LittleFS.end();
     if (!Update.begin(UPDATE_SIZE_UNKNOWN, U_SPIFFS)) {
       Update.printError(Serial);
+      return;
     }
   }
   if (!Update.hasError()) {
-    if (Update.write(data, len) != len) {
+    if (len && Update.write(data, len) != len) {
       Update.printError(Serial);
     }
   }
   if (final) {
     if (!Update.end(true)) {
       Update.printError(Serial);
+    } else {
+      Serial.printf("Filesystem upload complete: %u bytes\n", index + len);
     }
   }
 }
@@ -671,6 +719,9 @@ void setupWebServer() {
   server.on("/api/remotes", HTTP_GET, jsonGet(handleApiRemotes));
   server.on("/api/logs", HTTP_GET, jsonGet(handleApiLogs));
   server.on("/api/lastaddr", HTTP_GET, jsonGet(handleApiLastAddr));
+#if defined(SSD1306_DISPLAY)
+  server.on("/api/display", HTTP_GET, jsonGet(handleApiDisplayGet));
+#endif
 #if defined(SYSLOG)
   server.on("/api/syslog", HTTP_GET, jsonGet(handleApiSyslogGet));
 #endif
@@ -679,6 +730,9 @@ void setupWebServer() {
 #endif
   server.on("/api/command", HTTP_POST, jsonPost(handleApiCommand));
   server.on("/api/action", HTTP_POST, jsonPost(handleApiAction));
+#if defined(SSD1306_DISPLAY)
+  server.on("/api/display", HTTP_POST, jsonPost(handleApiDisplaySet));
+#endif
 #if defined(MQTT)
   server.on("/api/mqtt", HTTP_POST, jsonPost(handleApiMqttSet));
 #endif

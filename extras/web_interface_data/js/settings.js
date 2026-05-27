@@ -1,4 +1,13 @@
 (function () {
+    function setDisplayStatus(app, message, isError) {
+        if (!app.elements.displayStatus) {
+            return;
+        }
+
+        app.elements.displayStatus.textContent = message;
+        app.elements.displayStatus.classList.toggle("error", !!isError);
+    }
+
     async function loadLastAddress(app) {
         try {
             const data = await window.MiOpenApi.requestJson("/api/lastaddr");
@@ -37,6 +46,72 @@
         }
     }
 
+    async function loadDisplayConfig(app) {
+        if (!app.elements.displayEnabledInput) {
+            return;
+        }
+
+        setDisplayStatus(
+            app,
+            app.i18nText("status.display_loading", "Display settings loading...")
+        );
+
+        try {
+            const config = await window.MiOpenApi.requestJson("/api/display");
+            const enabled = config.enabled !== false;
+            app.elements.displayEnabledInput.checked = enabled;
+            setDisplayStatus(
+                app,
+                enabled
+                    ? app.i18nText("status.display_enabled", "Display is enabled")
+                    : app.i18nText("status.display_disabled", "Display is disabled")
+            );
+        } catch (error) {
+            console.error("Error fetching display config", error);
+            setDisplayStatus(
+                app,
+                app.i18nText("status.display_load_error", "Could not load display settings"),
+                true
+            );
+            app.logStatus(app.i18nText("log.error_fetching_display", "Error fetching display config"), true);
+        }
+    }
+
+    async function updateDisplayConfig(app) {
+        if (!app.elements.displayEnabledInput) {
+            return;
+        }
+
+        const requestedEnabled = app.elements.displayEnabledInput.checked;
+        setDisplayStatus(
+            app,
+            app.i18nText("status.display_saving", "Saving display setting...")
+        );
+        try {
+            const result = await window.MiOpenApi.postJson("/api/display", {
+                enabled: requestedEnabled
+            });
+            const enabled = result.enabled !== false;
+            app.elements.displayEnabledInput.checked = enabled;
+            setDisplayStatus(
+                app,
+                enabled
+                    ? app.i18nText("status.display_saved_enabled", "Saved: display enabled")
+                    : app.i18nText("status.display_saved_disabled", "Saved: display disabled")
+            );
+            app.logStatus(result.message || app.i18nText("log.display_updated", "Display settings updated."));
+        } catch (error) {
+            console.error("Error updating display config", error);
+            app.elements.displayEnabledInput.checked = !requestedEnabled;
+            setDisplayStatus(
+                app,
+                app.i18nText("status.display_save_error", "Saving display setting failed"),
+                true
+            );
+            app.logStatus(app.i18nText("log.error_updating_display", "Error updating display config"), true);
+        }
+    }
+
     async function uploadSelectedFile(app, input, url, missingMessage, successMessage, refreshFn) {
         const file = input.files[0];
         if (!file) {
@@ -64,6 +139,12 @@
         };
         app.updateMqttConfig = function () {
             return updateMqttConfig(app);
+        };
+        app.loadDisplayConfig = function () {
+            return loadDisplayConfig(app);
+        };
+        app.updateDisplayConfig = function () {
+            return updateDisplayConfig(app);
         };
         app.uploadFirmware = function () {
             return uploadSelectedFile(

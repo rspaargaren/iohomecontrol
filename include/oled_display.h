@@ -26,12 +26,17 @@ void display1WPosition(const uint8_t *remote, float position, const char *name =
 void displayCustomMessage(const char* message, const char* status = nullptr);
 void clearDisplayMessages();
 void updateDisplayStatus();
+bool isDisplayEnabled();
+void setDisplayEnabled(bool enabled);
 #else
 inline bool initDisplay() { return true; }
 inline void display1WAction(const uint8_t *, const char *, const char *, const char * = nullptr) {}
+inline void display1WPosition(const uint8_t *, float, const char * = nullptr) {}
 inline void updateDisplayStatus() {}
 inline void displayCustomMessage(const char*, const char* = nullptr) {}
 inline void clearDisplayMessages() {}
+inline bool isDisplayEnabled() { return false; }
+inline void setDisplayEnabled(bool) {}
 #endif
 
 

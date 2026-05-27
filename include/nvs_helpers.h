@@ -14,6 +14,7 @@ static constexpr char NVS_KEY_MQTT_PORT[] = "mqtt_port";
 static constexpr char NVS_KEY_SYSLOG_ENABLED[] = "syslog_enabled";
 static constexpr char NVS_KEY_SYSLOG_SERVER[] = "syslog_server";
 static constexpr char NVS_KEY_SYSLOG_PORT[] = "syslog_port";
+static constexpr char NVS_KEY_DISPLAY_ENABLED[] = "display_on";
 
 
 bool nvs_init();
