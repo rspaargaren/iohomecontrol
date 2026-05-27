@@ -18,7 +18,7 @@
 #include <atomic>
 
 AsyncMqttClient mqttClient;
-const char AVAILABILITY_TOPIC[] = "iown/status";
+static const char AVAILABILITY_TOPIC[] = "iown/status";
 static const char GATEWAY_ID[] = "MyOpenIO";
 static TaskHandle_t s_mqttSchedulerTask = nullptr;
 static std::atomic<bool> s_heartbeatEnabled{false};
@@ -48,42 +48,22 @@ static void stopHeartbeat() {
     s_heartbeatEnabled.store(false);
 }
 
+static void storeHardcodedConfigValue(const char* desc, const char* key, std::string &value) {
+    if (!nvs_read_string(key, value)) {
+        if (value.empty()) {
+            Serial.printf("%s not set\n", desc);
+        } else {
+            nvs_write_string(key, value);
+        }
+    }
+}
+
 void initMqtt() {
-    if (!nvs_read_string(NVS_KEY_MQTT_SERVER, mqtt_server)) {
-        if (mqtt_server.empty()) {
-            Serial.println("MQTT server not set");
-        } else {
-            nvs_write_string(NVS_KEY_MQTT_SERVER, mqtt_server);
-        }
-    }
-    if (!nvs_read_string(NVS_KEY_MQTT_USER, mqtt_user)) {
-        if (mqtt_user.empty()) {
-            Serial.println("MQTT user not set");
-        } else {
-            nvs_write_string(NVS_KEY_MQTT_USER, mqtt_user);
-        }
-    }
-    if (!nvs_read_string(NVS_KEY_MQTT_PASSWORD, mqtt_password)) {
-        if (mqtt_password.empty()) {
-            Serial.println("MQTT password not set");
-        } else {
-            nvs_write_string(NVS_KEY_MQTT_PASSWORD, mqtt_password);
-        }
-    }
-    if (!nvs_read_string(NVS_KEY_MQTT_DISCOVERY, mqtt_discovery_topic)) {
-        if (mqtt_discovery_topic.empty()) {
-            Serial.println("MQTT discovery topic not set");
-        } else {
-            nvs_write_string(NVS_KEY_MQTT_DISCOVERY, mqtt_discovery_topic);
-        }
-    }
-    if (!nvs_read_string(NVS_KEY_MQTT_CLIENT_ID, mqtt_client_id)) {
-        if (mqtt_client_id.empty()) {
-            Serial.println("MQTT client id not set");
-        } else {
-            nvs_write_string(NVS_KEY_MQTT_CLIENT_ID, mqtt_client_id);
-        }
-    }
+    storeHardcodedConfigValue("MQTT server", NVS_KEY_MQTT_SERVER, mqtt_server);
+    storeHardcodedConfigValue("MQTT user", NVS_KEY_MQTT_USER, mqtt_user);
+    storeHardcodedConfigValue("MQTT password", NVS_KEY_MQTT_PASSWORD, mqtt_password);
+    storeHardcodedConfigValue("MQTT discovery", NVS_KEY_MQTT_DISCOVERY, mqtt_discovery_topic);
+    storeHardcodedConfigValue("MQTT client id", NVS_KEY_MQTT_CLIENT_ID, mqtt_client_id);
 
     if (!nvs_read_u16(NVS_KEY_MQTT_PORT, mqtt_port)) {
         nvs_write_u16(NVS_KEY_MQTT_PORT, mqtt_port);
@@ -109,21 +89,27 @@ void initMqtt() {
     }
 }
 
+static JsonDocument createDeviceObject(const std::string &id, const std::string &name, const std::string &key = "") {
+    JsonDocument device;
+    device["identifiers"] = id;
+    device["name"] = name;
+    device["manufacturer"] = "Somfy";
+    device["model"] = "IO Blind Bridge";
+    device["sw_version"] = "1.0.0";
+    if (!key.empty()) {
+        device["serial_number"] = key;
+    }
+    device["via_device"] = GATEWAY_ID;
+    return device;
+}
+
 static void publishButtonDiscovery(const std::string &id, const std::string &name,
                                    const std::string &action, const std::string &key) {
     JsonDocument doc;
     doc["name"] = name + " " + action;
     doc["unique_id"] = id + "_" + action;
     doc["command_topic"] = "iown/" + id + "/" + action;
-
-    JsonObject device = doc["device"].to<JsonObject>();
-    device["identifiers"] = id;
-    device["name"] = name;
-    device["manufacturer"] = "Somfy";
-    device["model"] = "IO Blind Bridge";
-    device["sw_version"] = "1.0.0";
-    device["serial_number"] = key;
-    device["via_device"] = GATEWAY_ID;
+    doc["device"] = createDeviceObject(id, name, key);
 
     std::string payload;
     size_t len = serializeJson(doc, payload);
@@ -143,15 +129,7 @@ void publishTravelTimeDiscovery(const std::string &id, const std::string &name,
     doc["min"] = 0;
     doc["max"] = 60;
     doc["step"] = 1;
-
-    JsonObject device = doc["device"].to<JsonObject>();
-    device["identifiers"] = id;
-    device["name"] = name;
-    device["manufacturer"] = "Somfy";
-    device["model"] = "IO Blind Bridge";
-    device["sw_version"] = "1.0.0";
-    device["serial_number"] = key;
-    device["via_device"] = GATEWAY_ID;
+    doc["device"] = createDeviceObject(id, name, key);
 
     std::string payload;
     size_t len = serializeJson(doc, payload);
@@ -189,15 +167,7 @@ void publishDiscovery(const std::string &id, const std::string &name, const std:
     doc["optimistic"] = false;
     doc["retain"] = true;
     doc["qos"] = 0;
-
-    JsonObject device = doc["device"].to<JsonObject>();
-    device["identifiers"] = id;
-    device["name"] = name;
-    device["manufacturer"] = "Somfy";
-    device["model"] = "IO Blind Bridge";
-    device["sw_version"] = "1.0.0";
-    device["serial_number"] = key;
-    device["via_device"] = GATEWAY_ID;
+    doc["device"] = createDeviceObject(id, name, key);
 
     std::string payload;
     size_t len = serializeJson(doc, payload);
@@ -371,13 +341,7 @@ static void publishIohcFrameDiscovery() {
     configDoc["state_topic"] = mqtt_discovery_topic + "/sensor/iohc_frame/state";
     configDoc["unique_id"] = "iohc_frame";
     configDoc["json_attributes_topic"] = mqtt_discovery_topic + "/sensor/iohc_frame/state";
-
-    JsonObject device = configDoc["device"].to<JsonObject>();
-    device["identifiers"] = GATEWAY_ID;
-    device["name"] = "My Open IO Gateway";
-    device["manufacturer"] = "Somfy";
-    device["model"] = "IO Blind Bridge";
-    device["sw_version"] = "1.0.0";
+    configDoc["device"] = createDeviceObject(GATEWAY_ID, "My Open IO Gateway");
 
     std::string cfg;
     size_t cfgLen = serializeJson(configDoc, cfg);
