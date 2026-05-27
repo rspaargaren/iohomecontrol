@@ -25,8 +25,19 @@ static std::atomic<bool> s_heartbeatEnabled{false};
 static std::atomic<uint32_t> s_nextHeartbeatAtMs{0};
 static uint32_t s_lastMqttConnectAttemptMs = 0;
 static constexpr uint32_t MQTT_RECONNECT_INTERVAL_MS = 5000;
+static TaskHandle_t s_mqttPostConnectTask = nullptr;
 
 static void mqttSchedulerTask(void*);
+static void publishIohcFrameDiscovery();
+static void onMqttConnect(bool sessionPresent);
+static void onMqttDisconnect(AsyncMqttClientDisconnectReason reason);
+static void onMqttMessage(char *topic, char *payload,
+                   AsyncMqttClientMessageProperties properties,
+                   size_t len, size_t index, size_t total);
+static void publishHeartbeat();
+static void mqttFuncHandler(const char *cmd);
+static void mqttPostConnectTask(void*);
+static void handleMqttConnectImpl();
 
 static void startHeartbeat() {
     s_heartbeatEnabled.store(true);
