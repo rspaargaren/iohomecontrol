@@ -235,7 +235,6 @@ namespace IOHC {
         if (radioState == iohcRadio::RadioState::PAYLOAD) {
             // if TX ready?
             if (_flags[0] & RF_IRQFLAGS1_TXREADY) {
-                radio->sent(radio->iohc);
                 Radio::clearFlags();
                 if (radioState != iohcRadio::RadioState::TX) {
                     Radio::setRx();
@@ -387,6 +386,7 @@ void iohcRadio::onTxTicker(void *arg) {
     }
 
     // ✅ TXDONE received
+    radio->sent(radio->iohc);
     ESP_LOGD("RADIO", "TXDONE flag set, ready to send repeat or next packet.\n");
 
     // 🔁 Repeat logic
