@@ -386,7 +386,6 @@ void iohcRadio::onTxTicker(void *arg) {
     }
 
     // ✅ TXDONE received
-    radio->sent(radio->iohc);
     ESP_LOGD("RADIO", "TXDONE flag set, ready to send repeat or next packet.\n");
 
     // 🔁 Repeat logic
@@ -394,6 +393,9 @@ void iohcRadio::onTxTicker(void *arg) {
         radio->iohc->repeat--;
         ets_printf("TX: Repeating current packet (%d repeats left)\n", radio->iohc->repeat);
     } else {
+        // inform callback we finished sending this packet
+        radio->sent(radio->iohc);
+        
         radio->txCounter++;
 
         // 🛑 Check if all packets are sent
