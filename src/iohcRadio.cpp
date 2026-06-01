@@ -355,7 +355,7 @@ void iohcRadio::startQueuedSend() {
     //iohc->decode(true); //false);
     //IOHC::lastSendCmd = iohc->payload.packet.header.cmd;
 
-    ets_printf("TX: Sent first packet at %llu us\n", esp_timer_get_time());
+    ets_printf("TX: Sent first packet (%d repeats) at %llu us\n", iohc->repeat, esp_timer_get_time());
 
     // Start ticker for repeats (short preamble)
     Sender.attach_ms(iohc->repeatTime, &iohcRadio::onTxTicker, (void*)this);
@@ -395,7 +395,7 @@ void iohcRadio::onTxTicker(void *arg) {
     } else {
         // inform callback we finished sending this packet
         radio->sent(radio->iohc);
-        
+
         radio->txCounter++;
 
         // 🛑 Check if all packets are sent
