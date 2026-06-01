@@ -358,8 +358,6 @@ void iohcRadio::startQueuedSend() {
 
     ets_printf("TX: Sent first packet at %llu us\n", esp_timer_get_time());
 
-    if (iohc->repeat > 0) iohc->repeat--;
-
     // Start ticker for repeats (short preamble)
     Sender.attach_ms(iohc->repeatTime, &iohcRadio::onTxTicker, (void*)this);
 }
@@ -388,20 +386,7 @@ void iohcRadio::onTxTicker(void *arg) {
         return;
     }
 
-    // 🛑 Check if all packets are sent
-    if ((radio->txCounter + 1) == radio->packets2send.size()) {
-        ets_printf("TX: All packets sent. Stopping Ticker.\n");
-        radio->Sender.detach();
-        for (auto p : radio->packets2send) delete p;
-        radio->packets2send.clear();
-        Radio::setRx();
-        radio->setRadioState(RadioState::RX);
-        radio->startQueuedSend();
-        return;
-    }
-
     // ✅ TXDONE received
-    radio->txComplete = false;
     ESP_LOGD("RADIO", "TXDONE flag set, ready to send repeat or next packet.\n");
 
     // 🔁 Repeat logic
@@ -410,12 +395,27 @@ void iohcRadio::onTxTicker(void *arg) {
         ets_printf("TX: Repeating current packet (%d repeats left)\n", radio->iohc->repeat);
     } else {
         radio->txCounter++;
+
+        // 🛑 Check if all packets are sent
+        if (radio->txCounter == radio->packets2send.size()) {
+            ets_printf("TX: All packets sent. Stopping Ticker.\n");
+            radio->Sender.detach();
+            for (auto p : radio->packets2send) delete p;
+            radio->packets2send.clear();
+            Radio::setRx();
+            radio->setRadioState(RadioState::RX);
+            radio->startQueuedSend();
+            return;
+        }
+
         radio->iohc = radio->packets2send[radio->txCounter];
         ets_printf("TX: Moving to next packet %d/%d (repeat=%d)\n",
                     radio->txCounter + 1,
                     radio->packets2send.size(),
                     radio->iohc->repeat);
     }
+
+    radio->txComplete = false;
 
     //Radio::setRx();
     radio->setRadioState(RadioState::TX); // Stay TX until done
