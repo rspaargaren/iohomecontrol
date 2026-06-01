@@ -382,8 +382,14 @@ void iohcRadio::onTxTicker(void *arg) {
         iohcRadio::txComplete = true;
     }
 
+    // ⏳ Wait for TXDONE
+    if (!radio->txComplete) {
+        ets_printf("TX: Waiting for TXDONE... (state=%s)\n", radioStateToString(radio->radioState));
+        return;
+    }
+
     // 🛑 Check if all packets are sent
-    if (radio->txCounter >= radio->packets2send.size()) {
+    if ((radio->txCounter + 1) == radio->packets2send.size()) {
         ets_printf("TX: All packets sent. Stopping Ticker.\n");
         radio->Sender.detach();
         for (auto p : radio->packets2send) delete p;
@@ -391,12 +397,6 @@ void iohcRadio::onTxTicker(void *arg) {
         Radio::setRx();
         radio->setRadioState(RadioState::RX);
         radio->startQueuedSend();
-        return;
-    }
-
-    // ⏳ Wait for TXDONE
-    if (!radio->txComplete) {
-        ets_printf("TX: Waiting for TXDONE... (state=%s)\n", radioStateToString(radio->radioState));
         return;
     }
 
@@ -410,29 +410,15 @@ void iohcRadio::onTxTicker(void *arg) {
         ets_printf("TX: Repeating current packet (%d repeats left)\n", radio->iohc->repeat);
     } else {
         radio->txCounter++;
-        if (radio->txCounter < radio->packets2send.size()) {
-            radio->iohc = radio->packets2send[radio->txCounter];
-            ets_printf("TX: Moving to next packet %d/%d (repeat=%d)\n",
-                       radio->txCounter + 1,
-                       radio->packets2send.size(),
-                       radio->iohc->repeat);
-        }
+        radio->iohc = radio->packets2send[radio->txCounter];
+        ets_printf("TX: Moving to next packet %d/%d (repeat=%d)\n",
+                    radio->txCounter + 1,
+                    radio->packets2send.size(),
+                    radio->iohc->repeat);
     }
 
-    // 👇 Only go RX after all packets
-    if (radio->txCounter >= radio->packets2send.size()) {
-        ets_printf("TX: All repeats done. Switching to RX\n");
-        radio->Sender.detach();
-        for (auto p : radio->packets2send) delete p;
-        radio->packets2send.clear();
-        Radio::setRx();
-        radio->setRadioState(RadioState::RX);
-        radio->startQueuedSend();
-        return;
-    } else {
-        //Radio::setRx();
-        radio->setRadioState(RadioState::TX); // Stay TX until done
-    }
+    //Radio::setRx();
+    radio->setRadioState(RadioState::TX); // Stay TX until done
 
     // 📡 Send next packet (short preamble)
     Radio::setPreambleLength(SHORT_PREAMBLE_MS);
