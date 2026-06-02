@@ -235,7 +235,6 @@ namespace IOHC {
         if (radioState == iohcRadio::RadioState::PAYLOAD) {
             // if TX ready?
             if (_flags[0] & RF_IRQFLAGS1_TXREADY) {
-                radio->sent(radio->iohc);
                 Radio::clearFlags();
                 if (radioState != iohcRadio::RadioState::TX) {
                     Radio::setRx();
@@ -356,9 +355,7 @@ void iohcRadio::startQueuedSend() {
     //iohc->decode(true); //false);
     //IOHC::lastSendCmd = iohc->payload.packet.header.cmd;
 
-    ets_printf("TX: Sent first packet at %llu us\n", esp_timer_get_time());
-
-    if (iohc->repeat > 0) iohc->repeat--;
+    ets_printf("TX: Sent first packet (%d repeats) at %llu us\n", iohc->repeat, esp_timer_get_time());
 
     // Start ticker for repeats (short preamble)
     Sender.attach_ms(iohc->repeatTime, &iohcRadio::onTxTicker, (void*)this);
@@ -382,18 +379,6 @@ void iohcRadio::onTxTicker(void *arg) {
         iohcRadio::txComplete = true;
     }
 
-    // 🛑 Check if all packets are sent
-    if (radio->txCounter >= radio->packets2send.size()) {
-        ets_printf("TX: All packets sent. Stopping Ticker.\n");
-        radio->Sender.detach();
-        for (auto p : radio->packets2send) delete p;
-        radio->packets2send.clear();
-        Radio::setRx();
-        radio->setRadioState(RadioState::RX);
-        radio->startQueuedSend();
-        return;
-    }
-
     // ⏳ Wait for TXDONE
     if (!radio->txComplete) {
         ets_printf("TX: Waiting for TXDONE... (state=%s)\n", radioStateToString(radio->radioState));
@@ -401,7 +386,6 @@ void iohcRadio::onTxTicker(void *arg) {
     }
 
     // ✅ TXDONE received
-    radio->txComplete = false;
     ESP_LOGD("RADIO", "TXDONE flag set, ready to send repeat or next packet.\n");
 
     // 🔁 Repeat logic
@@ -409,30 +393,34 @@ void iohcRadio::onTxTicker(void *arg) {
         radio->iohc->repeat--;
         ets_printf("TX: Repeating current packet (%d repeats left)\n", radio->iohc->repeat);
     } else {
+        // inform callback we finished sending this packet
+        radio->sent(radio->iohc);
+
         radio->txCounter++;
-        if (radio->txCounter < radio->packets2send.size()) {
-            radio->iohc = radio->packets2send[radio->txCounter];
-            ets_printf("TX: Moving to next packet %d/%d (repeat=%d)\n",
-                       radio->txCounter + 1,
-                       radio->packets2send.size(),
-                       radio->iohc->repeat);
+
+        // 🛑 Check if all packets are sent
+        if (radio->txCounter == radio->packets2send.size()) {
+            ets_printf("TX: All packets sent. Stopping Ticker.\n");
+            radio->Sender.detach();
+            for (auto p : radio->packets2send) delete p;
+            radio->packets2send.clear();
+            Radio::setRx();
+            radio->setRadioState(RadioState::RX);
+            radio->startQueuedSend();
+            return;
         }
+
+        radio->iohc = radio->packets2send[radio->txCounter];
+        ets_printf("TX: Moving to next packet %d/%d (repeat=%d)\n",
+                    radio->txCounter + 1,
+                    radio->packets2send.size(),
+                    radio->iohc->repeat);
     }
 
-    // 👇 Only go RX after all packets
-    if (radio->txCounter >= radio->packets2send.size()) {
-        ets_printf("TX: All repeats done. Switching to RX\n");
-        radio->Sender.detach();
-        for (auto p : radio->packets2send) delete p;
-        radio->packets2send.clear();
-        Radio::setRx();
-        radio->setRadioState(RadioState::RX);
-        radio->startQueuedSend();
-        return;
-    } else {
-        //Radio::setRx();
-        radio->setRadioState(RadioState::TX); // Stay TX until done
-    }
+    radio->txComplete = false;
+
+    //Radio::setRx();
+    radio->setRadioState(RadioState::TX); // Stay TX until done
 
     // 📡 Send next packet (short preamble)
     Radio::setPreambleLength(SHORT_PREAMBLE_MS);
