@@ -444,7 +444,7 @@ void iohcRadio::onTxTicker(void *arg) {
     bool IRAM_ATTR iohcRadio::receive(bool stats = false) {
         digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
         // bool frmErr = false;
-        iohc = new iohcPacket;
+        auto iohc = new iohcPacket;
         iohc->buffer_length = 0;
         iohc->frequency = scan_freqs[currentFreqIdx];
 
