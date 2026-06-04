@@ -162,18 +162,10 @@ void sendSyslog(const String &msg, int severity) {
     const String base = currentHostIdent();
     const String ho = syslog_tag.empty() ? base : (syslog_tag.c_str() + String("-") + base);
 
-#ifndef SYSLOG_RFC5424
-    // RFC3164: <PRI>MMM dd HH:MM:SS HOST APP: message
-    const String header = "<" + String(p) + ">" + rfc3164Timestamp() + " " + ho + " " + SYSLOG_APP + ": ";
+    // No timestamp — device has no NTP so Jan 1 epoch would be rejected by syslog servers.
+    // The receiver timestamps the message on arrival instead.
+    const String header = "<" + String(p) + ">" + ho + " " + SYSLOG_APP + ": ";
     const String wire   = header + msg;
-#else
-    // RFC5424: <PRI>1 TIMESTAMP HOST APP PROCID MSGID - message
-    const char* PROCID = "-";   // e.g., chip ID if you want
-    const char* MSGID  = "-";
-    const String header = "<" + String(p) + ">1 " + iso8601UTC() + " " + ho + " " + SYSLOG_APP
-                        + " " + PROCID + " " + MSGID + " - ";
-    const String wire   = header + msg;
-#endif
 
     ESP_LOGD(TAG, "Sending syslog (len=%u): %s", wire.length(), wire.c_str());
     syslogUdp.beginPacket(syslogIP, syslog_port);
