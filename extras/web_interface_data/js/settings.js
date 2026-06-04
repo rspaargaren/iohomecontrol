@@ -77,9 +77,16 @@
         }
     }
 
+    let displayUpdateInFlight = false;
+
     async function updateDisplayConfig(app) {
-        if (!app.elements.displayEnabledInput) {
+        if (!app.elements.displayEnabledInput || displayUpdateInFlight) {
             return;
+        }
+
+        displayUpdateInFlight = true;
+        if (app.elements.displayUpdateButton) {
+            app.elements.displayUpdateButton.disabled = true;
         }
 
         const requestedEnabled = app.elements.displayEnabledInput.checked;
@@ -109,6 +116,11 @@
                 true
             );
             app.logStatus(app.i18nText("log.error_updating_display", "Error updating display config"), true);
+        } finally {
+            displayUpdateInFlight = false;
+            if (app.elements.displayUpdateButton) {
+                app.elements.displayUpdateButton.disabled = false;
+            }
         }
     }
 

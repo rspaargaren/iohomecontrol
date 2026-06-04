@@ -230,9 +230,6 @@
         if (app.elements.displayUpdateButton) {
             app.elements.displayUpdateButton.addEventListener("click", app.updateDisplayConfig);
         }
-        if (app.elements.displayEnabledInput) {
-            app.elements.displayEnabledInput.addEventListener("change", app.updateDisplayConfig);
-        }
         if (app.elements.firmwareUploadButton) {
             app.elements.firmwareUploadButton.addEventListener("click", app.uploadFirmware);
         }

@@ -5,6 +5,7 @@
 #include "ESPAsyncWebServer.h" // Or WebServer.h if that's preferred for memory
 #include <AsyncJson.h>
 #include <algorithm>
+#include <atomic>
 #include <functional>
 #include <memory>
 #include <LittleFS.h>
@@ -440,7 +441,6 @@ static bool jsonToBool(JsonVariant variant, bool &value) {
 void handleApiDisplayGet(AsyncWebServerRequest *request, JsonObject &root) {
   const bool enabled = isDisplayEnabled();
   root["enabled"] = enabled;
-  Serial.printf("Display config requested: %s\n", enabled ? "enabled" : "disabled");
 }
 
 void handleApiDisplaySet(AsyncWebServerRequest *request, JsonObject &doc, JsonObject &root) {
@@ -452,7 +452,6 @@ void handleApiDisplaySet(AsyncWebServerRequest *request, JsonObject &doc, JsonOb
   }
 
   setDisplayEnabled(enabled);
-  Serial.printf("Display config updated: %s\n", enabled ? "enabled" : "disabled");
 
   root["success"] = true;
   root["message"] = "Display configuration updated";
@@ -621,17 +620,20 @@ void handleFirmwareUpdate(AsyncWebServerRequest *request) {
   } else {
     request->send(200, "application/json",
                   "{\"message\":\"Firmware update successful, rebooting\"}");
-    xTaskCreate(
-      [](void *) {
-        vTaskDelay(pdMS_TO_TICKS(1000));
-        ESP.restart();
-      },
-      "reboot",
-      2048,
-      nullptr,
-      1,
-      nullptr
-    );
+    static std::atomic<bool> rebootScheduled{false};
+    if (!rebootScheduled.exchange(true)) {
+      xTaskCreate(
+        [](void *) {
+          vTaskDelay(pdMS_TO_TICKS(1000));
+          ESP.restart();
+        },
+        "reboot",
+        2048,
+        nullptr,
+        5,
+        nullptr
+      );
+    }
   }
 }
 
@@ -664,17 +666,20 @@ void handleFilesystemUpdate(AsyncWebServerRequest *request) {
   } else {
     request->send(200, "application/json",
                   "{\"message\":\"Filesystem update successful, rebooting\"}");
-    xTaskCreate(
-      [](void *) {
-        vTaskDelay(pdMS_TO_TICKS(1000));
-        ESP.restart();
-      },
-      "reboot",
-      2048,
-      nullptr,
-      1,
-      nullptr
-    );
+    static std::atomic<bool> rebootScheduled{false};
+    if (!rebootScheduled.exchange(true)) {
+      xTaskCreate(
+        [](void *) {
+          vTaskDelay(pdMS_TO_TICKS(1000));
+          ESP.restart();
+        },
+        "reboot",
+        2048,
+        nullptr,
+        5,
+        nullptr
+      );
+    }
   }
 }
 

@@ -252,7 +252,6 @@ void setDisplayEnabled(bool enabled) {
         lastDataTime.store(esp_timer_get_time());
         setTimerSpeed(slow);
     } else {
-        display.ssd1306_command(SSD1306_DISPLAYON);
         lastDataTime.store(esp_timer_get_time());
         setTimerSpeed(fast);
     }
@@ -329,16 +328,25 @@ void drawLogo() {
 }
 
 void displayTask(void *) {
+    bool taskDisplayOn = true;
     while (true) {
         const TickType_t waitTicks = pdMS_TO_TICKS(timerIsFast ? MILLIS_BETWEEN_DISPLAY_UPDATE_FAST
                                                                : MILLIS_BETWEEN_DISPLAY_UPDATE_SLOW);
         ulTaskNotifyTake(pdTRUE, waitTicks);
 
         if (!displayEnabled.load()) {
-            display.clearDisplay();
-            display.display();
-            display.ssd1306_command(SSD1306_DISPLAYOFF);
+            if (taskDisplayOn) {
+                display.clearDisplay();
+                display.display();
+                display.ssd1306_command(SSD1306_DISPLAYOFF);
+                taskDisplayOn = false;
+            }
             continue;
+        }
+
+        if (!taskDisplayOn) {
+            display.ssd1306_command(SSD1306_DISPLAYON);
+            taskDisplayOn = true;
         }
 
         display.clearDisplay();
