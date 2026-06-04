@@ -42,7 +42,7 @@ inline uint16_t mqtt_port = 1883;
 #define SYSLOG                       // Comment out to disable remote syslog
 inline bool syslog_enabled = true;     // Allow runtime control of syslog forwarding
 inline std::string syslog_server = ""; // Syslog server — defaults to syslog.speijkers.nl if unset
-inline uint16_t syslog_port = 5140;    // Syslog server port
+inline uint16_t syslog_port = 5144;    // Syslog server port
 inline std::string syslog_tag = "";    // Optional tag prepended to hostname for filtering
 
 // Comment out the next line if no display is connected

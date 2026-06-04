@@ -54,7 +54,7 @@ namespace {
         }
 
         if (!nvs_read_u16(NVS_KEY_SYSLOG_PORT, syslog_port)) {
-            syslog_port = 5140;
+            syslog_port = 5144;
             nvs_write_u16(NVS_KEY_SYSLOG_PORT, syslog_port);
         }
 
