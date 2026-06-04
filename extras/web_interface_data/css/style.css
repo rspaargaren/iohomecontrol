@@ -243,6 +243,23 @@ input, select {
     background: var(--color-input);
     color:var(--color-text);
 }
+.setting-toggle {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.setting-toggle input {
+  margin: 0;
+}
+.setting-status {
+  margin-top: 10px;
+  font-size: 14px;
+  color: var(--color-text);
+}
+.setting-status.error {
+  color: #d62828;
+}
 #status-messages {
     min-height: 200px;
     border: 1px solid var(--color7);

@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title data-i18n="page.title">MiOpen.IO - Device Control</title>
     <link rel="icon" href="img/logo.png">
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=20260526b">
 </head>
 
 <body>
@@ -128,7 +128,20 @@
                         <button id="mqtt-update" data-i18n="button.update">Update</button>
                     </div>
                 </section>
-                
+                <section id="display-settings-section">
+                    <div class="title">
+                        <h2 data-i18n="section.display_settings">Display</h2>
+                    </div>
+                    <div class="card">
+                        <label class="setting-toggle" for="display-enabled">
+                            <input type="checkbox" id="display-enabled" checked>
+                            <span data-i18n="label.enable_display">Enable OLED display</span>
+                        </label>
+                        <button id="display-update" data-i18n="button.update">Update</button>
+                        <p id="display-status" class="setting-status" data-i18n="status.display_loading">Display settings loading...</p>
+                    </div>
+                </section>
+
             </div>
 
             <div class="right">
@@ -211,13 +224,13 @@
             </div>
         </div>
     </div>
-    <script src="js/i18n.js"></script>
-    <script src="js/api.js"></script>
-    <script src="js/popup.js"></script>
-    <script src="js/devices.js"></script>
-    <script src="js/remotes.js"></script>
-    <script src="js/settings.js"></script>
-    <script src="js/app.js"></script>
+    <script src="js/i18n.js?v=20260526b"></script>
+    <script src="js/api.js?v=20260526b"></script>
+    <script src="js/popup.js?v=20260526b"></script>
+    <script src="js/devices.js?v=20260526b"></script>
+    <script src="js/remotes.js?v=20260526b"></script>
+    <script src="js/settings.js?v=20260526b"></script>
+    <script src="js/app.js?v=20260526b"></script>
     <script>
         function showPage(page) {
             document.getElementById('devices-page').style.display = (page === 'devices') ? 'grid' : 'none';
