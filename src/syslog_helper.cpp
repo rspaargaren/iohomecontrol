@@ -146,6 +146,9 @@ void sendSyslog(const String &msg, int severity) {
     if (!syslog_enabled) {
         return;
     }
+    if (WiFi.status() != WL_CONNECTED) {
+        return;
+    }
     if (!syslogReady) {
         ESP_LOGD(TAG, "Syslog not ready, initializing");
         initSyslog();

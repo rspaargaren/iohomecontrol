@@ -20,6 +20,9 @@
 #if defined(MQTT)
 #include <mqtt_handler.h>
 #endif
+#if defined(SYSLOG)
+#include <syslog_helper.h>
+#endif
 #include <WiFiManager.h>
 #include <ESPmDNS.h>
 #include <TickerUsESP32.h>
@@ -98,6 +101,10 @@ static void handleWifiConnected() {
 
         ensureWebServerStarted();
         onMqttAfterWifi();
+#if defined(SYSLOG)
+        resetSyslog();
+        initSyslog();
+#endif
     }
 }
 
