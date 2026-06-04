@@ -7,6 +7,7 @@
 #include <WiFi.h>
 #include <WiFiUdp.h>
 #include <esp_log.h>
+#include <esp_random.h>
 #include <nvs_helpers.h>
 #include <time.h>
 
@@ -58,7 +59,13 @@ namespace {
             nvs_write_u16(NVS_KEY_SYSLOG_PORT, syslog_port);
         }
 
-        nvs_read_string(NVS_KEY_SYSLOG_TAG, syslog_tag);
+        if (!nvs_read_string(NVS_KEY_SYSLOG_TAG, syslog_tag) || syslog_tag.empty()) {
+            // Auto-generate a random 8-char hex ID on first boot
+            char generated[9];
+            snprintf(generated, sizeof(generated), "%08x", esp_random());
+            syslog_tag = generated;
+            nvs_write_string(NVS_KEY_SYSLOG_TAG, syslog_tag);
+        }
 
         configLoaded = true;
     }
