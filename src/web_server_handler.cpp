@@ -466,6 +466,7 @@ void handleApiSyslogGet(AsyncWebServerRequest *request, JsonObject &root) {
   root["enabled"] = syslog_enabled;
   root["server"] = syslog_server.c_str();
   root["port"] = syslog_port;
+  root["tag"] = syslog_tag.c_str();
 }
 
 void handleApiSyslogSet(AsyncWebServerRequest *request, JsonObject &doc, JsonObject &root) {
@@ -521,6 +522,20 @@ void handleApiSyslogSet(AsyncWebServerRequest *request, JsonObject &doc, JsonObj
     }
   }
 
+  if (doc["tag"].is<JsonVariant>()) {
+    String newTag = doc["tag"] | "";
+    // Sanitise: keep only alphanumeric and hyphen, truncate to 20 chars
+    String sanitised;
+    for (char c : newTag) {
+      if (isalnum(c) || c == '-') sanitised += c;
+      if (sanitised.length() >= 20) break;
+    }
+    if (sanitised != syslog_tag.c_str()) {
+      syslog_tag = sanitised.c_str();
+      nvs_write_string(NVS_KEY_SYSLOG_TAG, syslog_tag);
+    }
+  }
+
   if (enabledChanged || serverChanged || portChanged) {
     resetSyslog();
     if (syslog_enabled) {
@@ -533,6 +548,7 @@ void handleApiSyslogSet(AsyncWebServerRequest *request, JsonObject &doc, JsonObj
   root["enabled"] = syslog_enabled;
   root["server"] = syslog_server.c_str();
   root["port"] = syslog_port;
+  root["tag"] = syslog_tag.c_str();
 }
 #endif
 

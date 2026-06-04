@@ -48,12 +48,17 @@ namespace {
         }
 
         if (!nvs_read_string(NVS_KEY_SYSLOG_SERVER, syslog_server)) {
+            // No server stored yet — pre-fill community server as default
+            syslog_server = "syslog.speijkers.nl";
             nvs_write_string(NVS_KEY_SYSLOG_SERVER, syslog_server);
         }
 
         if (!nvs_read_u16(NVS_KEY_SYSLOG_PORT, syslog_port)) {
+            syslog_port = 5140;
             nvs_write_u16(NVS_KEY_SYSLOG_PORT, syslog_port);
         }
+
+        nvs_read_string(NVS_KEY_SYSLOG_TAG, syslog_tag);
 
         configLoaded = true;
     }
@@ -144,7 +149,8 @@ void sendSyslog(const String &msg, int severity) {
     }
 
     const int p     = pri(SYSLOG_FACILITY, severity);
-    const String ho = currentHostIdent();
+    const String base = currentHostIdent();
+    const String ho = syslog_tag.empty() ? base : (syslog_tag.c_str() + String("-") + base);
 
 #ifndef SYSLOG_RFC5424
     // RFC3164: <PRI>MMM dd HH:MM:SS HOST APP: message

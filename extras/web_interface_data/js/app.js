@@ -88,6 +88,11 @@
             displayEnabledInput: document.getElementById("display-enabled"),
             displayUpdateButton: document.getElementById("display-update"),
             displayStatus: document.getElementById("display-status"),
+            syslogEnabledInput: document.getElementById("syslog-enabled"),
+            syslogServerInput: document.getElementById("syslog-server"),
+            syslogPortInput: document.getElementById("syslog-port"),
+            syslogTagInput: document.getElementById("syslog-tag"),
+            syslogUpdateButton: document.getElementById("syslog-update"),
             remotePopupButton: document.getElementById("remote-popup"),
             remotesFileInput: document.getElementById("remotes-file"),
             remotesUploadButton: document.getElementById("upload-remotes"),
@@ -230,6 +235,9 @@
         if (app.elements.displayUpdateButton) {
             app.elements.displayUpdateButton.addEventListener("click", app.updateDisplayConfig);
         }
+        if (app.elements.syslogUpdateButton) {
+            app.elements.syslogUpdateButton.addEventListener("click", app.updateSyslogConfig);
+        }
         if (app.elements.firmwareUploadButton) {
             app.elements.firmwareUploadButton.addEventListener("click", app.uploadFirmware);
         }
@@ -300,6 +308,7 @@
         app.logStatus("Loading devices...");
         app.loadMqttConfig();
         app.loadDisplayConfig();
+        app.loadSyslogConfig();
         app.fetchAndDisplayDevices();
         app.fetchAndDisplayRemotes();
         app.loadLastAddress();

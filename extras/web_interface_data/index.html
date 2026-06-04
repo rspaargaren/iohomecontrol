@@ -141,6 +141,25 @@
                         <p id="display-status" class="setting-status" data-i18n="status.display_loading">Display settings loading...</p>
                     </div>
                 </section>
+                <section id="syslog-settings-section">
+                    <div class="title">
+                        <h2 data-i18n="section.syslog_settings">Syslog settings</h2>
+                    </div>
+                    <div class="card">
+                        <label class="setting-toggle" for="syslog-enabled">
+                            <input type="checkbox" id="syslog-enabled">
+                            <span data-i18n="label.enable_syslog_forwarding">Enable syslog forwarding</span>
+                        </label>
+                        <label for="syslog-server" data-i18n="label.server">Server:</label>
+                        <input type="text" id="syslog-server" data-i18n-placeholder="placeholder.syslog_server" placeholder="Syslog Server">
+                        <label for="syslog-port" data-i18n="label.port">Port:</label>
+                        <input type="number" id="syslog-port" min="1" max="65535" data-i18n-placeholder="placeholder.syslog_port" placeholder="Syslog Port">
+                        <label for="syslog-tag" data-i18n="label.syslog_tag">Tag:</label>
+                        <input type="text" id="syslog-tag" maxlength="20" data-i18n-placeholder="placeholder.syslog_tag" placeholder="e.g. myhouse">
+                        <p class="setting-note" data-i18n="note.syslog_privacy">Only device events are sent — no credentials or IP addresses.</p>
+                        <button id="syslog-update" data-i18n="button.update">Update</button>
+                    </div>
+                </section>
 
             </div>
 
