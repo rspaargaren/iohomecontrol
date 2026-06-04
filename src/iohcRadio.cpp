@@ -235,13 +235,13 @@ namespace IOHC {
         if (radioState == iohcRadio::RadioState::PAYLOAD) {
             // if TX ready?
             if (_flags[0] & RF_IRQFLAGS1_TXREADY) {
-                radio->sent(radio->iohc);
+                radio->sent(radio->packets2send[radio->txCounter]);
                 Radio::clearFlags();
                 if (radioState != iohcRadio::RadioState::TX) {
                     Radio::setRx();
                     radio->setRadioState(iohcRadio::RadioState::RX);
                 }
-                // radio->sent(radio->iohc); // Put after Workaround to permit MQTT sending. No more needed
+                // radio->sent(radio->packets2send[radio->txCounter]); // Put after Workaround to permit MQTT sending. No more needed
                 return;
             }
             // if in RX mode?
@@ -341,7 +341,7 @@ void iohcRadio::startQueuedSend() {
     ets_printf("TX: Preparing %d packet(s)\n", packets2send.size());
     setRadioState(RadioState::TX);
 
-    iohc = packets2send[txCounter];
+    auto packet = packets2send[txCounter];
 
     // 🟢 Set long preamble for first packet
     Radio::setPreambleLength(LONG_PREAMBLE_MS);
@@ -350,18 +350,23 @@ void iohcRadio::startQueuedSend() {
     // Send first packet immediately
     Radio::setStandby();
     Radio::clearFlags();
-    Radio::writeBytes(REG_FIFO, iohc->payload.buffer, iohc->buffer_length);
+    Radio::writeBytes(REG_FIFO, packet->payload.buffer, packet->buffer_length);
     Radio::setTx();
     //packetStamp = esp_timer_get_time();
-    //iohc->decode(true); //false);
-    //IOHC::lastSendCmd = iohc->payload.packet.header.cmd;
+    //packet->decode(true); //false);
+    //IOHC::lastSendCmd = packet->payload.packet.header.cmd;
 
     ets_printf("TX: Sent first packet at %llu us\n", esp_timer_get_time());
 
-    if (iohc->repeat > 0) iohc->repeat--;
+    if (packet->repeat > 0) packet->repeat--;
 
     // Start ticker for repeats (short preamble)
-    Sender.attach_ms(iohc->repeatTime, &iohcRadio::onTxTicker, (void*)this);
+    Sender.attach_ms(packet->repeatTime, &iohcRadio::onTxTicker, (void*)this);
+}
+
+void iohcRadio::send(iohcPacket *packet) {
+    std::vector<iohcPacket *> packets = { packet };
+    send(packets);
 }
 
 void iohcRadio::send(std::vector<iohcPacket *> &iohcTx) {
@@ -373,6 +378,7 @@ void iohcRadio::send(std::vector<iohcPacket *> &iohcTx) {
  
 void iohcRadio::onTxTicker(void *arg) {
     iohcRadio *radio = (iohcRadio *)arg;
+    auto packet = radio->packets2send[radio->txCounter];
 
     // 🩵 Fallback: Check IRQFLAGS2 (0x3F) for PacketSent in FSK mode
     uint8_t irqFlags2 = Radio::readByte(0x3F); // REG_IRQFLAGS2
@@ -405,17 +411,17 @@ void iohcRadio::onTxTicker(void *arg) {
     ESP_LOGD("RADIO", "TXDONE flag set, ready to send repeat or next packet.\n");
 
     // 🔁 Repeat logic
-    if (radio->iohc->repeat > 0) {
-        radio->iohc->repeat--;
-        ets_printf("TX: Repeating current packet (%d repeats left)\n", radio->iohc->repeat);
+    if (packet->repeat > 0) {
+        packet->repeat--;
+        ets_printf("TX: Repeating current packet (%d repeats left)\n", packet->repeat);
     } else {
         radio->txCounter++;
         if (radio->txCounter < radio->packets2send.size()) {
-            radio->iohc = radio->packets2send[radio->txCounter];
+            packet = radio->packets2send[radio->txCounter];
             ets_printf("TX: Moving to next packet %d/%d (repeat=%d)\n",
                        radio->txCounter + 1,
                        radio->packets2send.size(),
-                       radio->iohc->repeat);
+                       packet->repeat);
         }
     }
 
@@ -438,11 +444,11 @@ void iohcRadio::onTxTicker(void *arg) {
     Radio::setPreambleLength(SHORT_PREAMBLE_MS);
     Radio::setStandby();
     Radio::clearFlags();
-    Radio::writeBytes(REG_FIFO, radio->iohc->payload.buffer, radio->iohc->buffer_length);
+    Radio::writeBytes(REG_FIFO, packet->payload.buffer, packet->buffer_length);
     Radio::setTx();
     //packetStamp = esp_timer_get_time();
-    //radio->iohc->decode(true); //false);
-    //IOHC::lastSendCmd = radio->iohc->payload.packet.header.cmd;
+    //packet->decode(true); //false);
+    //IOHC::lastSendCmd = packet->payload.packet.header.cmd;
 
     ets_printf("TX: Sent packet %d/%d at %llu us\n",
                radio->txCounter + 1,
