@@ -40,6 +40,7 @@ inline std::string mqtt_discovery_topic = "homeassistant";
 inline uint16_t mqtt_port = 1883;
 
 #define SYSLOG                       // Comment out to disable remote syslog
+#define SYSLOG_SECRET "7a06c4100d82ed8d"  // Shared token — Graylog drops messages without it
 inline bool syslog_enabled = true;     // Allow runtime control of syslog forwarding
 inline std::string syslog_server = ""; // Syslog server — defaults to syslog.speijkers.nl if unset
 inline uint16_t syslog_port = 5144;    // Syslog server port
