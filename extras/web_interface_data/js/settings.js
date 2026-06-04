@@ -124,6 +124,54 @@
         }
     }
 
+    async function loadSyslogConfig(app) {
+        if (!app.elements.syslogServerInput) {
+            return;
+        }
+        try {
+            const config = await window.MiOpenApi.requestJson("/api/syslog");
+            app.elements.syslogEnabledInput.checked = config.enabled !== false;
+            app.elements.syslogServerInput.value = config.server || "";
+            app.elements.syslogPortInput.value = config.port || "";
+            app.elements.syslogTagInput.value = config.tag || "";
+        } catch (error) {
+            console.error("Error fetching syslog config", error);
+        }
+    }
+
+    let syslogUpdateInFlight = false;
+
+    async function updateSyslogConfig(app) {
+        if (!app.elements.syslogServerInput || syslogUpdateInFlight) {
+            return;
+        }
+        syslogUpdateInFlight = true;
+        if (app.elements.syslogUpdateButton) {
+            app.elements.syslogUpdateButton.disabled = true;
+        }
+        try {
+            const result = await window.MiOpenApi.postJson("/api/syslog", {
+                enabled: app.elements.syslogEnabledInput.checked,
+                server: app.elements.syslogServerInput.value,
+                port: parseInt(app.elements.syslogPortInput.value, 10),
+                tag: app.elements.syslogTagInput.value
+            });
+            app.elements.syslogEnabledInput.checked = result.enabled !== false;
+            app.elements.syslogServerInput.value = result.server || "";
+            app.elements.syslogPortInput.value = result.port || "";
+            app.elements.syslogTagInput.value = result.tag || "";
+            app.logStatus(result.message || app.i18nText("log.syslog_updated", "Syslog settings updated."));
+        } catch (error) {
+            console.error("Error updating syslog config", error);
+            app.logStatus(app.i18nText("log.error_updating_syslog", "Error updating syslog config"), true);
+        } finally {
+            syslogUpdateInFlight = false;
+            if (app.elements.syslogUpdateButton) {
+                app.elements.syslogUpdateButton.disabled = false;
+            }
+        }
+    }
+
     async function uploadSelectedFile(app, input, url, missingMessage, successMessage, refreshFn) {
         const file = input.files[0];
         if (!file) {
@@ -157,6 +205,12 @@
         };
         app.updateDisplayConfig = function () {
             return updateDisplayConfig(app);
+        };
+        app.loadSyslogConfig = function () {
+            return loadSyslogConfig(app);
+        };
+        app.updateSyslogConfig = function () {
+            return updateSyslogConfig(app);
         };
         app.uploadFirmware = function () {
             return uploadSelectedFile(
