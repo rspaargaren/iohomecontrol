@@ -775,8 +775,8 @@ void setupWebServer() {
   server.on("/api/mqtt", HTTP_POST, jsonPost(handleApiMqttSet));
 #endif
 #if defined(SYSLOG)
-  server.on("/api/syslog", HTTP_POST, jsonPost(handleApiSyslogSet));
   server.on("/api/syslog/test", HTTP_POST, jsonPost(handleApiSyslogTest));
+  server.on("/api/syslog", HTTP_POST, jsonPost(handleApiSyslogSet));
 #endif
   server.on("/api/firmware", HTTP_POST, handleFirmwareUpdate,
             handleFirmwareUpload);
