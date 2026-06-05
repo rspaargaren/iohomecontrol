@@ -69,12 +69,12 @@ jobs:
           tag_prefix: ''
 
       - name: Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
-          name: Release ${{ steps.generate_release_tag.outputs.release_tag }}
+          name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || steps.generate_release_tag.outputs.release_tag }}
           body_path: changelog.md
-          prerelease: ${{ !startsWith(github.ref, 'refs/tags/v') }}
-          tag_name: ${{ steps.generate_release_tag.outputs.release_tag }}
+          prerelease: ${{  !startsWith(github.ref_name, 'v') }}
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || steps.generate_release_tag.outputs.release_tag }}
           files: |
             LilyGoLoraESP32.bin
             LilyGoLoraESP32_firmware.bin
@@ -86,12 +86,12 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v6
         with:
-         name: build-artifacts
-         path: |
-           LilyGoLoraESP32.bin
-           LilyGoLoraESP32_firmware.bin
-           LilyGoLoraESP32_filesystem.bin
-           HeltecLoraV2ESP32.bin
-           HeltecLoraV2ESP32_firmware.bin
-           HeltecLoraV2ESP32_filesystem.bin
-           changelog.md
+          name: build-artifacts
+          path: |
+            LilyGoLoraESP32.bin
+            LilyGoLoraESP32_firmware.bin
+            LilyGoLoraESP32_filesystem.bin
+            HeltecLoraV2ESP32.bin
+            HeltecLoraV2ESP32_firmware.bin
+            HeltecLoraV2ESP32_filesystem.bin
+            changelog.md
