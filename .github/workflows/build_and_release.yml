@@ -46,7 +46,7 @@ jobs:
         run: esptool --chip esp32 merge-bin -o LilyGoLoraESP32.bin --flash-size 4MB 0x1000 .pio/build/LilyGoLoraESP32/bootloader.bin 0x8000 .pio/build/LilyGoLoraESP32/partitions.bin 0x10000 .pio/build/LilyGoLoraESP32/firmware.bin 0x210000 .pio/build/LilyGoLoraESP32/littlefs.bin
 
       - name: Merge bin files together for HeltecLoraV2ESP32
-        run: esptool --chip esp32 merge-bin -o HeltecLoraV2ESP32.bin --flash-size 8MB 0x1000 .pio/build/HeltecLoraV2ESP32/bootloader.bin 0x8000 .pio/build/HeltecLoraV2ESP32/partitions.bin 0x10000 .pio/build/HeltecLoraV2ESP32/firmware.bin 0x290000 .pio/build/HeltecLoraV2ESP32/littlefs.bin
+        run: esptool --chip esp32 merge-bin -o HeltecLoraV2ESP32.bin --flash-size 8MB 0x1000 .pio/build/HeltecLoraV2ESP32/bootloader.bin 0x8000 .pio/build/HeltecLoraV2ESP32/partitions.bin 0x10000 .pio/build/HeltecLoraV2ESP32/firmware.bin 0x670000 .pio/build/HeltecLoraV2ESP32/littlefs.bin
 
       - name: Prepare firmware and littlefs files for release
         run: |
