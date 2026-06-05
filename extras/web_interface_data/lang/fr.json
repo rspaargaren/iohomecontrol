@@ -182,5 +182,10 @@
   "log.error_adding_remote": "Error adding remote: {message}",
   "help.device": "Etape 1: Appareils -> (+)\nCreez un nouvel appareil.\nEtape 2: Ouvrir Modifier\nAllez dans les parametres de cet appareil.\nEtape 3: Activez le mode programmation sur la telecommande physique\nMaintenez le bouton de programmation enfonce jusqu'a ce que l'ecran ou le volet bouge brievement. Des que vous voyez ce court mouvement, la telecommande est en mode appairage.\nEtape 4: Dans Modifier -> Associer\nCliquez Associer dans l'interface web. L'appareil bouge de nouveau.\nEtape 5: Associe.",
   "help.remote": "Etape 1: Telecommandes -> (+)\nCreez une nouvelle telecommande.\nEtape 2: Verifier l'ID\nVerifiez que l'ID renseigne correspond bien a celui de la telecommande physique.\nVous pouvez voir l'ID dans les logs de la derniere commande recue.\nEtape 3: Cliquez Modifier\nLiez ici l'appareil cree precedemment a cette telecommande.\nEtape 4: Termine.",
-  "footer.rights": "MiOpen.IO 2025 - 2026 | djbenbe & rspaargaren. Tous droits reserves."
+  "footer.rights": "MiOpen.IO 2025 - 2026 | djbenbe & rspaargaren. Tous droits reserves.",
+
+  "button.syslog_test": "Envoyer test",
+  "log.syslog_test_sent": "Message de test envoye — verifiez votre serveur syslog.",
+  "log.syslog_test_failed": "Test echoue: ",
+  "log.error_syslog_test": "Erreur lors de l'envoi du message de test."
 }

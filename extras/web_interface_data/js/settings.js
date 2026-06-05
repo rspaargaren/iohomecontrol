@@ -139,6 +139,7 @@
         }
     }
 
+    let syslogTestInFlight = false;
     let syslogUpdateInFlight = false;
 
     async function updateSyslogConfig(app) {
@@ -169,6 +170,26 @@
             if (app.elements.syslogUpdateButton) {
                 app.elements.syslogUpdateButton.disabled = false;
             }
+        }
+    }
+
+    async function sendSyslogTest(app) {
+        if (syslogTestInFlight) return;
+        syslogTestInFlight = true;
+        if (app.elements.syslogTestButton) app.elements.syslogTestButton.disabled = true;
+        try {
+            const result = await window.MiOpenApi.postJson("/api/syslog/test", {});
+            if (result.success) {
+                app.logStatus(app.i18nText("log.syslog_test_sent", "Test message sent — check your syslog server."));
+            } else {
+                app.logStatus(app.i18nText("log.syslog_test_failed", "Test failed: ") + (result.message || ""), true);
+            }
+        } catch (error) {
+            console.error("Error sending syslog test", error);
+            app.logStatus(app.i18nText("log.error_syslog_test", "Error sending syslog test message"), true);
+        } finally {
+            syslogTestInFlight = false;
+            if (app.elements.syslogTestButton) app.elements.syslogTestButton.disabled = false;
         }
     }
 
@@ -211,6 +232,9 @@
         };
         app.updateSyslogConfig = function () {
             return updateSyslogConfig(app);
+        };
+        app.sendSyslogTest = function () {
+            return sendSyslogTest(app);
         };
         app.uploadFirmware = function () {
             return uploadSelectedFile(

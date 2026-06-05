@@ -21,6 +21,7 @@
 #include <nvs_helpers.h>
 #include <oled_display.h>
 #if defined(SYSLOG)
+#include <WiFi.h>
 #include <syslog_helper.h>
 #endif
 #include <tokens.h>
@@ -550,6 +551,22 @@ void handleApiSyslogSet(AsyncWebServerRequest *request, JsonObject &doc, JsonObj
   root["port"] = syslog_port;
   root["tag"] = syslog_tag.c_str();
 }
+
+void handleApiSyslogTest(AsyncWebServerRequest *request, JsonObject &doc, JsonObject &root) {
+  if (!syslog_enabled) {
+    root["success"] = false;
+    root["message"] = "Syslog is disabled";
+    return;
+  }
+  if (WiFi.status() != WL_CONNECTED) {
+    root["success"] = false;
+    root["message"] = "WiFi not connected";
+    return;
+  }
+  sendSyslog("Test message from web UI", 6);
+  root["success"] = true;
+  root["message"] = "Test message sent";
+}
 #endif
 
 #if defined(MQTT)
@@ -759,6 +776,7 @@ void setupWebServer() {
 #endif
 #if defined(SYSLOG)
   server.on("/api/syslog", HTTP_POST, jsonPost(handleApiSyslogSet));
+  server.on("/api/syslog/test", HTTP_POST, jsonPost(handleApiSyslogTest));
 #endif
   server.on("/api/firmware", HTTP_POST, handleFirmwareUpdate,
             handleFirmwareUpload);

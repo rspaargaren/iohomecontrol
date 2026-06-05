@@ -93,6 +93,7 @@
             syslogPortInput: document.getElementById("syslog-port"),
             syslogTagInput: document.getElementById("syslog-tag"),
             syslogUpdateButton: document.getElementById("syslog-update"),
+            syslogTestButton: document.getElementById("syslog-test"),
             remotePopupButton: document.getElementById("remote-popup"),
             remotesFileInput: document.getElementById("remotes-file"),
             remotesUploadButton: document.getElementById("upload-remotes"),
@@ -237,6 +238,9 @@
         }
         if (app.elements.syslogUpdateButton) {
             app.elements.syslogUpdateButton.addEventListener("click", app.updateSyslogConfig);
+        }
+        if (app.elements.syslogTestButton) {
+            app.elements.syslogTestButton.addEventListener("click", app.sendSyslogTest);
         }
         if (app.elements.firmwareUploadButton) {
             app.elements.firmwareUploadButton.addEventListener("click", app.uploadFirmware);
