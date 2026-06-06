@@ -396,6 +396,14 @@ void handleApiAction(AsyncWebServerRequest *request, JsonObject &doc, JsonObject
   root["message"] = msg;
 }
 
+void handleApiInfo(AsyncWebServerRequest *request, JsonObject &root) {
+#ifdef FIRMWARE_VERSION
+  root["version"] = FIRMWARE_VERSION;
+#else
+  root["version"] = "dev";
+#endif
+}
+
 void handleApiLogs(AsyncWebServerRequest *request, JsonArray &root) {
   auto logs = getLogMessages();
   for (const auto &msg : logs) {
@@ -753,6 +761,7 @@ void setupWebServer() {
   }
 
   // API Endpoints
+  server.on("/api/info", HTTP_GET, jsonGet(handleApiInfo));
   server.on("/api/devices", HTTP_GET, jsonGet(handleApiDevices));
   server.on("/api/remotes", HTTP_GET, jsonGet(handleApiRemotes));
   server.on("/api/logs", HTTP_GET, jsonGet(handleApiLogs));

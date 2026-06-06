@@ -308,6 +308,13 @@
             app.fetchAndDisplayRemotes();
         });
 
+        window.MiOpenApi.requestJson("/api/info").then(function (info) {
+            const el = document.getElementById("firmware-version");
+            if (el && info.version) {
+                el.textContent = "Firmware: " + info.version;
+            }
+        }).catch(function () {});
+
         app.logStatus("System started");
         app.logStatus("Loading devices...");
         app.loadMqttConfig();

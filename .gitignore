@@ -2,7 +2,6 @@
 /.idea/
 /docs/
 compile_commands.json
-git_rev_macro.py
 sdkconfig
 sdkconfig.HeltecESP32
 CMakeLists.txt
