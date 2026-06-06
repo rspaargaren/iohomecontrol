@@ -23,16 +23,21 @@
 #include <wifi_helper.h>
 #include <WiFi.h>
 #include <display_helpers.h>
+#include <nvs_helpers.h>
+#include <atomic>
 #include <chrono>
 #include <freertos/semphr.h>
+
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RST);
 DisplayBuffer displayBuffer;
 SemaphoreHandle_t displayBufferMutex = xSemaphoreCreateMutex();
+
 TimerHandle_t displayUpdateTimer;
 std::chrono::time_point<std::chrono::system_clock> startTime;
-std::chrono::time_point<std::chrono::system_clock> timeSinceNoData;
-void handleTimerTick(TimerHandle_t);
+std::atomic<int64_t> lastDataTime = 0;
+std::atomic<bool> displayEnabled = true;
+void displayTask(void *);
 
 const int MILLIS_BETWEEN_DISPLAY_UPDATE_SLOW = 30000;
 const int MILLIS_BETWEEN_DISPLAY_UPDATE_FAST = 100;
@@ -130,19 +135,30 @@ int mqttStatusToIconIndex() {
 
 const bool fast = true;
 const bool slow = false;
-bool timerIsFast = false;
+std::atomic<bool> timerIsFast = false;
+
+static void notifyDisplayTask() {
+    if (displayTaskHandle != nullptr) {
+        xTaskNotifyGive(displayTaskHandle);
+    }
+}
+
 void setTimerSpeed(bool needsFast) {
     if (!displayUpdateTimer) {
         return;
     }
     if (needsFast != timerIsFast) {
-        xTimerChangePeriod(displayUpdateTimer, pdMS_TO_TICKS(needsFast ? MILLIS_BETWEEN_DISPLAY_UPDATE_FAST : MILLIS_BETWEEN_DISPLAY_UPDATE_SLOW), 0);
-
         timerIsFast = needsFast;
+        notifyDisplayTask();
     }
 }
 
 bool initDisplay() {
+    bool enabled = true;
+    if (nvs_read_bool(NVS_KEY_DISPLAY_ENABLED, enabled)) {
+        displayEnabled.store(enabled);
+    }
+
     Wire.begin(OLED_SDA, OLED_SCL);
     if (!display.begin(SSD1306_SWITCHCAPVCC, OLED_ADDRESS)) {
         return false;
@@ -164,6 +180,10 @@ bool initDisplay() {
         Serial.println("Failed to create display update timer");
     }
 
+    startTime = std::chrono::system_clock::now();
+    lastDataTime = esp_timer_get_time();
+    xTaskNotifyGive(displayTaskHandle);
+
     return true;
 }
 
@@ -176,15 +196,7 @@ int getSecondsSinceStart() {
 }
 
 int getSecondsSinceNoData() {
-    return getSecondsSince(timeSinceNoData);
-}
-
-template<typename ... Args>
-std::string format(const std::string &format, Args ... args)
-{
-    char buf[250];
-    snprintf(buf, 250, format.c_str(), args ...);
-    return std::string(buf);
+    return (esp_timer_get_time() - lastDataTime.load()) / 1000000LL;;
 }
 
 const char* getRemoteName(const uint8_t *remote, const char *name) {
@@ -197,6 +209,7 @@ const char* getRemoteName(const uint8_t *remote, const char *name) {
 }
 
 void display1WAction(const uint8_t *remote, const char *action, const char *dir, const char *name) {
+
     xSemaphoreTake(displayBufferMutex, portMAX_DELAY);
     displayBuffer.addLine(format("%s: %s", dir, getRemoteName(remote, name)), action);
     xSemaphoreGive(displayBufferMutex);
@@ -208,15 +221,54 @@ void display1WAction(const uint8_t *remote, const char *action, const char *dir,
 void display1WPosition(const uint8_t *remote, float position, const char *name) {
     xSemaphoreTake(displayBufferMutex, portMAX_DELAY);
     displayBuffer.addLine(getRemoteName(remote, name), format("%d%%", static_cast<int>(position)));
+
     xSemaphoreGive(displayBufferMutex);
 
     lastDisplayActivityMs = millis();
     setTimerSpeed(fast);
+    notifyDisplayTask();
 }
+
+void clearDisplayMessages() {
+    xSemaphoreTake(displayBufferMutex, portMAX_DELAY);
+    displayBuffer.clear();
+    xSemaphoreGive(displayBufferMutex);
+
+    lastDataTime.store(esp_timer_get_time());
+    setTimerSpeed(slow);
+}
+
 
 void updateDisplayStatus() {
     lastDisplayActivityMs = millis();
     setTimerSpeed(fast);
+    notifyDisplayTask();
+}
+
+bool isDisplayEnabled() {
+    return displayEnabled.load();
+}
+
+void setDisplayEnabled(bool enabled) {
+    if (enabled == displayEnabled.load()) {
+        return;
+    }
+
+    displayEnabled.store(enabled);
+    nvs_write_bool(NVS_KEY_DISPLAY_ENABLED, enabled);
+
+    if (!enabled) {
+        xSemaphoreTake(displayBufferMutex, portMAX_DELAY);
+        displayBuffer.clear();
+        xSemaphoreGive(displayBufferMutex);
+        lastDataTime.store(esp_timer_get_time());
+        setTimerSpeed(slow);
+    } else {
+        lastDataTime.store(esp_timer_get_time());
+        setTimerSpeed(fast);
+    }
+
+    notifyDisplayTask();
 }
 
 void drawLogo(int x, int y) {
@@ -251,7 +303,7 @@ void drawHeader() {
 #endif // MQTT
 
     // wifi icon is 8x7
-    const auto wifiIcon = wifiIcons[min(wifiStatus.signalStrengthPercent, 99) / 25];
+    const auto wifiIcon = wifiIcons[min(wifiStatus.signalStrengthPercent.load(), 99) / 25];
     display.drawBitmap(127-8, 3, wifiIcon, 8, 7, SSD1306_WHITE);
 }
 
@@ -280,8 +332,9 @@ bool drawContents() {
     return lines.size() > 0;
 }
 
-void handleTimerTick(TimerHandle_t) {
-    display.clearDisplay();
+void drawData() {
+    display.setTextSize(1);
+    display.setTextColor(SSD1306_WHITE);
 
     display.setTextSize(1);
     display.setTextColor(SSD1306_WHITE);
@@ -304,7 +357,19 @@ void handleTimerTick(TimerHandle_t) {
         return;
     }
 
-    display.display();
+
+        display.clearDisplay();
+
+        const auto secondsSinceNoData = getSecondsSinceNoData();
+
+        if (timerIsFast || secondsSinceNoData < SECONDS_BEFORE_SCREENSAVER) {
+            drawData();
+        } else {
+            drawLogo();
+        }
+
+        display.display();
+    }
 }
 
 #endif

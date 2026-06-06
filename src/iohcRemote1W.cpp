@@ -152,11 +152,12 @@ namespace IOHC {
         switch (cmd) {
             case RemoteButton::Pair: {
                 // 0x2e: 0x1120 + target broadcast + source + 0x2e00 + sequence + hmac
-                packets2send.clear();
 
+                std::vector<iohcPacket *> packets2send;
 //                for (auto&r: remotes) {
 
                     auto* packet = new iohcPacket;
+                    packets2send.push_back(packet);
                     IOHC::iohcRemote1W::forgePacket(packet, r.type[0]);
                     // Packet length
                     packet->payload.packet.header.CtrlByte1.asStruct.MsgLen += sizeof(_p0x2e);
@@ -184,7 +185,6 @@ namespace IOHC {
 
                     packet->buffer_length = packet->payload.packet.header.CtrlByte1.asStruct.MsgLen + 1;
 
-                    packets2send.push_back(packet);
                     // if (typn) packet->payload.packet.header.CtrlByte2.asStruct.LPM = 0; //TODO only first is LPM
                     digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
 //                }
@@ -200,12 +200,13 @@ namespace IOHC {
 
             case RemoteButton::Remove: {
                 // 0x39: 0x1c00 + target broadcast + source + 0x3900 + sequence + hmac
-                packets2send.clear();
 
+                std::vector<iohcPacket *> packets2send;
 //                for (auto&r: remotes) {
 
 
                     auto* packet = new iohcPacket;
+                    packets2send.push_back(packet);
                     IOHC::iohcRemote1W::forgePacket(packet, r.type[0]);
                     // Packet length
                     //                    packet->payload.packet.header.CtrlByte1.asStruct.MsgLen = sizeof(_header) - 1;
@@ -233,7 +234,6 @@ namespace IOHC {
 
                     packet->buffer_length = packet->payload.packet.header.CtrlByte1.asStruct.MsgLen + 1;
 
-                    packets2send.push_back(packet);
                     digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
 //                }
                 _radioInstance->send(packets2send);
@@ -249,11 +249,12 @@ namespace IOHC {
 
             case RemoteButton::Add: {
                 // 0x30: 0x1100 + target broadcast + source + 0x3000 + ???
-                packets2send.clear();
 
+                std::vector<iohcPacket *> packets2send;
 //                for (auto&r: remotes) {
 
                     auto* packet = new iohcPacket;
+                    packets2send.push_back(packet);
                     IOHC::iohcRemote1W::forgePacket(packet, r.type[0]);
                     // Packet length
                     packet->payload.packet.header.CtrlByte1.asStruct.MsgLen += sizeof(_p0x30);
@@ -282,7 +283,7 @@ namespace IOHC {
 
                     packet->buffer_length = packet->payload.packet.header.CtrlByte1.asStruct.MsgLen + 1;
 
-                    packets2send.push_back(packet);
+
                     digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
 //                }
                 _radioInstance->send(packets2send);
@@ -293,12 +294,14 @@ namespace IOHC {
                 break;
             }
            default: {
-                packets2send.clear();
-
                 // 0x00: 0x1600 + target broadcast + source + 0x00 + Originator + ACEI + Main Param + FP1 + FP2 + sequence + hmac
+
+                std::vector<iohcPacket *> packets2send;
 //                for (auto&r: remotes) {
 
                     auto* packet = new iohcPacket;
+                    packets2send.push_back(packet);
+
                     IOHC::iohcRemote1W::forgePacket(packet, r.type[0]);
                     // Packet length
                     // packet->payload.packet.header.CtrlByte1.asStruct.MsgLen += sizeof(_p0x00);
@@ -628,15 +631,15 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
                     // }
                     packet->buffer_length = packet->payload.packet.header.CtrlByte1.asStruct.MsgLen + 1;
 
-                    packets2send.push_back(packet);
                     digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
+
+                    _radioInstance->send(packets2send);
+
+                    display1WAction(r.node, remoteButtonToString(cmd), "TX", r.name.c_str());
+                    Serial.printf("%s position: %.0f%%\n", r.name.c_str(), r.positionTracker.getPosition());
+                    display1WPosition(r.node, r.positionTracker.getPosition(), r.name.c_str());
+                    break;
                 }
-                _radioInstance->send(packets2send);
-                display1WAction(r.node, remoteButtonToString(cmd), "TX", r.name.c_str());
-                Serial.printf("%s position: %.0f%%\n", r.name.c_str(), r.positionTracker.getPosition());
-                display1WPosition(r.node, r.positionTracker.getPosition(), r.name.c_str());
-                break;
-//            }
         }
         this->save(); // Save sequence number
     }

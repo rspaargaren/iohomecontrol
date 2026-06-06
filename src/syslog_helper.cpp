@@ -7,6 +7,7 @@
 #include <WiFi.h>
 #include <WiFiUdp.h>
 #include <esp_log.h>
+#include <esp_random.h>
 #include <nvs_helpers.h>
 #include <time.h>
 
@@ -48,11 +49,22 @@ namespace {
         }
 
         if (!nvs_read_string(NVS_KEY_SYSLOG_SERVER, syslog_server)) {
+            // No server stored yet — pre-fill community server as default
+            syslog_server = "syslog.speijkers.nl";
             nvs_write_string(NVS_KEY_SYSLOG_SERVER, syslog_server);
         }
 
         if (!nvs_read_u16(NVS_KEY_SYSLOG_PORT, syslog_port)) {
+            syslog_port = 5144;
             nvs_write_u16(NVS_KEY_SYSLOG_PORT, syslog_port);
+        }
+
+        if (!nvs_read_string(NVS_KEY_SYSLOG_TAG, syslog_tag) || syslog_tag.empty()) {
+            // Auto-generate a random 8-char hex ID on first boot
+            char generated[9];
+            snprintf(generated, sizeof(generated), "%08x", esp_random());
+            syslog_tag = generated;
+            nvs_write_string(NVS_KEY_SYSLOG_TAG, syslog_tag);
         }
 
         configLoaded = true;
@@ -134,6 +146,9 @@ void sendSyslog(const String &msg, int severity) {
     if (!syslog_enabled) {
         return;
     }
+    if (WiFi.status() != WL_CONNECTED) {
+        return;
+    }
     if (!syslogReady) {
         ESP_LOGD(TAG, "Syslog not ready, initializing");
         initSyslog();
@@ -144,20 +159,13 @@ void sendSyslog(const String &msg, int severity) {
     }
 
     const int p     = pri(SYSLOG_FACILITY, severity);
-    const String ho = currentHostIdent();
+    const String base = currentHostIdent();
+    const String ho = syslog_tag.empty() ? base : (syslog_tag.c_str() + String("-") + base);
 
-#ifndef SYSLOG_RFC5424
-    // RFC3164: <PRI>MMM dd HH:MM:SS HOST APP: message
-    const String header = "<" + String(p) + ">" + rfc3164Timestamp() + " " + ho + " " + SYSLOG_APP + ": ";
-    const String wire   = header + msg;
-#else
-    // RFC5424: <PRI>1 TIMESTAMP HOST APP PROCID MSGID - message
-    const char* PROCID = "-";   // e.g., chip ID if you want
-    const char* MSGID  = "-";
-    const String header = "<" + String(p) + ">1 " + iso8601UTC() + " " + ho + " " + SYSLOG_APP
-                        + " " + PROCID + " " + MSGID + " - ";
-    const String wire   = header + msg;
-#endif
+    // No timestamp — device has no NTP so Jan 1 epoch would be rejected by syslog servers.
+    // The receiver timestamps the message on arrival instead.
+    const String header = "<" + String(p) + ">" + ho + " " + SYSLOG_APP + ": ";
+    const String wire   = header + "[" SYSLOG_SECRET "] " + msg;
 
     ESP_LOGD(TAG, "Sending syslog (len=%u): %s", wire.length(), wire.c_str());
     syslogUdp.beginPacket(syslogIP, syslog_port);

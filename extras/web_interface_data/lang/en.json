@@ -11,6 +11,7 @@
   "section.remotes": "Remotes",
   "section.status_logs": "Status / Log",
   "section.mqtt_settings": "MQTT settings",
+  "section.display_settings": "Display",
   "section.syslog_settings": "Syslog settings",
   "section.update_backup": "Update/backup",
   "section.update": "Update",
@@ -34,6 +35,18 @@
   "label.password": "Password:",
   "label.discovery_topic": "Discovery Topic:",
   "label.enable_syslog_forwarding": "Enable syslog forwarding",
+  "label.syslog_tag": "Tag:",
+  "placeholder.syslog_tag": "e.g. myhouse",
+  "note.syslog_privacy": "Only device events are sent — no credentials or IP addresses.",
+  "label.enable_display": "Enable OLED display",
+  "status.display_loading": "Loading display settings...",
+  "status.display_enabled": "Display is enabled",
+  "status.display_disabled": "Display is disabled",
+  "status.display_saving": "Saving display setting...",
+  "status.display_saved_enabled": "Saved: display enabled",
+  "status.display_saved_disabled": "Saved: display disabled",
+  "status.display_load_error": "Could not load display settings",
+  "status.display_save_error": "Saving display setting failed",
   "label.firmware": "Firmware:",
   "label.filesystem": "Filesystem:",
   "label.devices": "Devices:",
@@ -118,6 +131,9 @@
   "log.websocket_disconnected": "WebSocket disconnected",
   "log.mqtt_updated": "MQTT settings updated.",
   "log.error_updating_mqtt": "Error updating MQTT config",
+  "log.display_updated": "Display settings updated.",
+  "log.error_fetching_display": "Error fetching display settings",
+  "log.error_updating_display": "Error updating display settings",
   "log.syslog_updated": "Syslog settings updated.",
   "log.error_updating_syslog": "Error updating syslog config",
   "log.no_firmware_selected": "No firmware file selected",
@@ -179,5 +195,10 @@
   "help.device": "Step 1: Devices -> (+)\nCreate a new screen.\nStep 2: Open Edit\nGo to that screen's settings.\nStep 3: Activate programming mode on the physical remote\nPress and hold the programming button until the screen or shutter moves briefly. As soon as you see that short movement, the remote is in pairing mode.\nStep 4: In Edit -> Pair\nClick Pair in the web page. The screen will move up and down again.\nStep 5: Paired.",
   "help.remote": "Step 1: Remotes -> (+)\nCreate a new remote.\nStep 2: Check the ID\nMake sure the entered ID matches the ID of the physical remote.\nYou can see the ID in the logs of the last received command.\nStep 3: Click Edit\nLink the previously created screen to this remote here.\nStep 4: Done.",
 
-  "footer.rights": "MiOpen.IO 2025 - 2026 | djbenbe & rspaargaren. All Rights Reserved."
+  "footer.rights": "MiOpen.IO 2025 - 2026 | djbenbe & rspaargaren. All Rights Reserved.",
+
+  "button.syslog_test": "Send test",
+  "log.syslog_test_sent": "Test message sent — check your syslog server.",
+  "log.syslog_test_failed": "Test failed: ",
+  "log.error_syslog_test": "Error sending syslog test message."
 }

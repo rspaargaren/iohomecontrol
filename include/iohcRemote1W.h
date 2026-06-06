@@ -95,9 +95,6 @@ namespace IOHC {
 
 
         std::vector<remote> remotes;
-
-        std::vector<iohcPacket *> packets2send{};
-
     };
 }
 #endif

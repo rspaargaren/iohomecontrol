@@ -5,6 +5,7 @@
 #include "ESPAsyncWebServer.h" // Or WebServer.h if that's preferred for memory
 #include <AsyncJson.h>
 #include <algorithm>
+#include <atomic>
 #include <functional>
 #include <memory>
 #include <LittleFS.h>
@@ -18,7 +19,9 @@
 #include <log_buffer.h>
 #include <mqtt_handler.h>
 #include <nvs_helpers.h>
+#include <oled_display.h>
 #if defined(SYSLOG)
+#include <WiFi.h>
 #include <syslog_helper.h>
 #endif
 #include <tokens.h>
@@ -393,6 +396,14 @@ void handleApiAction(AsyncWebServerRequest *request, JsonObject &doc, JsonObject
   root["message"] = msg;
 }
 
+void handleApiInfo(AsyncWebServerRequest *request, JsonObject &root) {
+#ifdef FIRMWARE_VERSION
+  root["version"] = FIRMWARE_VERSION;
+#else
+  root["version"] = "dev";
+#endif
+}
+
 void handleApiLogs(AsyncWebServerRequest *request, JsonArray &root) {
   auto logs = getLogMessages();
   for (const auto &msg : logs) {
@@ -404,7 +415,6 @@ void handleApiLastAddr(AsyncWebServerRequest *request, JsonObject &root) {
   root["address"] = bytesToHexString(IOHC::lastFromAddress, sizeof(IOHC::lastFromAddress)).c_str();
 }
 
-#if defined(SYSLOG)
 static bool jsonToBool(JsonVariant variant, bool &value) {
   if (variant.is<bool>()) {
     value = variant.as<bool>();
@@ -436,12 +446,36 @@ static bool jsonToBool(JsonVariant variant, bool &value) {
   return false;
 }
 
+#if defined(SSD1306_DISPLAY)
+void handleApiDisplayGet(AsyncWebServerRequest *request, JsonObject &root) {
+  const bool enabled = isDisplayEnabled();
+  root["enabled"] = enabled;
+}
+
+void handleApiDisplaySet(AsyncWebServerRequest *request, JsonObject &doc, JsonObject &root) {
+  bool enabled = isDisplayEnabled();
+  if (!doc["enabled"].is<JsonVariant>() || !jsonToBool(doc["enabled"], enabled)) {
+    request->send(400, "application/json",
+                  "{\"success\":false,\"message\":\"Invalid enabled value\"}");
+    return;
+  }
+
+  setDisplayEnabled(enabled);
+
+  root["success"] = true;
+  root["message"] = "Display configuration updated";
+  root["enabled"] = isDisplayEnabled();
+}
+#endif
+
+#if defined(SYSLOG)
 void handleApiSyslogGet(AsyncWebServerRequest *request, JsonObject &root) {
   initSyslog();
 
   root["enabled"] = syslog_enabled;
   root["server"] = syslog_server.c_str();
   root["port"] = syslog_port;
+  root["tag"] = syslog_tag.c_str();
 }
 
 void handleApiSyslogSet(AsyncWebServerRequest *request, JsonObject &doc, JsonObject &root) {
@@ -497,6 +531,20 @@ void handleApiSyslogSet(AsyncWebServerRequest *request, JsonObject &doc, JsonObj
     }
   }
 
+  if (doc["tag"].is<JsonVariant>()) {
+    String newTag = doc["tag"] | "";
+    // Sanitise: keep only alphanumeric and hyphen, truncate to 20 chars
+    String sanitised;
+    for (char c : newTag) {
+      if (isalnum(c) || c == '-') sanitised += c;
+      if (sanitised.length() >= 20) break;
+    }
+    if (sanitised != syslog_tag.c_str()) {
+      syslog_tag = sanitised.c_str();
+      nvs_write_string(NVS_KEY_SYSLOG_TAG, syslog_tag);
+    }
+  }
+
   if (enabledChanged || serverChanged || portChanged) {
     resetSyslog();
     if (syslog_enabled) {
@@ -509,6 +557,23 @@ void handleApiSyslogSet(AsyncWebServerRequest *request, JsonObject &doc, JsonObj
   root["enabled"] = syslog_enabled;
   root["server"] = syslog_server.c_str();
   root["port"] = syslog_port;
+  root["tag"] = syslog_tag.c_str();
+}
+
+void handleApiSyslogTest(AsyncWebServerRequest *request, JsonObject &doc, JsonObject &root) {
+  if (!syslog_enabled) {
+    root["success"] = false;
+    root["message"] = "Syslog is disabled";
+    return;
+  }
+  if (WiFi.status() != WL_CONNECTED) {
+    root["success"] = false;
+    root["message"] = "WiFi not connected";
+    return;
+  }
+  sendSyslog("Test message from web UI", 6);
+  root["success"] = true;
+  root["message"] = "Test message sent";
 }
 #endif
 
@@ -596,8 +661,20 @@ void handleFirmwareUpdate(AsyncWebServerRequest *request) {
   } else {
     request->send(200, "application/json",
                   "{\"message\":\"Firmware update successful, rebooting\"}");
-    delay(100);
-    ESP.restart();
+    static std::atomic<bool> rebootScheduled{false};
+    if (!rebootScheduled.exchange(true)) {
+      xTaskCreate(
+        [](void *) {
+          vTaskDelay(pdMS_TO_TICKS(1000));
+          ESP.restart();
+        },
+        "reboot",
+        2048,
+        nullptr,
+        5,
+        nullptr
+      );
+    }
   }
 }
 
@@ -626,11 +703,24 @@ void handleFilesystemUpdate(AsyncWebServerRequest *request) {
   if (Update.hasError()) {
     request->send(500, "application/json",
                   "{\"message\":\"Filesystem update failed\"}");
+    LittleFS.begin();
   } else {
     request->send(200, "application/json",
                   "{\"message\":\"Filesystem update successful, rebooting\"}");
-    delay(100);
-    ESP.restart();
+    static std::atomic<bool> rebootScheduled{false};
+    if (!rebootScheduled.exchange(true)) {
+      xTaskCreate(
+        [](void *) {
+          vTaskDelay(pdMS_TO_TICKS(1000));
+          ESP.restart();
+        },
+        "reboot",
+        2048,
+        nullptr,
+        5,
+        nullptr
+      );
+    }
   }
 }
 
@@ -639,18 +729,22 @@ void handleFilesystemUpload(AsyncWebServerRequest *request, String filename,
                             bool final) {
   if (!index) {
     Serial.printf("Filesystem upload start: %s\n", filename.c_str());
+    LittleFS.end();
     if (!Update.begin(UPDATE_SIZE_UNKNOWN, U_SPIFFS)) {
       Update.printError(Serial);
+      return;
     }
   }
   if (!Update.hasError()) {
-    if (Update.write(data, len) != len) {
+    if (len && Update.write(data, len) != len) {
       Update.printError(Serial);
     }
   }
   if (final) {
     if (!Update.end(true)) {
       Update.printError(Serial);
+    } else {
+      Serial.printf("Filesystem upload complete: %u bytes\n", index + len);
     }
   }
 }
@@ -667,10 +761,14 @@ void setupWebServer() {
   }
 
   // API Endpoints
+  server.on("/api/info", HTTP_GET, jsonGet(handleApiInfo));
   server.on("/api/devices", HTTP_GET, jsonGet(handleApiDevices));
   server.on("/api/remotes", HTTP_GET, jsonGet(handleApiRemotes));
   server.on("/api/logs", HTTP_GET, jsonGet(handleApiLogs));
   server.on("/api/lastaddr", HTTP_GET, jsonGet(handleApiLastAddr));
+#if defined(SSD1306_DISPLAY)
+  server.on("/api/display", HTTP_GET, jsonGet(handleApiDisplayGet));
+#endif
 #if defined(SYSLOG)
   server.on("/api/syslog", HTTP_GET, jsonGet(handleApiSyslogGet));
 #endif
@@ -679,10 +777,14 @@ void setupWebServer() {
 #endif
   server.on("/api/command", HTTP_POST, jsonPost(handleApiCommand));
   server.on("/api/action", HTTP_POST, jsonPost(handleApiAction));
+#if defined(SSD1306_DISPLAY)
+  server.on("/api/display", HTTP_POST, jsonPost(handleApiDisplaySet));
+#endif
 #if defined(MQTT)
   server.on("/api/mqtt", HTTP_POST, jsonPost(handleApiMqttSet));
 #endif
 #if defined(SYSLOG)
+  server.on("/api/syslog/test", HTTP_POST, jsonPost(handleApiSyslogTest));
   server.on("/api/syslog", HTTP_POST, jsonPost(handleApiSyslogSet));
 #endif
   server.on("/api/firmware", HTTP_POST, handleFirmwareUpdate,

@@ -85,6 +85,15 @@
             mqttServerInput: document.getElementById("mqtt-server"),
             mqttUpdateButton: document.getElementById("mqtt-update"),
             mqttUserInput: document.getElementById("mqtt-user"),
+            displayEnabledInput: document.getElementById("display-enabled"),
+            displayUpdateButton: document.getElementById("display-update"),
+            displayStatus: document.getElementById("display-status"),
+            syslogEnabledInput: document.getElementById("syslog-enabled"),
+            syslogServerInput: document.getElementById("syslog-server"),
+            syslogPortInput: document.getElementById("syslog-port"),
+            syslogTagInput: document.getElementById("syslog-tag"),
+            syslogUpdateButton: document.getElementById("syslog-update"),
+            syslogTestButton: document.getElementById("syslog-test"),
             remotePopupButton: document.getElementById("remote-popup"),
             remotesFileInput: document.getElementById("remotes-file"),
             remotesUploadButton: document.getElementById("upload-remotes"),
@@ -224,6 +233,15 @@
         if (app.elements.mqttUpdateButton) {
             app.elements.mqttUpdateButton.addEventListener("click", app.updateMqttConfig);
         }
+        if (app.elements.displayUpdateButton) {
+            app.elements.displayUpdateButton.addEventListener("click", app.updateDisplayConfig);
+        }
+        if (app.elements.syslogUpdateButton) {
+            app.elements.syslogUpdateButton.addEventListener("click", app.updateSyslogConfig);
+        }
+        if (app.elements.syslogTestButton) {
+            app.elements.syslogTestButton.addEventListener("click", app.sendSyslogTest);
+        }
         if (app.elements.firmwareUploadButton) {
             app.elements.firmwareUploadButton.addEventListener("click", app.uploadFirmware);
         }
@@ -290,9 +308,18 @@
             app.fetchAndDisplayRemotes();
         });
 
+        window.MiOpenApi.requestJson("/api/info").then(function (info) {
+            const el = document.getElementById("firmware-version");
+            if (el && info.version) {
+                el.textContent = "Firmware: " + info.version;
+            }
+        }).catch(function () {});
+
         app.logStatus("System started");
         app.logStatus("Loading devices...");
         app.loadMqttConfig();
+        app.loadDisplayConfig();
+        app.loadSyslogConfig();
         app.fetchAndDisplayDevices();
         app.fetchAndDisplayRemotes();
         app.loadLastAddress();

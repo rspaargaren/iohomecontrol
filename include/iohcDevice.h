@@ -66,7 +66,6 @@ namespace IOHC {
         bool Fake = false;
         bool Home = false;
 
-        std::vector<iohcPacket *> packets2send{};
         iohcRadio *_radioInstance{};
     };
 }
