@@ -58,6 +58,8 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           output: changelog.md
+          onlyLastTag: true
+          stripHeaders: true
 
       - name: Generate release tag
         id: generate_release_tag
