@@ -21,6 +21,7 @@
 #include <mqtt_handler.h>
 #include <nvs_helpers.h>
 #include <oled_display.h>
+#include <version_info.h>
 #if defined(SYSLOG)
 #include <WiFi.h>
 #include <syslog_helper.h>
@@ -398,7 +399,7 @@ void handleApiAction(AsyncWebServerRequest *request, JsonObject &doc, JsonObject
 }
 
 void handleApiInfo(AsyncWebServerRequest *request, JsonObject &root) {
-  root["version"] = firmwareVersion();
+  appendVersionInfo(root);
 }
 
 void handleApiLogs(AsyncWebServerRequest *request, JsonArray &root) {

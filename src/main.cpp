@@ -31,6 +31,7 @@
 #include <iohcOtherDevice2W.h>
 #include <iohcRemoteMap.h>
 #include <interact.h>
+#include <version_info.h>
 #if defined(MQTT)
 #include <mqtt_handler.h>
 #endif
@@ -140,6 +141,7 @@ void setup() {
 
     // Initialize network services after devices are ready
     initWifi();
+    initVersionInfo();
 #if defined(MQTT)
     initMqtt();
 #endif

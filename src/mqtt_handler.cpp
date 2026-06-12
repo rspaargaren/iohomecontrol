@@ -5,6 +5,7 @@
 #include <firmware_version.h>
 #include <iohcRemote1W.h>
 #include <iohcCryptoHelpers.h>
+#include <version_info.h>
 #include <AsyncMqttClient.h>
 #include <ArduinoJson.h>
 #include <interact.h>
@@ -25,7 +26,15 @@ static const char FREE_MEM_TOPIC[] = "iown/info/free_mem";
 static const char WIFI_STRENGTH_TOPIC[] = "iown/info/wifi_rssi";
 static const char IP_ADDRESS_TOPIC[] = "iown/info/ip";
 static const char VERSION_TOPIC[] = "iown/info/version";
+static const char VERSION_ATTRIBUTES_TOPIC[] = "iown/info/version/attributes";
+static const char VERSION_LATEST_TOPIC[] = "iown/info/version/latest";
+static const char VERSION_CHECK_COMPLETED_TOPIC[] = "iown/info/version/check_completed";
+static const char VERSION_CHECK_OK_TOPIC[] = "iown/info/version/check_ok";
+static const char VERSION_UPDATE_AVAILABLE_TOPIC[] = "iown/info/version/update_available";
 static const char GATEWAY_ID[] = "MyOpenIO";
+static const char VERSION_ENTITY_ID[] = "iohc_version";
+static const char VERSION_LATEST_ENTITY_ID[] = "iohc_latest_version";
+static const char VERSION_UPDATE_ENTITY_ID[] = "iohc_update_available";
 static TaskHandle_t s_mqttSchedulerTask = nullptr;
 static std::atomic<bool> s_heartbeatEnabled{false};
 static std::atomic<uint32_t> s_nextHeartbeatAtMs{0};
@@ -38,13 +47,13 @@ static void publishIohcFrameDiscovery();
 static void publishFreeMemDiscovery();
 static void publishIpAddressDiscovery();
 static void publishWifiStrengthDiscovery();
+static void publishVersionDiscovery();
 static void onMqttConnect(bool sessionPresent);
 static void onMqttDisconnect(AsyncMqttClientDisconnectReason reason);
 static void onMqttMessage(char *topic, char *payload,
                    AsyncMqttClientMessageProperties properties,
                    size_t len, size_t index, size_t total);
 static void publishHeartbeat();
-static void publishVersion();
 static void mqttFuncHandler(const char *cmd);
 static void mqttPostConnectTask(void*);
 static void handleMqttConnectImpl();
@@ -111,6 +120,53 @@ static JsonDocument createDeviceObject(const std::string &id, const std::string 
     }
     device["via_device"] = GATEWAY_ID;
     return device;
+}
+
+static void publishVersionDiscovery() {
+    JsonDocument versionDoc;
+    versionDoc["name"] = "Firmware Version";
+    versionDoc["unique_id"] = VERSION_ENTITY_ID;
+    versionDoc["state_topic"] = VERSION_TOPIC;
+    versionDoc["json_attributes_topic"] = VERSION_ATTRIBUTES_TOPIC;
+    versionDoc["availability_topic"] = AVAILABILITY_TOPIC;
+    versionDoc["entity_category"] = "diagnostic";
+    versionDoc["icon"] = "mdi:source-branch";
+    versionDoc["device"] = createDeviceObject(GATEWAY_ID, "My Open IO Gateway");
+
+    std::string versionPayload;
+    size_t versionLen = serializeJson(versionDoc, versionPayload);
+    mqttClient.publish((mqtt_discovery_topic + "/sensor/" + VERSION_ENTITY_ID + "/config").c_str(),
+                       0, true, versionPayload.c_str(), versionLen);
+
+    JsonDocument latestDoc;
+    latestDoc["name"] = "Latest Firmware Version";
+    latestDoc["unique_id"] = VERSION_LATEST_ENTITY_ID;
+    latestDoc["state_topic"] = VERSION_LATEST_TOPIC;
+    latestDoc["availability_topic"] = AVAILABILITY_TOPIC;
+    latestDoc["entity_category"] = "diagnostic";
+    latestDoc["icon"] = "mdi:tag-outline";
+    latestDoc["device"] = createDeviceObject(GATEWAY_ID, "My Open IO Gateway");
+
+    std::string latestPayload;
+    size_t latestLen = serializeJson(latestDoc, latestPayload);
+    mqttClient.publish((mqtt_discovery_topic + "/sensor/" + VERSION_LATEST_ENTITY_ID + "/config").c_str(),
+                       0, true, latestPayload.c_str(), latestLen);
+
+    JsonDocument updateDoc;
+    updateDoc["name"] = "Firmware Update Available";
+    updateDoc["unique_id"] = VERSION_UPDATE_ENTITY_ID;
+    updateDoc["state_topic"] = VERSION_UPDATE_AVAILABLE_TOPIC;
+    updateDoc["availability_topic"] = AVAILABILITY_TOPIC;
+    updateDoc["payload_on"] = "true";
+    updateDoc["payload_off"] = "false";
+    updateDoc["entity_category"] = "diagnostic";
+    updateDoc["icon"] = "mdi:update";
+    updateDoc["device"] = createDeviceObject(GATEWAY_ID, "My Open IO Gateway");
+
+    std::string updatePayload;
+    size_t updateLen = serializeJson(updateDoc, updatePayload);
+    mqttClient.publish((mqtt_discovery_topic + "/binary_sensor/" + VERSION_UPDATE_ENTITY_ID + "/config").c_str(),
+                       0, true, updatePayload.c_str(), updateLen);
 }
 
 static void publishButtonDiscovery(const std::string &id, const std::string &name,
@@ -223,8 +279,33 @@ void publishIpAddress() {
     mqttClient.publish(IP_ADDRESS_TOPIC, 0, true, WiFi.localIP().toString().c_str());
 }
 
-void publishVersion() {
-    mqttClient.publish(VERSION_TOPIC, 0, true, firmwareVersion());
+void publishVersionInfo() {
+    if (mqttStatus != ConnState::Connected || !mqttClient.connected()) {
+        return;
+    }
+
+    const VersionInfoSnapshot info = getVersionInfo();
+    JsonDocument attributesDoc;
+    attributesDoc["latest_version"] = info.latestVersion;
+    attributesDoc["release_url"] = info.releaseUrl;
+    attributesDoc["version_check_error"] = info.error;
+    attributesDoc["current_is_dev"] = info.currentIsDev;
+    attributesDoc["version_check_completed"] = info.checkCompleted;
+    attributesDoc["version_check_ok"] = info.checkOk;
+    attributesDoc["update_available"] = info.updateAvailable;
+    std::string attributesPayload;
+    size_t attributesLen = serializeJson(attributesDoc, attributesPayload);
+
+    mqttClient.publish(VERSION_TOPIC, 0, true, info.version.c_str());
+    mqttClient.publish(VERSION_ATTRIBUTES_TOPIC, 0, true,
+                       attributesPayload.c_str(), attributesLen);
+    mqttClient.publish(VERSION_LATEST_TOPIC, 0, true, info.latestVersion.c_str());
+    mqttClient.publish(VERSION_CHECK_COMPLETED_TOPIC, 0, true,
+                       info.checkCompleted ? "true" : "false");
+    mqttClient.publish(VERSION_CHECK_OK_TOPIC, 0, true,
+                       info.checkOk ? "true" : "false");
+    mqttClient.publish(VERSION_UPDATE_AVAILABLE_TOPIC, 0, true,
+                       info.updateAvailable ? "true" : "false");
 }
 
 void publishCoverState(const std::string &id, const char *state) {
@@ -266,6 +347,7 @@ static void handleMqttConnectImpl() {
     publishWifiStrengthDiscovery();
     // Discovery van de ‘frame’ sensor eerst, zodat state pub direct een entity heeft
     publishIohcFrameDiscovery();
+    publishVersionDiscovery();
     const auto &remotes = IOHC::iohcRemote1W::getInstance()->getRemotes();
     for (const auto &r : remotes) {
         std::string id = bytesToHexString(r.node, sizeof(r.node));
@@ -286,7 +368,7 @@ static void handleMqttConnectImpl() {
     publishFreeMem();
     publishWifiStrength();
     publishIpAddress();
-    publishVersion();
+    publishVersionInfo();
 }
 
 void connectToMqtt() {
