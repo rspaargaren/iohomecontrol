@@ -17,6 +17,7 @@
 #include <esp32-hal-gpio.h>
 #include <map>
 #include "esp_log.h"
+#include <queue>
 
 #include <iohcRadio.h>
 #include <utility>
@@ -34,6 +35,14 @@ namespace IOHC {
 
 
     TaskHandle_t handle_interrupt;
+    TaskHandle_t callbackTask = NULL;
+    QueueHandle_t callbackQueue = NULL;
+    struct Callback {
+        IohcPacketDelegate *callback;
+        iohcPacket *packet;
+    };
+
+
     /**
      * The function `handle_interrupt_task` waits for a notification and then calls the `tickerCounter`
      * function if certain conditions are met.
@@ -90,7 +99,16 @@ namespace IOHC {
         portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
     }
 
-
+    void callbackTaskLoop(void *parameters) {
+        Callback *callback = NULL;
+        while (true) {
+            if (xQueueReceive(callbackQueue, &callback, portMAX_DELAY) == pdPASS && callback != NULL) {
+                (*callback->callback)(callback->packet);
+                delete callback->packet;
+                vPortFree(callback);
+            }
+        }
+    }
 
     iohcRadio::iohcRadio() {
         Radio::initHardware();
@@ -115,6 +133,14 @@ namespace IOHC {
 #elif defined(CC1101)
         attachInterrupt(RADIO_PREAMBLE_DETECTED, i_preamble, RISING);
 #endif
+
+        callbackQueue = xQueueCreate(20, sizeof(struct Callback *));
+        auto callbackTaskCode = xTaskCreatePinnedToCore(callbackTaskLoop, "CallbackTask", 4096, NULL, 5, &callbackTask, 0);
+        if (callbackTaskCode != pdPASS || callbackQueue == NULL) {
+            printf("ERROR: Can't create callback-task or corresponding queue %d\n", callbackTaskCode);
+            // sx127x_destroy(device);
+            return;
+        }
 
         // start state machine
         printf("Starting Interrupt Handler...\n");
@@ -361,7 +387,7 @@ void iohcRadio::onTxTicker(void *arg) {
         packet->repeat--;
         ets_printf("TX: Repeating current packet (%d repeats left)\n", packet->repeat);
     } else {
-        // inform callback we finished sending this packet
+        // inform callback we finished sending this packet, this transfers ownership of the packet to the callback queue
         radio->sent(packet);
         
         radio->txCounter++;
@@ -370,7 +396,6 @@ void iohcRadio::onTxTicker(void *arg) {
         if (radio->txCounter == radio->packets2send.size()) {
             ets_printf("TX: All packets sent. Stopping Ticker.\n");
             radio->Sender.detach();
-            for (auto p : radio->packets2send) delete p;
             radio->packets2send.clear();
             Radio::setRx();
             radio->setRadioState(RadioState::RX);
@@ -406,6 +431,22 @@ void iohcRadio::onTxTicker(void *arg) {
                esp_timer_get_time());
 }
 
+bool queueCallback(IohcPacketDelegate* callback, iohcPacket* packet) {
+    Callback *callbackData = (Callback*) pvPortMalloc(sizeof(Callback));
+    if (callbackData == NULL) {
+        return false;
+    }
+
+    callbackData->callback = callback;
+    callbackData->packet = packet;
+
+    if (xQueueSendToBack(callbackQueue, &callbackData, 0) != pdPASS) {
+        vPortFree(callbackData);
+        return false;
+    }
+    return true;
+}
+
 /**
  * The `sent` function in the `iohcRadio` class checks if a callback function `txCB` is set and calls
  * it with a packet as a parameter, returning the result.
@@ -423,8 +464,8 @@ void iohcRadio::onTxTicker(void *arg) {
             packet->decode(true);
             addLogMessage(String(packet->decodeToString(true).c_str()));
         }
-        if (txCB) {
-            ret = txCB(packet);
+        if (txCB && !queueCallback(&txCB, packet)) {
+            delete packet;
         }
         return ret;
     }
@@ -541,11 +582,12 @@ void iohcRadio::onTxTicker(void *arg) {
 #endif
 
         // Radio::clearFlags();
-        if (rxCB) rxCB(iohc);
         iohc->decode(true); //stats);
         addLogMessage(String(iohc->decodeToString(true).c_str()));
-        //free(iohc); // correct Bug memory
-        delete iohc;
+
+        if (rxCB && !queueCallback(&rxCB, iohc)) {
+            delete iohc;
+        }
         digitalWrite(RX_LED, false);
         return true;
     }
