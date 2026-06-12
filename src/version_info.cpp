@@ -43,6 +43,11 @@ struct VersionInfoState {
 SemaphoreHandle_t s_versionInfoMutex = nullptr;
 TaskHandle_t s_versionInfoTask = nullptr;
 VersionInfoState s_versionInfoState;
+std::string s_globalCaPem;
+
+// See extras/github-ca.md for how to refresh and validate this pinned CA.
+extern const uint8_t _binary_extras_github_ca_pem_start[] asm("_binary_extras_github_ca_pem_start");
+extern const uint8_t _binary_extras_github_ca_pem_end[] asm("_binary_extras_github_ca_pem_end");
 
 bool hasElapsed(uint32_t now, uint32_t since, uint32_t interval) {
   return static_cast<uint32_t>(now - since) >= interval;
@@ -118,6 +123,32 @@ void publishVersionInfoUpdate() {
     );
 }
 
+const char *githubCaPem() {
+  const auto *bundleStart = _binary_extras_github_ca_pem_start;
+  const auto *bundleEnd = _binary_extras_github_ca_pem_end;
+  const auto bundleSize = static_cast<unsigned int>(bundleEnd - bundleStart);
+  if (bundleSize == 0) {
+    Serial.println("Failed to locate embedded CA bundle");
+    return nullptr;
+  }
+
+  if (s_globalCaPem.empty()) {
+    // Keep a stable NUL-terminated copy for WiFiClientSecure::setCACert().
+    s_globalCaPem.assign(reinterpret_cast<const char *>(bundleStart), bundleSize);
+  }
+
+  if (s_globalCaPem.empty()) {
+    Serial.println("Embedded CA bundle is empty");
+    return nullptr;
+  }
+
+  if (s_globalCaPem.back() != '\0') {
+    s_globalCaPem.push_back('\0');
+  }
+
+  return s_globalCaPem.c_str();
+}
+
 void checkLatestRelease() {
   const std::string url = buildReleaseApiUrl();
   const uint32_t now = millis();
@@ -133,10 +164,27 @@ void checkLatestRelease() {
     return;
   }
 
+  const char *caPem = githubCaPem();
+  if (!caPem) {
+    updateState([&](VersionInfoState &state) {
+      state.checkCompleted = true;
+      state.checkOk = false;
+      state.updateAvailable = false;
+      state.error = "Failed to load GitHub root CA";
+      state.lastCheckAtMs = now;
+    });
+    publishVersionInfoUpdate();
+    return;
+  }
+
   WiFiClientSecure client;
-  client.setInsecure();
+  client.setTimeout(15000);
+  client.setCACert(caPem);
 
   HTTPClient http;
+  http.useHTTP10(true);
+  http.setTimeout(15000);
+  http.setUserAgent("iohomecontrol");
   if (!http.begin(client, url.c_str())) {
     updateState([&](VersionInfoState &state) {
       state.checkCompleted = true;
@@ -149,19 +197,18 @@ void checkLatestRelease() {
     return;
   }
 
-  http.useHTTP10(true);
-  http.addHeader("User-Agent", "iohomecontrol");
   http.addHeader("Accept", "application/vnd.github+json");
   const int code = http.GET();
-
   if (code != HTTP_CODE_OK) {
+    const std::string requestErrorText = code > 0
+        ? std::string("GitHub API returned HTTP ") + std::to_string(code)
+        : std::string("GitHub request failed: ") + http.errorToString(code).c_str();
     http.end();
     updateState([&](VersionInfoState &state) {
       state.checkCompleted = true;
       state.checkOk = false;
       state.updateAvailable = false;
-      state.error = code > 0 ? (std::string("GitHub API returned HTTP ") + std::to_string(code))
-                             : "GitHub request failed";
+      state.error = requestErrorText;
       state.lastCheckAtMs = now;
     });
     publishVersionInfoUpdate();
@@ -173,9 +220,9 @@ void checkLatestRelease() {
   filter["html_url"] = true;
 
   JsonDocument doc;
-  auto &stream = http.getStream();
-  const auto error = deserializeJson(
-      doc, stream, DeserializationOption::Filter(filter));
+  Stream &responseStream = http.getStream();
+  const auto error = deserializeJson(doc, responseStream,
+                                     DeserializationOption::Filter(filter));
   http.end();
 
   if (error != DeserializationError::Ok) {
@@ -190,8 +237,10 @@ void checkLatestRelease() {
     return;
   }
 
-  const std::string latestVersion = doc["tag_name"].as<std::string>();
-  const std::string releaseUrl = doc["html_url"].as<std::string>();
+  const char *latestVersionValue = doc["tag_name"] | "";
+  const char *releaseUrlValue = doc["html_url"] | "";
+  const std::string latestVersion = latestVersionValue;
+  const std::string releaseUrl = releaseUrlValue;
   if (latestVersion.empty()) {
     updateState([&](VersionInfoState &state) {
       state.checkCompleted = true;
@@ -265,7 +314,7 @@ void initVersionInfo() {
   }
 
   if (std::string(firmwareVersion()) == "DEV") {
-    Serial.println("Disabling automatic version check for DEV versions. Only officially released versions have version check.");
+    Serial.println("Disabling automatic version check for DEV versions. Only officially released versions have automated version checking.");
   } else {
     s_versionInfoMutex = xSemaphoreCreateMutex();
     if (!s_versionInfoMutex) {
