@@ -25,6 +25,7 @@
 extern struct WiFiStatus {
   std::atomic<ConnState> connectionStatus;
   std::atomic<int> signalStrengthPercent;
+  std::atomic<int> rssi;
 } wifiStatus;
 
 
