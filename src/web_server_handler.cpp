@@ -12,6 +12,7 @@
 #include <Update.h>
 #include <cstdlib>
 #include <interact.h>
+#include <firmware_version.h>
 #include <iohcCryptoHelpers.h>
 #include <iohcRemote1W.h>
 #include <iohcRemoteMap.h>
@@ -20,6 +21,7 @@
 #include <mqtt_handler.h>
 #include <nvs_helpers.h>
 #include <oled_display.h>
+#include <version_info.h>
 #if defined(SYSLOG)
 #include <WiFi.h>
 #include <syslog_helper.h>
@@ -397,11 +399,7 @@ void handleApiAction(AsyncWebServerRequest *request, JsonObject &doc, JsonObject
 }
 
 void handleApiInfo(AsyncWebServerRequest *request, JsonObject &root) {
-#ifdef FIRMWARE_VERSION
-  root["version"] = FIRMWARE_VERSION;
-#else
-  root["version"] = "dev";
-#endif
+  appendVersionInfo(root);
 }
 
 void handleApiLogs(AsyncWebServerRequest *request, JsonArray &root) {

@@ -21,8 +21,13 @@ void publishTravelTimeDiscovery(const std::string &id, const std::string &name,
 void handleMqttConnect();
 void publishCoverState(const std::string &id, const char *state);
 void publishCoverPosition(const std::string &id, float position);
+void publishVersionInfo();
 void removeDiscovery(const std::string &id);
 
 #endif // MQTT
+
+#if !defined(MQTT)
+inline void publishVersionInfo() {}
+#endif
 
 #endif // MQTT_HANDLER_H

@@ -11,7 +11,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -34,10 +33,21 @@ jobs:
       - name: install esptools
         run: pip install -U esptool
 
+      - name: Generate release tag
+        id: generate_release_tag
+        uses: alexvingg/next-release-tag@v1.0.4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          tag_prefix: ''
+
       - name: Build PlatformIO project
+        env:
+          RELEASE_VERSION: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || steps.generate_release_tag.outputs.release_tag }}
         run: pio run
 
       - name: Build filesystem
+        env:
+          RELEASE_VERSION: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || steps.generate_release_tag.outputs.release_tag }}
         run: pio run -t buildfs
 
       - name: Merge bin files together for LilyGoLoraESP32
@@ -60,13 +70,6 @@ jobs:
           output: changelog.md
           onlyLastTag: true
           stripHeaders: true
-
-      - name: Generate release tag
-        id: generate_release_tag
-        uses: alexvingg/next-release-tag@v1.0.4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          tag_prefix: ''
 
       - name: Release
         uses: softprops/action-gh-release@v3

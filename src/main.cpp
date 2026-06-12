@@ -16,6 +16,7 @@
 
 #include "esp_log.h"
 #include <board-config.h>
+#include <firmware_version.h>
 #include <user_config.h>
 
 #include <crypto2Wutils.h>
@@ -30,6 +31,7 @@
 #include <iohcOtherDevice2W.h>
 #include <iohcRemoteMap.h>
 #include <interact.h>
+#include <version_info.h>
 #if defined(MQTT)
 #include <mqtt_handler.h>
 #endif
@@ -99,6 +101,8 @@ void setup() {
     esp_log_set_vprintf(log_to_buffer_and_serial);
     esp_log_level_set("*", ESP_LOG_DEBUG);    // Or VERBOSE for ESP_LOGV
 
+    Serial.printf("Firmware version: %s\n", firmwareVersion());
+
 
     initDisplay(); // Init OLED display
 
@@ -137,6 +141,7 @@ void setup() {
 
     // Initialize network services after devices are ready
     initWifi();
+    initVersionInfo();
 #if defined(MQTT)
     initMqtt();
 #endif

@@ -39,6 +39,9 @@ inline std::string mqtt_password = "";
 inline std::string mqtt_discovery_topic = "homeassistant";
 inline uint16_t mqtt_port = 1883;
 
+inline std::string github_release_owner = "rspaargaren";
+inline std::string github_release_repo = "iohomecontrol";
+
 #define SYSLOG                       // Comment out to disable remote syslog
 #define SYSLOG_SECRET "7a06c4100d82ed8d"  // Shared token — Graylog drops messages without it
 inline bool syslog_enabled = true;     // Allow runtime control of syslog forwarding
