@@ -2,6 +2,7 @@
 
 #if defined(MQTT)
 
+#include <firmware_version.h>
 #include <iohcRemote1W.h>
 #include <iohcCryptoHelpers.h>
 #include <AsyncMqttClient.h>
@@ -23,6 +24,7 @@ static const char AVAILABILITY_TOPIC[] = "iown/status";
 static const char FREE_MEM_TOPIC[] = "iown/info/free_mem";
 static const char WIFI_STRENGTH_TOPIC[] = "iown/info/wifi_rssi";
 static const char IP_ADDRESS_TOPIC[] = "iown/info/ip";
+static const char VERSION_TOPIC[] = "iown/info/version";
 static const char GATEWAY_ID[] = "MyOpenIO";
 static TaskHandle_t s_mqttSchedulerTask = nullptr;
 static std::atomic<bool> s_heartbeatEnabled{false};
@@ -42,6 +44,7 @@ static void onMqttMessage(char *topic, char *payload,
                    AsyncMqttClientMessageProperties properties,
                    size_t len, size_t index, size_t total);
 static void publishHeartbeat();
+static void publishVersion();
 static void mqttFuncHandler(const char *cmd);
 static void mqttPostConnectTask(void*);
 static void handleMqttConnectImpl();
@@ -102,7 +105,7 @@ static JsonDocument createDeviceObject(const std::string &id, const std::string 
     device["name"] = name;
     device["manufacturer"] = "Somfy";
     device["model"] = "IO Blind Bridge";
-    device["sw_version"] = "1.0.0";
+    device["sw_version"] = firmwareVersion();
     if (!key.empty()) {
         device["serial_number"] = key;
     }
@@ -220,6 +223,10 @@ void publishIpAddress() {
     mqttClient.publish(IP_ADDRESS_TOPIC, 0, true, WiFi.localIP().toString().c_str());
 }
 
+void publishVersion() {
+    mqttClient.publish(VERSION_TOPIC, 0, true, firmwareVersion());
+}
+
 void publishCoverState(const std::string &id, const char *state) {
     std::string topic = "iown/" + id + "/state";
     mqttClient.publish(topic.c_str(), 0, true, state);
@@ -279,6 +286,7 @@ static void handleMqttConnectImpl() {
     publishFreeMem();
     publishWifiStrength();
     publishIpAddress();
+    publishVersion();
 }
 
 void connectToMqtt() {

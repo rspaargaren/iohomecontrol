@@ -16,6 +16,7 @@
 
 #include "esp_log.h"
 #include <board-config.h>
+#include <firmware_version.h>
 #include <user_config.h>
 
 #include <crypto2Wutils.h>
@@ -98,6 +99,8 @@ void setup() {
     Serial.begin(115200);       //Start serial connection for debug and manual input
     esp_log_set_vprintf(log_to_buffer_and_serial);
     esp_log_level_set("*", ESP_LOG_DEBUG);    // Or VERBOSE for ESP_LOGV
+
+    Serial.printf("Firmware version: %s\n", firmwareVersion());
 
 
     initDisplay(); // Init OLED display

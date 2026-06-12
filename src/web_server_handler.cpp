@@ -12,6 +12,7 @@
 #include <Update.h>
 #include <cstdlib>
 #include <interact.h>
+#include <firmware_version.h>
 #include <iohcCryptoHelpers.h>
 #include <iohcRemote1W.h>
 #include <iohcRemoteMap.h>
@@ -397,11 +398,7 @@ void handleApiAction(AsyncWebServerRequest *request, JsonObject &doc, JsonObject
 }
 
 void handleApiInfo(AsyncWebServerRequest *request, JsonObject &root) {
-#ifdef FIRMWARE_VERSION
-  root["version"] = FIRMWARE_VERSION;
-#else
-  root["version"] = "dev";
-#endif
+  root["version"] = firmwareVersion();
 }
 
 void handleApiLogs(AsyncWebServerRequest *request, JsonArray &root) {
