@@ -16,17 +16,35 @@
 #include <freertos/task.h>
 #include <nvs_helpers.h>
 #include <atomic>
+#include "wifi_helper.h"
 
 AsyncMqttClient mqttClient;
-const char AVAILABILITY_TOPIC[] = "iown/status";
+static const char AVAILABILITY_TOPIC[] = "iown/status";
+static const char FREE_MEM_TOPIC[] = "iown/info/free_mem";
+static const char WIFI_STRENGTH_TOPIC[] = "iown/info/wifi_rssi";
+static const char IP_ADDRESS_TOPIC[] = "iown/info/ip";
 static const char GATEWAY_ID[] = "MyOpenIO";
 static TaskHandle_t s_mqttSchedulerTask = nullptr;
 static std::atomic<bool> s_heartbeatEnabled{false};
 static std::atomic<uint32_t> s_nextHeartbeatAtMs{0};
 static uint32_t s_lastMqttConnectAttemptMs = 0;
 static constexpr uint32_t MQTT_RECONNECT_INTERVAL_MS = 5000;
+static TaskHandle_t s_mqttPostConnectTask = nullptr;
 
 static void mqttSchedulerTask(void*);
+static void publishIohcFrameDiscovery();
+static void publishFreeMemDiscovery();
+static void publishIpAddressDiscovery();
+static void publishWifiStrengthDiscovery();
+static void onMqttConnect(bool sessionPresent);
+static void onMqttDisconnect(AsyncMqttClientDisconnectReason reason);
+static void onMqttMessage(char *topic, char *payload,
+                   AsyncMqttClientMessageProperties properties,
+                   size_t len, size_t index, size_t total);
+static void publishHeartbeat();
+static void mqttFuncHandler(const char *cmd);
+static void mqttPostConnectTask(void*);
+static void handleMqttConnectImpl();
 
 static void startHeartbeat() {
     s_heartbeatEnabled.store(true);
@@ -37,42 +55,22 @@ static void stopHeartbeat() {
     s_heartbeatEnabled.store(false);
 }
 
+static void storeHardcodedConfigValue(const char* desc, const char* key, std::string &value) {
+    if (!nvs_read_string(key, value)) {
+        if (value.empty()) {
+            Serial.printf("%s not set\n", desc);
+        } else {
+            nvs_write_string(key, value);
+        }
+    }
+}
+
 void initMqtt() {
-    if (!nvs_read_string(NVS_KEY_MQTT_SERVER, mqtt_server)) {
-        if (mqtt_server.empty()) {
-            Serial.println("MQTT server not set");
-        } else {
-            nvs_write_string(NVS_KEY_MQTT_SERVER, mqtt_server);
-        }
-    }
-    if (!nvs_read_string(NVS_KEY_MQTT_USER, mqtt_user)) {
-        if (mqtt_user.empty()) {
-            Serial.println("MQTT user not set");
-        } else {
-            nvs_write_string(NVS_KEY_MQTT_USER, mqtt_user);
-        }
-    }
-    if (!nvs_read_string(NVS_KEY_MQTT_PASSWORD, mqtt_password)) {
-        if (mqtt_password.empty()) {
-            Serial.println("MQTT password not set");
-        } else {
-            nvs_write_string(NVS_KEY_MQTT_PASSWORD, mqtt_password);
-        }
-    }
-    if (!nvs_read_string(NVS_KEY_MQTT_DISCOVERY, mqtt_discovery_topic)) {
-        if (mqtt_discovery_topic.empty()) {
-            Serial.println("MQTT discovery topic not set");
-        } else {
-            nvs_write_string(NVS_KEY_MQTT_DISCOVERY, mqtt_discovery_topic);
-        }
-    }
-    if (!nvs_read_string(NVS_KEY_MQTT_CLIENT_ID, mqtt_client_id)) {
-        if (mqtt_client_id.empty()) {
-            Serial.println("MQTT client id not set");
-        } else {
-            nvs_write_string(NVS_KEY_MQTT_CLIENT_ID, mqtt_client_id);
-        }
-    }
+    storeHardcodedConfigValue("MQTT server", NVS_KEY_MQTT_SERVER, mqtt_server);
+    storeHardcodedConfigValue("MQTT user", NVS_KEY_MQTT_USER, mqtt_user);
+    storeHardcodedConfigValue("MQTT password", NVS_KEY_MQTT_PASSWORD, mqtt_password);
+    storeHardcodedConfigValue("MQTT discovery", NVS_KEY_MQTT_DISCOVERY, mqtt_discovery_topic);
+    storeHardcodedConfigValue("MQTT client id", NVS_KEY_MQTT_CLIENT_ID, mqtt_client_id);
 
     if (!nvs_read_u16(NVS_KEY_MQTT_PORT, mqtt_port)) {
         nvs_write_u16(NVS_KEY_MQTT_PORT, mqtt_port);
@@ -98,21 +96,27 @@ void initMqtt() {
     }
 }
 
+static JsonDocument createDeviceObject(const std::string &id, const std::string &name, const std::string &key = "") {
+    JsonDocument device;
+    device["identifiers"] = id;
+    device["name"] = name;
+    device["manufacturer"] = "Somfy";
+    device["model"] = "IO Blind Bridge";
+    device["sw_version"] = "1.0.0";
+    if (!key.empty()) {
+        device["serial_number"] = key;
+    }
+    device["via_device"] = GATEWAY_ID;
+    return device;
+}
+
 static void publishButtonDiscovery(const std::string &id, const std::string &name,
                                    const std::string &action, const std::string &key) {
     JsonDocument doc;
     doc["name"] = name + " " + action;
     doc["unique_id"] = id + "_" + action;
     doc["command_topic"] = "iown/" + id + "/" + action;
-
-    JsonObject device = doc["device"].to<JsonObject>();
-    device["identifiers"] = id;
-    device["name"] = name;
-    device["manufacturer"] = "Somfy";
-    device["model"] = "IO Blind Bridge";
-    device["sw_version"] = "1.0.0";
-    device["serial_number"] = key;
-    device["via_device"] = GATEWAY_ID;
+    doc["device"] = createDeviceObject(id, name, key);
 
     std::string payload;
     size_t len = serializeJson(doc, payload);
@@ -132,15 +136,7 @@ void publishTravelTimeDiscovery(const std::string &id, const std::string &name,
     doc["min"] = 0;
     doc["max"] = 60;
     doc["step"] = 1;
-
-    JsonObject device = doc["device"].to<JsonObject>();
-    device["identifiers"] = id;
-    device["name"] = name;
-    device["manufacturer"] = "Somfy";
-    device["model"] = "IO Blind Bridge";
-    device["sw_version"] = "1.0.0";
-    device["serial_number"] = key;
-    device["via_device"] = GATEWAY_ID;
+    doc["device"] = createDeviceObject(id, name, key);
 
     std::string payload;
     size_t len = serializeJson(doc, payload);
@@ -178,15 +174,7 @@ void publishDiscovery(const std::string &id, const std::string &name, const std:
     doc["optimistic"] = false;
     doc["retain"] = true;
     doc["qos"] = 0;
-
-    JsonObject device = doc["device"].to<JsonObject>();
-    device["identifiers"] = id;
-    device["name"] = name;
-    device["manufacturer"] = "Somfy";
-    device["model"] = "IO Blind Bridge";
-    device["sw_version"] = "1.0.0";
-    device["serial_number"] = key;
-    device["via_device"] = GATEWAY_ID;
+    doc["device"] = createDeviceObject(id, name, key);
 
     std::string payload;
     size_t len = serializeJson(doc, payload);
@@ -218,6 +206,18 @@ void removeDiscovery(const std::string &id) {
 
 void publishHeartbeat() {
     mqttClient.publish(AVAILABILITY_TOPIC, 0, true, "online");
+}
+
+void publishFreeMem() {
+    mqttClient.publish(FREE_MEM_TOPIC, 0, true, std::to_string(esp_get_free_heap_size()).c_str());
+}
+
+void publishWifiStrength() {
+    mqttClient.publish(WIFI_STRENGTH_TOPIC, 0, true, std::to_string(wifiStatus.rssi).c_str());
+}
+
+void publishIpAddress() {
+    mqttClient.publish(IP_ADDRESS_TOPIC, 0, true, WiFi.localIP().toString().c_str());
 }
 
 void publishCoverState(const std::string &id, const char *state) {
@@ -254,6 +254,9 @@ static void mqttPostConnectTask(void* /*arg*/) {
 }
 
 static void handleMqttConnectImpl() {
+    publishFreeMemDiscovery();
+    publishIpAddressDiscovery();
+    publishWifiStrengthDiscovery();
     // Discovery van de ‘frame’ sensor eerst, zodat state pub direct een entity heeft
     publishIohcFrameDiscovery();
     const auto &remotes = IOHC::iohcRemote1W::getInstance()->getRemotes();
@@ -273,6 +276,9 @@ static void handleMqttConnectImpl() {
     }
     startHeartbeat();
     publishHeartbeat();
+    publishFreeMem();
+    publishWifiStrength();
+    publishIpAddress();
 }
 
 void connectToMqtt() {
@@ -349,6 +355,8 @@ static void mqttSchedulerTask(void*) {
             s_nextHeartbeatAtMs.store(now + 60000UL);
             if (mqttStatus == ConnState::Connected && mqttClient.connected()) {
                 publishHeartbeat();
+                publishFreeMem();
+                publishWifiStrength();
             }
         }
     }
@@ -360,13 +368,7 @@ static void publishIohcFrameDiscovery() {
     configDoc["state_topic"] = mqtt_discovery_topic + "/sensor/iohc_frame/state";
     configDoc["unique_id"] = "iohc_frame";
     configDoc["json_attributes_topic"] = mqtt_discovery_topic + "/sensor/iohc_frame/state";
-
-    JsonObject device = configDoc["device"].to<JsonObject>();
-    device["identifiers"] = GATEWAY_ID;
-    device["name"] = "My Open IO Gateway";
-    device["manufacturer"] = "Somfy";
-    device["model"] = "IO Blind Bridge";
-    device["sw_version"] = "1.0.0";
+    configDoc["device"] = createDeviceObject(GATEWAY_ID, "My Open IO Gateway");
 
     std::string cfg;
     size_t cfgLen = serializeJson(configDoc, cfg);
@@ -374,6 +376,55 @@ static void publishIohcFrameDiscovery() {
                        0, true, cfg.c_str(), cfgLen);
 }
 
+static void publishFreeMemDiscovery() {
+    JsonDocument configDoc;
+    configDoc["name"] = "Free Memory";
+    configDoc["state_topic"] = FREE_MEM_TOPIC;
+    configDoc["unique_id"] = "free_mem";
+    configDoc["unit_of_measurement"] = "B";
+    configDoc["device_class"] = "data_size";
+    configDoc["entity_category"] = "diagnostic";
+    configDoc["icon"] = "mdi:memory";
+    configDoc["device"] = createDeviceObject(GATEWAY_ID, "My Open IO Gateway");
+
+    std::string cfg;
+    size_t cfgLen = serializeJson(configDoc, cfg);
+    mqttClient.publish((mqtt_discovery_topic + "/sensor/iohc_free_mem/config").c_str(),
+                       0, true, cfg.c_str(), cfgLen);
+}
+
+static void publishIpAddressDiscovery() {
+    JsonDocument configDoc;
+    configDoc["name"] = "IP Address";
+    configDoc["state_topic"] = IP_ADDRESS_TOPIC;
+    configDoc["unique_id"] = "ip";
+    configDoc["native_value"] = "str";
+    configDoc["entity_category"] = "diagnostic";
+    configDoc["icon"] = "mdi:ip-network";
+    configDoc["device"] = createDeviceObject(GATEWAY_ID, "My Open IO Gateway");
+
+    std::string cfg;
+    size_t cfgLen = serializeJson(configDoc, cfg);
+    mqttClient.publish((mqtt_discovery_topic + "/sensor/iohc_ip/config").c_str(),
+                       0, true, cfg.c_str(), cfgLen);
+}
+
+static void publishWifiStrengthDiscovery() {
+    JsonDocument configDoc;
+    configDoc["name"] = "WiFi RSSI";
+    configDoc["state_topic"] = WIFI_STRENGTH_TOPIC;
+    configDoc["unique_id"] = "wifi_rssi";
+    configDoc["native_value"] = "int";
+    configDoc["device_class"] = "signal_strength";
+    configDoc["entity_category"] = "diagnostic";
+    configDoc["icon"] = "mdi:wifi";
+    configDoc["device"] = createDeviceObject(GATEWAY_ID, "My Open IO Gateway");
+
+    std::string cfg;
+    size_t cfgLen = serializeJson(configDoc, cfg);
+    mqttClient.publish((mqtt_discovery_topic + "/sensor/iohc_wifi_rssi/config").c_str(),
+                       0, true, cfg.c_str(), cfgLen);
+}
 
 void mqttFuncHandler(const char *cmd) {
     constexpr char delim = ' ';

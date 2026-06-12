@@ -36,7 +36,7 @@ const uint32_t WIFI_NOTIFY_RECONNECT = BIT2;
 // below variables are thread safe because of the use of a single task that reads/modifies them (except for wifiStatus, but that one has atomic fields)
 TimersUS::TickerUsESP32 wifiReconnectTimer {};
 TimersUS::TickerUsESP32 rssiTimer {};
-WiFiStatus wifiStatus = { ConnState::Disconnected, 0 };
+WiFiStatus wifiStatus = { ConnState::Disconnected, 0, 0 };
 
 TaskHandle_t wifiWorkerTaskHandle = NULL;
 bool mdnsStarted = false;
@@ -57,7 +57,8 @@ static void notifyWiFiWorker(uint32_t bits) {
 
 static void rssiTimerCb() {
     if (WiFi.status() == WL_CONNECTED) {
-        wifiStatus.signalStrengthPercent = rssiToQuality(WiFi.RSSI());
+        wifiStatus.rssi = WiFi.RSSI();
+        wifiStatus.signalStrengthPercent = rssiToQuality(wifiStatus.rssi);
     }
 }
 
@@ -84,7 +85,8 @@ static void onMqttAfterWifi() {
 static void handleWifiConnected() {
     if (WiFi.status() == WL_CONNECTED) {
         wifiStatus.connectionStatus = ConnState::Connected;
-        wifiStatus.signalStrengthPercent = rssiToQuality(WiFi.RSSI());
+        wifiStatus.rssi = WiFi.RSSI();
+        wifiStatus.signalStrengthPercent = rssiToQuality(wifiStatus.rssi);
 
         wifiReconnectTimer.detach();
         rssiTimer.attach(5, rssiTimerCb);
@@ -112,6 +114,7 @@ static void configureWifiDisconnected() {
     Serial.println("WiFi: connection lost (event)");
     wifiStatus.connectionStatus = ConnState::Disconnected;
     wifiStatus.signalStrengthPercent = 0;
+    wifiStatus.rssi = 0;
     rssiTimer.detach();
     wifiReconnectTimer.attach(10, wifiReconnectTimerCb);
     mdnsStarted = false;
