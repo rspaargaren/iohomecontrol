@@ -49,8 +49,10 @@ inline std::string syslog_server = ""; // Syslog server — defaults to syslog.s
 inline uint16_t syslog_port = 5144;    // Syslog server port
 inline std::string syslog_tag = "";    // Optional tag prepended to hostname for filtering
 
+#if !defined(WIRELESS_BRIDGE)
 // Comment out the next line if no display is connected
 #define SSD1306_DISPLAY
+#endif
 
 // Comment out the next line to disable the built-in web server
 #define WEBSERVER
