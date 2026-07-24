@@ -56,6 +56,16 @@
 #define RADIO_DIO1_PIN      35 //HELTEC
 #define RADIO_DIO2_PIN      34 //HELTEC
 #define RADIO_BUSY_PIN      32
+#elif defined(WIRELESS_BRIDGE)
+#define RADIO_SCLK_PIN       5
+#define RADIO_MISO_PIN      19
+#define RADIO_MOSI_PIN      27
+#define RADIO_CS_PIN        18
+#define RADIO_DIO0_PIN      26
+#define RADIO_RST_PIN       14
+#define BOARD_LED_PIN       25
+#define RADIO_DIO1_PIN      35 //HELTEC
+#define RADIO_DIO2_PIN      34 //HELTEC
 #else
 #define RADIO_SCLK_PIN       5
 #define RADIO_MISO_PIN      19
@@ -79,6 +89,8 @@
 #define I2C_SDA_PIN 4
 #define I2C_SCL_PIN 15
 #define DISPLAY_OLED_RST_PIN 16
+#elif defined(WIRELESS_BRIDGE)
+// wireless bridge lacks screen
 #else
 #define I2C_SDA_PIN 21
 #define I2C_SCL_PIN 22

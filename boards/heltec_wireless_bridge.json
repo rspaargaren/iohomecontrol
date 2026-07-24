@@ -1,0 +1,33 @@
+{
+  "build": {
+    "core": "esp32",
+    "extra_flags": [
+      "-DWIRELESS_BRIDGE",
+      "-DBOARD_HAS_PSRAM"
+    ],
+    "f_cpu": "240000000L",
+    "f_flash": "80000000L",
+    "flash_mode": "dio",
+    "mcu": "esp32",
+    "variant": "esp32"
+  },
+  "connectivity": [
+    "wifi",
+    "bluetooth",
+    "lora"
+  ],
+  "frameworks": [
+    "arduino",
+    "espidf"
+  ],
+  "name": "Heltec Wireless Bridge",
+  "upload": {
+    "flash_size": "8MB",
+    "maximum_ram_size": 327680,
+    "maximum_size": 8388608,
+    "require_upload_port": true,
+    "speed": 921600
+  },
+  "url": "https://heltec.org/project/wireless-bridge/",
+  "vendor": "Heltec Automation"
+}
