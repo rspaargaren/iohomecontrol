@@ -24,7 +24,6 @@
         deviceEl.style.background = "linear-gradient(to top, var(--color-input) " +
             percent + "%, var(--color-accent3) " + percent + "%)";
 
-        // Update slider + label if present
         const slider = deviceEl.querySelector('.position-slider');
         if (slider && Math.abs(parseInt(slider.value) - percent) > 1) {
             slider.value = percent;
@@ -61,12 +60,10 @@
         label.style.cssText = "min-width:36px;text-align:right;font-size:0.85em";
         label.textContent = Math.round(device.position || 0) + "%";
 
-        // Live label update while dragging (no command sent)
         slider.addEventListener("input", function () {
             label.textContent = slider.value + "%";
         });
 
-        // Send command on release
         slider.addEventListener("change", function () {
             const val = parseInt(slider.value, 10);
             label.textContent = val + "%";
@@ -146,10 +143,7 @@
                     });
                 }));
 
-                // Position slider
                 listItem.appendChild(createPositionSlider(app, device));
-
-                // Travel time label
                 listItem.appendChild(createTravelTimeLabel(app, device));
 
                 listItem.appendChild(createDeviceButton(app.i18nText("button.edit", "edit"), "edit", async function () {
@@ -219,7 +213,6 @@
                                             command: "time1W " + parsedTiming
                                         });
                                         app.logStatus(timeResult.message || "Travel time updated.");
-                                        // Update the inline label immediately
                                         const ttText = document.querySelector('[data-travel-time-id="' + device.id + '"]');
                                         if (ttText) {
                                             ttText.textContent = app.i18nText("label.travel_time", "Travel time:") + " " +
@@ -335,7 +328,7 @@
     function openPairWizard(app) {
         let scanInterval = null;
         let scanTimeoutTimer = null;
-        let dotTimer = null;        // FIX: hoisted so stopScan() can clear it
+        let dotTimer = null;
         let detectedAddress = null;
         let wizardCancelled = false;
 
@@ -368,20 +361,9 @@
         document.body.appendChild(overlay);
 
         function stopScan() {
-            // FIX: also clear dotTimer — previously leaked when wizard was
-            // closed before scan timeout fired
-            if (dotTimer) {
-                clearInterval(dotTimer);
-                dotTimer = null;
-            }
-            if (scanInterval) {
-                clearInterval(scanInterval);
-                scanInterval = null;
-            }
-            if (scanTimeoutTimer) {
-                clearTimeout(scanTimeoutTimer);
-                scanTimeoutTimer = null;
-            }
+            if (dotTimer) { clearInterval(dotTimer); dotTimer = null; }
+            if (scanInterval) { clearInterval(scanInterval); scanInterval = null; }
+            if (scanTimeoutTimer) { clearTimeout(scanTimeoutTimer); scanTimeoutTimer = null; }
             window.MiOpenApi.postJson("/api/scan/stop", {}).catch(function () {});
         }
 
@@ -445,8 +427,6 @@
                 confirmBtn.textContent = app.i18nText("wizard.pairing", "Pairing...");
 
                 try {
-                    // FIX: include detectedAddress as first token so the
-                    // firmware's new1W handler can register the correct device
                     await window.MiOpenApi.postJson("/api/command", {
                         command: detectedAddress
                             ? "new1W " + detectedAddress + " " + name
@@ -489,7 +469,7 @@
             nameInput.focus();
         }
 
-        function showStep1() {
+        function showStep1(useMotorButton) {
             card.innerHTML = "";
 
             const title = document.createElement("h3");
@@ -497,18 +477,23 @@
             title.style.marginTop = "0";
 
             const instruction = document.createElement("p");
-            instruction.innerHTML = app.i18nText(
-                "wizard.step1_instruction",
-                "Press the <strong>small button on the back</strong> of your screen's remote to put it in pair mode (the screen will move briefly up/down).<br><br>The address will be detected automatically."
-            );
+            if (useMotorButton) {
+                instruction.innerHTML = app.i18nText(
+                    "wizard.step1_instruction_motor",
+                    "Press and hold the <strong>Up ▲ and Down ▼ buttons simultaneously</strong> on the motor until the screen moves briefly up/down.<br><br>The address will be detected automatically."
+                );
+            } else {
+                instruction.innerHTML = app.i18nText(
+                    "wizard.step1_instruction",
+                    "Press the <strong>small button on the back</strong> of your screen's remote to put it in pair mode (the screen will move briefly up/down).<br><br>The address will be detected automatically."
+                );
+            }
 
             const statusLine = document.createElement("p");
             statusLine.style.cssText = "font-size:0.9em;color:var(--color-accent,#888);min-height:1.4em";
             statusLine.textContent = app.i18nText("wizard.scanning", "Scanning...");
 
             let dotCount = 0;
-            // FIX: assign to closure-scoped dotTimer (hoisted above) instead
-            // of a local const — stopScan() can now clear it on any exit path
             dotTimer = setInterval(function () {
                 if (wizardCancelled) { clearInterval(dotTimer); dotTimer = null; return; }
                 dotCount = (dotCount + 1) % 4;
@@ -522,9 +507,7 @@
             const cancelBtn = document.createElement("button");
             cancelBtn.textContent = app.i18nText("button.cancel", "Cancel");
             cancelBtn.className = "btn";
-            cancelBtn.addEventListener("click", function () {
-                closeWizard();
-            });
+            cancelBtn.addEventListener("click", function () { closeWizard(); });
 
             btnRow.appendChild(cancelBtn);
 
@@ -534,18 +517,18 @@
             card.appendChild(btnRow);
 
             window.MiOpenApi.requestJson("/api/scan?reset=1").then(function () {
-                // Timeout: stop scanning after SCAN_TIMEOUT_MS and show error
                 scanTimeoutTimer = setTimeout(function () {
                     if (wizardCancelled) { return; }
                     stopScan();
                     statusLine.style.color = "red";
-                    statusLine.textContent = app.i18nText("wizard.scan_timeout", "No screen detected. Press the button on the back of the remote and try again.");
+                    statusLine.textContent = useMotorButton
+                        ? app.i18nText("wizard.scan_timeout_motor", "No screen detected. Hold Up + Down on the motor until it moves briefly and try again.")
+                        : app.i18nText("wizard.scan_timeout", "No screen detected. Press the button on the back of the remote and try again.");
                     cancelBtn.textContent = app.i18nText("button.close", "Close");
                 }, SCAN_TIMEOUT_MS);
 
                 scanInterval = setInterval(function () {
                     if (wizardCancelled) { stopScan(); return; }
-
                     window.MiOpenApi.requestJson("/api/scan").then(function (data) {
                         if (data.detected && data.address) {
                             stopScan();
@@ -560,7 +543,90 @@
             });
         }
 
-        showStep1();
+        // Step 0: choose pairing method
+        function showStep0() {
+            card.innerHTML = "";
+
+            const title = document.createElement("h3");
+            title.textContent = app.i18nText("wizard.step0_title", "How do you want to start pairing?");
+            title.style.marginTop = "0";
+
+            const subtitle = document.createElement("p");
+            subtitle.style.cssText = "margin-bottom:18px;font-size:0.95em;color:var(--color-accent,#888)";
+            subtitle.textContent = app.i18nText("wizard.step0_subtitle", "Choose the method that applies to your screen.");
+
+            function makeMethodCard(emoji, labelKey, labelDefault, descKey, descDefault, onClick) {
+                const btn = document.createElement("button");
+                btn.style.cssText = [
+                    "display:flex",
+                    "align-items:flex-start",
+                    "gap:14px",
+                    "width:100%",
+                    "background:var(--color-card,var(--color-input,#f5f5f5))",
+                    "border:2px solid var(--color-border,#ddd)",
+                    "border-radius:10px",
+                    "padding:14px 16px",
+                    "margin-bottom:12px",
+                    "cursor:pointer",
+                    "text-align:left",
+                    "font-family:inherit",
+                    "color:var(--color-text,#222)",
+                    "transition:border-color 0.15s"
+                ].join(";");
+                btn.addEventListener("mouseover", function () { btn.style.borderColor = "var(--color-primary,#0078d4)"; });
+                btn.addEventListener("mouseout",  function () { btn.style.borderColor = "var(--color-border,#ddd)"; });
+
+                const emojiEl = document.createElement("span");
+                emojiEl.textContent = emoji;
+                emojiEl.style.cssText = "font-size:1.8em;line-height:1;flex-shrink:0";
+
+                const textWrap = document.createElement("div");
+                const labelEl = document.createElement("strong");
+                labelEl.textContent = app.i18nText(labelKey, labelDefault);
+                const descEl = document.createElement("p");
+                descEl.style.cssText = "margin:4px 0 0;font-size:0.85em;color:var(--color-accent,#888)";
+                descEl.textContent = app.i18nText(descKey, descDefault);
+                textWrap.appendChild(labelEl);
+                textWrap.appendChild(descEl);
+
+                btn.appendChild(emojiEl);
+                btn.appendChild(textWrap);
+                btn.addEventListener("click", onClick);
+                return btn;
+            }
+
+            const remoteBtn = makeMethodCard(
+                "\uD83D\uDCF9",
+                "wizard.method_remote_label",
+                "I have a remote control",
+                "wizard.method_remote_desc",
+                "Press the small PROG button on the back of the remote. The screen will move briefly.",
+                function () { showStep1(false); }
+            );
+
+            const motorBtn = makeMethodCard(
+                "\uD83D\uDD27",
+                "wizard.method_motor_label",
+                "I use the motor buttons (no remote)",
+                "wizard.method_motor_desc",
+                "Hold Up \u25b2 and Down \u25bc simultaneously on the motor until the screen moves briefly (e.g. Somfy Altea io, Oximo io).",
+                function () { showStep1(true); }
+            );
+
+            const cancelBtn = document.createElement("button");
+            cancelBtn.textContent = app.i18nText("button.cancel", "Cancel");
+            cancelBtn.className = "btn";
+            cancelBtn.style.cssText = "margin-top:4px;width:100%";
+            cancelBtn.addEventListener("click", closeWizard);
+
+            card.appendChild(title);
+            card.appendChild(subtitle);
+            card.appendChild(remoteBtn);
+            card.appendChild(motorBtn);
+            card.appendChild(cancelBtn);
+        }
+
+        showStep0();
     }
 
     function init(app) {
