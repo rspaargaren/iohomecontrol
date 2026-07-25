@@ -198,32 +198,63 @@
         }
     }
 
+    // FIX: WebSocket with exponential-backoff reconnect.
+    // On an embedded ESP32 with WiFi dropouts the WS connection will drop
+    // frequently; without reconnect the user loses all position updates and
+    // log messages until they manually reload the page.
     function initWebSocket(app) {
-        const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
-        const ws = new WebSocket(wsScheme + "://" + window.location.host + "/ws");
+        var reconnectDelay = 1000;
+        var reconnectTimer = null;
+        var intentionallyClosed = false;
 
-        ws.onmessage = function (event) {
-            const data = JSON.parse(event.data);
-            if (data.type === "log") {
-                app.logStatus(data.message);
-            } else if (data.type === "position") {
-                app.updateDeviceFill(data.id, data.position);
-            } else if (data.type === "init") {
-                app.fetchAndDisplayDevices();
-            } else if (data.type === "lastaddr") {
-                app.elements.lastAddrInput.value = data.address || "";
-            }
+        function connect() {
+            const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+            const ws = new WebSocket(wsScheme + "://" + window.location.host + "/ws");
+
+            ws.onmessage = function (event) {
+                const data = JSON.parse(event.data);
+                if (data.type === "log") {
+                    app.logStatus(data.message);
+                } else if (data.type === "position") {
+                    app.updateDeviceFill(data.id, data.position);
+                } else if (data.type === "init") {
+                    app.fetchAndDisplayDevices();
+                } else if (data.type === "lastaddr") {
+                    app.elements.lastAddrInput.value = data.address || "";
+                }
+            };
+
+            ws.onopen = function () {
+                reconnectDelay = 1000;
+                app.logStatus("WebSocket connected");
+                app.state.ws = ws;
+            };
+
+            ws.onclose = function () {
+                app.state.ws = null;
+                if (intentionallyClosed) { return; }
+                app.logStatus("WebSocket disconnected, reconnecting in " +
+                    (reconnectDelay / 1000) + "s...", true);
+                reconnectTimer = setTimeout(function () {
+                    reconnectDelay = Math.min(reconnectDelay * 2, 30000);
+                    connect();
+                }, reconnectDelay);
+            };
+
+            ws.onerror = function () {
+                // onclose fires after onerror; let onclose handle the reconnect
+                ws.close();
+            };
+        }
+
+        connect();
+
+        // Expose a clean-close so callers can stop reconnecting (e.g. page unload)
+        app.state.closeWs = function () {
+            intentionallyClosed = true;
+            if (reconnectTimer) { clearTimeout(reconnectTimer); }
+            if (app.state.ws) { app.state.ws.close(); }
         };
-
-        ws.onopen = function () {
-            app.logStatus("WebSocket connected");
-        };
-
-        ws.onclose = function () {
-            app.logStatus("WebSocket disconnected", true);
-        };
-
-        app.state.ws = ws;
     }
 
     function bindEvents(app) {
@@ -287,7 +318,8 @@
             },
             state: {
                 devicesCache: [],
-                ws: null
+                ws: null,
+                closeWs: null
             }
         };
 
