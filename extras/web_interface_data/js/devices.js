@@ -330,8 +330,11 @@
     // Pair Wizard
     // -------------------------------------------------------------------------
 
+    var SCAN_TIMEOUT_MS = 60000;
+
     function openPairWizard(app) {
         let scanInterval = null;
+        let scanTimeoutTimer = null;
         let detectedAddress = null;
         let wizardCancelled = false;
 
@@ -367,6 +370,10 @@
             if (scanInterval) {
                 clearInterval(scanInterval);
                 scanInterval = null;
+            }
+            if (scanTimeoutTimer) {
+                clearTimeout(scanTimeoutTimer);
+                scanTimeoutTimer = null;
             }
             window.MiOpenApi.postJson("/api/scan/stop", {}).catch(function () {});
         }
@@ -515,6 +522,16 @@
             card.appendChild(btnRow);
 
             window.MiOpenApi.requestJson("/api/scan?reset=1").then(function () {
+                // Timeout: stop scanning after SCAN_TIMEOUT_MS and show error
+                scanTimeoutTimer = setTimeout(function () {
+                    if (wizardCancelled) { return; }
+                    clearInterval(dotTimer);
+                    stopScan();
+                    statusLine.style.color = "red";
+                    statusLine.textContent = app.i18nText("wizard.scan_timeout", "No screen detected. Press the button on the back of the remote and try again.");
+                    cancelBtn.textContent = app.i18nText("button.close", "Close");
+                }, SCAN_TIMEOUT_MS);
+
                 scanInterval = setInterval(function () {
                     if (wizardCancelled) { stopScan(); clearInterval(dotTimer); return; }
 
@@ -527,6 +544,7 @@
                     }).catch(function () {});
                 }, 1500);
             }).catch(function (err) {
+                clearInterval(dotTimer);
                 statusLine.textContent = app.i18nText("wizard.scan_error", "Could not start scan: ") + err.message;
                 statusLine.style.color = "red";
             });
