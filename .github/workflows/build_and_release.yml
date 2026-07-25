@@ -70,6 +70,7 @@ jobs:
           output: changelog.md
           onlyLastTag: true
           stripHeaders: true
+          sinceTag: v1.0.2
 
       - name: Release
         uses: softprops/action-gh-release@v3
