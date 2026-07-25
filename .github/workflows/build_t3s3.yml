@@ -24,11 +24,8 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install PlatformIO
-        run: pip install platformio
-
-      - name: Install esptool
-        run: pip install -U esptool
+      - name: Install PlatformIO and esptool
+        run: pip install platformio esptool
 
       - name: Build firmware (LilyGoT3S3)
         run: pio run -e LilyGoT3S3
@@ -36,14 +33,25 @@ jobs:
       - name: Build filesystem (LilyGoT3S3)
         run: pio run -e LilyGoT3S3 -t buildfs
 
+      - name: Show build output
+        run: |
+          echo "=== .pio/build/LilyGoT3S3/ ==="
+          ls -lh .pio/build/LilyGoT3S3/
+          echo "=== locate boot_app0.bin ==="
+          find ~/.platformio -name "boot_app0.bin" 2>/dev/null | head -5
+
       - name: Merge into single flashable bin
         run: |
+          BOOT_APP0=$(find ~/.platformio -name "boot_app0.bin" | head -1)
+          echo "Using boot_app0.bin: $BOOT_APP0"
           esptool --chip esp32s3 merge-bin \
             -o LilyGoT3S3.bin \
             --flash-size 16MB \
+            --flash-mode dio \
+            --flash-freq 80m \
             0x0000  .pio/build/LilyGoT3S3/bootloader.bin \
             0x8000  .pio/build/LilyGoT3S3/partitions.bin \
-            0xe000  .pio/build/LilyGoT3S3/boot_app0.bin \
+            0xe000  "$BOOT_APP0" \
             0x10000 .pio/build/LilyGoT3S3/firmware.bin \
             0x210000 .pio/build/LilyGoT3S3/littlefs.bin
 
