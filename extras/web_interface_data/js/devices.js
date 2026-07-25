@@ -80,6 +80,26 @@
         return wrapper;
     }
 
+    function createTravelTimeLabel(app, device) {
+        const wrapper = document.createElement("div");
+        wrapper.className = "travel-time-label";
+        wrapper.style.cssText = "display:flex;align-items:center;gap:4px;margin-top:4px;font-size:0.78em;color:var(--color-accent,#888);width:100%";
+
+        const icon = document.createElement("span");
+        icon.textContent = "\u23F1";
+        icon.setAttribute("aria-hidden", "true");
+
+        const text = document.createElement("span");
+        text.dataset.travelTimeId = device.id;
+        text.textContent = app.i18nText("label.travel_time", "Travel time:") + " " +
+            (device.travel_time || 10) + " " + app.i18nText("label.seconds", "s");
+        text.title = app.i18nText("label.travel_time_hint", "Time for the screen to travel from fully open to fully closed. Edit to change.");
+
+        wrapper.appendChild(icon);
+        wrapper.appendChild(text);
+        return wrapper;
+    }
+
     async function fetchAndDisplayDevices(app) {
         const deviceList = app.elements.deviceList;
         const deviceSelect = app.elements.commandDeviceSelect;
@@ -128,6 +148,9 @@
 
                 // Position slider
                 listItem.appendChild(createPositionSlider(app, device));
+
+                // Travel time label
+                listItem.appendChild(createTravelTimeLabel(app, device));
 
                 listItem.appendChild(createDeviceButton(app.i18nText("button.edit", "edit"), "edit", async function () {
                     try {
@@ -196,6 +219,13 @@
                                             command: "time1W " + parsedTiming
                                         });
                                         app.logStatus(timeResult.message || "Travel time updated.");
+                                        // Update the inline label immediately
+                                        const ttText = document.querySelector('[data-travel-time-id="' + device.id + '"]');
+                                        if (ttText) {
+                                            ttText.textContent = app.i18nText("label.travel_time", "Travel time:") + " " +
+                                                parsedTiming + " " + app.i18nText("label.seconds", "s");
+                                        }
+                                        device.travel_time = parsedTiming;
                                     }
 
                                     if (typeof repeatOnNoResponse === "boolean" &&
