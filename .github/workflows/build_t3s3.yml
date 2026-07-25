@@ -26,31 +26,33 @@ jobs:
       - name: Build filesystem (LilyGoT3S3)
         run: pio run -e LilyGoT3S3 -t buildfs
 
-      - name: Show build output and find files
+      - name: Show all build output
         run: |
           echo "=== .pio/build/LilyGoT3S3/ ==="
-          ls -lh .pio/build/LilyGoT3S3/
-          echo "=== boot_app0.bin locations ==="
+          find .pio/build/LilyGoT3S3/ -type f | sort
+          echo "=== PlatformIO flash args ==="
+          cat .pio/build/LilyGoT3S3/flash_args 2>/dev/null || echo "flash_args not found"
+          echo "=== boot_app0 search ==="
           find ~/.platformio -name "boot_app0.bin" 2>/dev/null
-          echo "=== bootloader locations ==="
-          find ~/.platformio -name "bootloader.bin" 2>/dev/null | head -5
+          echo "=== bootloader search ==="
+          find ~/.platformio -name "bootloader*.bin" 2>/dev/null | head -10
 
       - name: Merge into single flashable bin
         run: |
           BUILD=.pio/build/LilyGoT3S3
-          BOOT_APP0=$(find ~/.platformio -name "boot_app0.bin" | head -1)
-          BOOTLOADER=$(find ~/.platformio -path "*/esp32s3*/bootloader*.bin" | head -1)
 
-          # Use build bootloader if present, else framework one
-          if [ -f "$BUILD/bootloader.bin" ]; then
-            BOOTLOADER="$BUILD/bootloader.bin"
+          # PlatformIO stores bootloader in the build dir under different names
+          # or references it via flash_args - find it wherever it is
+          BOOTLOADER=$(find .pio ~/.platformio -name "bootloader*.bin" 2>/dev/null | grep -i "esp32s3\|LilyGoT3S3" | head -1)
+          if [ -z "$BOOTLOADER" ]; then
+            BOOTLOADER=$(find .pio ~/.platformio -name "bootloader*.bin" 2>/dev/null | head -1)
           fi
+
+          BOOT_APP0=$(find ~/.platformio -name "boot_app0.bin" 2>/dev/null | head -1)
 
           echo "bootloader : $BOOTLOADER"
           echo "boot_app0  : $BOOT_APP0"
-          echo "partitions : $BUILD/partitions.bin"
-          echo "firmware   : $BUILD/firmware.bin"
-          echo "littlefs   : $BUILD/littlefs.bin"
+          ls -la "$BUILD/"
 
           esptool --chip esp32s3 merge-bin \
             -o LilyGoT3S3.bin \
