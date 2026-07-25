@@ -27,22 +27,21 @@
 #include <syslog_helper.h>
 #endif
 #include <tokens.h>
-// #include "main.h" // Or other relevant headers to access device data and
-// command functions
 
-// Assume ESPAsyncWebServer for now.
-// If you use WebServer.h, the setup and request handling will be different.
-AsyncWebServer server(80); // Create AsyncWebServer object on port 80
+AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
+
+// Tracks the last address seen *before* a scan was started, so we can detect
+// a new address arriving while the wizard is open.
+static std::string s_scanBaseline;
+static std::atomic<bool> s_scanActive{false};
 
 static void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
                       AwsEventType type, void *arg, uint8_t *data,
                       size_t len) {
   if (type == WS_EVT_CONNECT) {
-    // Ensure we broadcast the current position before sending init message
     IOHC::iohcRemote1W::getInstance()->updatePositions();
 
-    // Build a compact init message containing only device information
     JsonDocument doc;
     doc["type"] = "init";
 
@@ -59,7 +58,6 @@ static void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
     serializeJson(doc, payload);
     client->text(payload);
 
-    // Stream cached log messages individually to avoid a large JSON payload
     auto logMsgs = getLogMessages();
     for (const auto &m : logMsgs) {
       JsonDocument logDoc;
@@ -100,7 +98,6 @@ void broadcastLastAddress(const String &addr) {
   ws.textAll(payload);
 }
 
-// Structure describing a device entry returned to the web UI
 struct Device {
   String id;
   String name;
@@ -185,7 +182,6 @@ ArJsonRequestHandlerFunction jsonPost(const ArPostRequestHandlerFunction<JsonArr
 }
 
 void handleApiDevices(AsyncWebServerRequest *request, JsonArray &root) {
-  // Update device positions before returning them to the web client
   IOHC::iohcRemote1W::getInstance()->updatePositions();
 
   auto remotes = IOHC::iohcRemote1W::getInstance()->getRemotes();
@@ -204,13 +200,6 @@ void handleApiDevices(AsyncWebServerRequest *request, JsonArray &root) {
     deviceObj["paired"] = r.paired;
     deviceObj["repeatOnNoResponse"] = r.repeatOnNoResponse;
   }
-
-  // Provide a generic command interface as last entry
-  // JsonObject cmdObj = root.add<JsonObject>();
-  // cmdObj["id"] = "cmd_if";
-  // cmdObj["name"] = "Command Interface";
-
-  // log_i("Sent device list"); // Requires a logging library
 }
 
 void handleApiRemotes(AsyncWebServerRequest *request, JsonArray &root) {
@@ -229,6 +218,46 @@ void handleApiRemotes(AsyncWebServerRequest *request, JsonArray &root) {
       devs.add(d.c_str());
     }
   }
+}
+
+// ---------------------------------------------------------------------------
+// GET /api/scan
+// ---------------------------------------------------------------------------
+// Called by the pair wizard to detect a screen that is in pair mode.
+//
+// First call (or after ?reset=1): records the current lastFromAddress as
+// baseline and returns { "detected": false, "address": "" }.
+//
+// Subsequent calls: if lastFromAddress has changed compared to the baseline
+// a new device was seen broadcasting on the radio channel; returns
+// { "detected": true, "address": "<hex>" }.
+//
+// The wizard polls this endpoint every 1-2 seconds while step-1 is open.
+void handleApiScan(AsyncWebServerRequest *request, JsonObject &root) {
+  const std::string current =
+      bytesToHexString(IOHC::lastFromAddress, sizeof(IOHC::lastFromAddress));
+
+  const bool reset = request->hasParam("reset") &&
+                     request->getParam("reset")->value() == "1";
+
+  if (reset || !s_scanActive.load()) {
+    s_scanBaseline = current;
+    s_scanActive.store(true);
+    root["detected"] = false;
+    root["address"]  = "";
+    return;
+  }
+
+  const bool detected = (!current.empty() && current != s_scanBaseline);
+  root["detected"] = detected;
+  root["address"]  = detected ? current.c_str() : "";
+}
+
+// POST /api/scan/stop  – called when wizard is closed without pairing
+void handleApiScanStop(AsyncWebServerRequest *request, JsonObject &doc, JsonObject &root) {
+  s_scanActive.store(false);
+  s_scanBaseline.clear();
+  root["success"] = true;
 }
 
 void handleDownloadDevices(AsyncWebServerRequest *request) {
@@ -531,7 +560,6 @@ void handleApiSyslogSet(AsyncWebServerRequest *request, JsonObject &doc, JsonObj
 
   if (doc["tag"].is<JsonVariant>()) {
     String newTag = doc["tag"] | "";
-    // Sanitise: keep only alphanumeric and hyphen, truncate to 20 chars
     String sanitised;
     for (char c : newTag) {
       if (isalnum(c) || c == '-') sanitised += c;
@@ -750,51 +778,45 @@ void handleFilesystemUpload(AsyncWebServerRequest *request, String filename,
 void setupWebServer() {
   Serial.println("Initializing HTTP server ...");
 
-  // Serve static files from /web_interface_data
-  // Ensure this path matches where your platformio.ini places data files
-  // or how you upload them (e.g., SPIFFS, LittleFS).
-  // The path "/" serves index.html from the data directory.
   if (!LittleFS.exists("/web_interface_data/index.html")) {
     Serial.println("Warning: /web_interface_data/index.html not found");
   }
 
   // API Endpoints
-  server.on("/api/info", HTTP_GET, jsonGet(handleApiInfo));
-  server.on("/api/devices", HTTP_GET, jsonGet(handleApiDevices));
-  server.on("/api/remotes", HTTP_GET, jsonGet(handleApiRemotes));
-  server.on("/api/logs", HTTP_GET, jsonGet(handleApiLogs));
-  server.on("/api/lastaddr", HTTP_GET, jsonGet(handleApiLastAddr));
+  server.on("/api/info",      HTTP_GET,  jsonGet(handleApiInfo));
+  server.on("/api/devices",   HTTP_GET,  jsonGet(handleApiDevices));
+  server.on("/api/remotes",   HTTP_GET,  jsonGet(handleApiRemotes));
+  server.on("/api/logs",      HTTP_GET,  jsonGet(handleApiLogs));
+  server.on("/api/lastaddr",  HTTP_GET,  jsonGet(handleApiLastAddr));
+  server.on("/api/scan",      HTTP_GET,  jsonGet(handleApiScan));
 #if defined(SSD1306_DISPLAY)
-  server.on("/api/display", HTTP_GET, jsonGet(handleApiDisplayGet));
+  server.on("/api/display",   HTTP_GET,  jsonGet(handleApiDisplayGet));
 #endif
 #if defined(SYSLOG)
-  server.on("/api/syslog", HTTP_GET, jsonGet(handleApiSyslogGet));
+  server.on("/api/syslog",    HTTP_GET,  jsonGet(handleApiSyslogGet));
 #endif
 #if defined(MQTT)
-  server.on("/api/mqtt", HTTP_GET, jsonGet(handleApiMqttGet));
+  server.on("/api/mqtt",      HTTP_GET,  jsonGet(handleApiMqttGet));
 #endif
-  server.on("/api/command", HTTP_POST, jsonPost(handleApiCommand));
-  server.on("/api/action", HTTP_POST, jsonPost(handleApiAction));
+  server.on("/api/command",   HTTP_POST, jsonPost(handleApiCommand));
+  server.on("/api/action",    HTTP_POST, jsonPost(handleApiAction));
+  server.on("/api/scan/stop", HTTP_POST, jsonPost(handleApiScanStop));
 #if defined(SSD1306_DISPLAY)
-  server.on("/api/display", HTTP_POST, jsonPost(handleApiDisplaySet));
+  server.on("/api/display",   HTTP_POST, jsonPost(handleApiDisplaySet));
 #endif
 #if defined(MQTT)
-  server.on("/api/mqtt", HTTP_POST, jsonPost(handleApiMqttSet));
+  server.on("/api/mqtt",      HTTP_POST, jsonPost(handleApiMqttSet));
 #endif
 #if defined(SYSLOG)
   server.on("/api/syslog/test", HTTP_POST, jsonPost(handleApiSyslogTest));
-  server.on("/api/syslog", HTTP_POST, jsonPost(handleApiSyslogSet));
+  server.on("/api/syslog",    HTTP_POST, jsonPost(handleApiSyslogSet));
 #endif
-  server.on("/api/firmware", HTTP_POST, handleFirmwareUpdate,
-            handleFirmwareUpload);
-  server.on("/api/filesystem", HTTP_POST, handleFilesystemUpdate,
-            handleFilesystemUpload);
+  server.on("/api/firmware",  HTTP_POST, handleFirmwareUpdate, handleFirmwareUpload);
+  server.on("/api/filesystem", HTTP_POST, handleFilesystemUpdate, handleFilesystemUpload);
   server.on("/api/download/devices", HTTP_GET, handleDownloadDevices);
   server.on("/api/download/remotes", HTTP_GET, handleDownloadRemotes);
-  server.on("/api/upload/devices", HTTP_POST, handleUploadDevicesDone,
-            handleUploadDevicesFile);
-  server.on("/api/upload/remotes", HTTP_POST, handleUploadRemotesDone,
-            handleUploadRemotesFile);
+  server.on("/api/upload/devices",   HTTP_POST, handleUploadDevicesDone, handleUploadDevicesFile);
+  server.on("/api/upload/remotes",   HTTP_POST, handleUploadRemotesDone, handleUploadRemotesFile);
 
   ws.onEvent(onWsEvent);
   server.addHandler(&ws);
@@ -805,18 +827,6 @@ void setupWebServer() {
   staticHandler.setFilter([](AsyncWebServerRequest *request) {
     return !request->url().startsWith("/api");
   });
-  // You might need to explicitly serve each file if serveStatic with directory
-  // isn't working as expected or if files are not in a subdirectory of the data
-  // dir. server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-  //     request->send(LittleFS, "/web_interface_data/index.html", "text/html");
-  // });
-  // server.on("/style.css", HTTP_GET, [](AsyncWebServerRequest *request){
-  //     request->send(LittleFS, "/web_interface_data/style.css", "text/css");
-  // });
-  // server.on("/script.js", HTTP_GET, [](AsyncWebServerRequest *request){
-  //     request->send(LittleFS, "/web_interface_data/script.js",
-  //     "application/javascript");
-  // });
 
   server.onNotFound([](AsyncWebServerRequest *request) {
     request->send(404, "text/plain", "Not found");
@@ -827,7 +837,6 @@ void setupWebServer() {
 }
 
 void loopWebServer() {
-  // For ESPAsyncWebServer, most work is done asynchronously.
   ws.cleanupClients();
 }
 
