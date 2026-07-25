@@ -12,13 +12,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Cache PlatformIO
-        uses: actions/cache@v4
-        with:
-          path: ~/.platformio
-          key: ${{ runner.os }}-pio-t3s3-${{ hashFiles('platformio.ini') }}
-          restore-keys: ${{ runner.os }}-pio-t3s3-
-
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -33,27 +26,42 @@ jobs:
       - name: Build filesystem (LilyGoT3S3)
         run: pio run -e LilyGoT3S3 -t buildfs
 
-      - name: Show build output
+      - name: Show build output and find files
         run: |
           echo "=== .pio/build/LilyGoT3S3/ ==="
           ls -lh .pio/build/LilyGoT3S3/
-          echo "=== locate boot_app0.bin ==="
-          find ~/.platformio -name "boot_app0.bin" 2>/dev/null | head -5
+          echo "=== boot_app0.bin locations ==="
+          find ~/.platformio -name "boot_app0.bin" 2>/dev/null
+          echo "=== bootloader locations ==="
+          find ~/.platformio -name "bootloader.bin" 2>/dev/null | head -5
 
       - name: Merge into single flashable bin
         run: |
+          BUILD=.pio/build/LilyGoT3S3
           BOOT_APP0=$(find ~/.platformio -name "boot_app0.bin" | head -1)
-          echo "Using boot_app0.bin: $BOOT_APP0"
+          BOOTLOADER=$(find ~/.platformio -path "*/esp32s3*/bootloader*.bin" | head -1)
+
+          # Use build bootloader if present, else framework one
+          if [ -f "$BUILD/bootloader.bin" ]; then
+            BOOTLOADER="$BUILD/bootloader.bin"
+          fi
+
+          echo "bootloader : $BOOTLOADER"
+          echo "boot_app0  : $BOOT_APP0"
+          echo "partitions : $BUILD/partitions.bin"
+          echo "firmware   : $BUILD/firmware.bin"
+          echo "littlefs   : $BUILD/littlefs.bin"
+
           esptool --chip esp32s3 merge-bin \
             -o LilyGoT3S3.bin \
             --flash-size 16MB \
             --flash-mode dio \
             --flash-freq 80m \
-            0x0000  .pio/build/LilyGoT3S3/bootloader.bin \
-            0x8000  .pio/build/LilyGoT3S3/partitions.bin \
-            0xe000  "$BOOT_APP0" \
-            0x10000 .pio/build/LilyGoT3S3/firmware.bin \
-            0x210000 .pio/build/LilyGoT3S3/littlefs.bin
+            0x0000   "$BOOTLOADER" \
+            0x8000   "$BUILD/partitions.bin" \
+            0xe000   "$BOOT_APP0" \
+            0x10000  "$BUILD/firmware.bin" \
+            0x210000 "$BUILD/littlefs.bin"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
