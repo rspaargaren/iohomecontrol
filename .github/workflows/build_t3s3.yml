@@ -1,0 +1,58 @@
+name: Build LilyGoT3S3
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: ${{ runner.os }}-pio-t3s3-${{ hashFiles('platformio.ini') }}
+          restore-keys: ${{ runner.os }}-pio-t3s3-
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install PlatformIO
+        run: pip install platformio
+
+      - name: Install esptool
+        run: pip install -U esptool
+
+      - name: Build firmware (LilyGoT3S3)
+        run: pio run -e LilyGoT3S3
+
+      - name: Build filesystem (LilyGoT3S3)
+        run: pio run -e LilyGoT3S3 -t buildfs
+
+      - name: Merge into single flashable bin
+        run: |
+          esptool --chip esp32s3 merge-bin \
+            -o LilyGoT3S3.bin \
+            --flash-size 16MB \
+            0x0000  .pio/build/LilyGoT3S3/bootloader.bin \
+            0x8000  .pio/build/LilyGoT3S3/partitions.bin \
+            0xe000  .pio/build/LilyGoT3S3/boot_app0.bin \
+            0x10000 .pio/build/LilyGoT3S3/firmware.bin \
+            0x210000 .pio/build/LilyGoT3S3/littlefs.bin
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: LilyGoT3S3-firmware
+          retention-days: 30
+          path: |
+            LilyGoT3S3.bin
+            .pio/build/LilyGoT3S3/firmware.bin
+            .pio/build/LilyGoT3S3/littlefs.bin
