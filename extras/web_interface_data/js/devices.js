@@ -335,6 +335,7 @@
     function openPairWizard(app) {
         let scanInterval = null;
         let scanTimeoutTimer = null;
+        let dotTimer = null;        // FIX: hoisted so stopScan() can clear it
         let detectedAddress = null;
         let wizardCancelled = false;
 
@@ -367,6 +368,12 @@
         document.body.appendChild(overlay);
 
         function stopScan() {
+            // FIX: also clear dotTimer — previously leaked when wizard was
+            // closed before scan timeout fired
+            if (dotTimer) {
+                clearInterval(dotTimer);
+                dotTimer = null;
+            }
             if (scanInterval) {
                 clearInterval(scanInterval);
                 scanInterval = null;
@@ -438,8 +445,12 @@
                 confirmBtn.textContent = app.i18nText("wizard.pairing", "Pairing...");
 
                 try {
+                    // FIX: include detectedAddress as first token so the
+                    // firmware's new1W handler can register the correct device
                     await window.MiOpenApi.postJson("/api/command", {
-                        command: "new1W " + name
+                        command: detectedAddress
+                            ? "new1W " + detectedAddress + " " + name
+                            : "new1W " + name
                     });
 
                     const devices = await window.MiOpenApi.requestJson("/api/devices");
@@ -496,8 +507,10 @@
             statusLine.textContent = app.i18nText("wizard.scanning", "Scanning...");
 
             let dotCount = 0;
-            const dotTimer = setInterval(function () {
-                if (wizardCancelled) { clearInterval(dotTimer); return; }
+            // FIX: assign to closure-scoped dotTimer (hoisted above) instead
+            // of a local const — stopScan() can now clear it on any exit path
+            dotTimer = setInterval(function () {
+                if (wizardCancelled) { clearInterval(dotTimer); dotTimer = null; return; }
                 dotCount = (dotCount + 1) % 4;
                 statusLine.textContent = app.i18nText("wizard.scanning", "Scanning") +
                     ".".repeat(dotCount);
@@ -510,7 +523,6 @@
             cancelBtn.textContent = app.i18nText("button.cancel", "Cancel");
             cancelBtn.className = "btn";
             cancelBtn.addEventListener("click", function () {
-                clearInterval(dotTimer);
                 closeWizard();
             });
 
@@ -525,7 +537,6 @@
                 // Timeout: stop scanning after SCAN_TIMEOUT_MS and show error
                 scanTimeoutTimer = setTimeout(function () {
                     if (wizardCancelled) { return; }
-                    clearInterval(dotTimer);
                     stopScan();
                     statusLine.style.color = "red";
                     statusLine.textContent = app.i18nText("wizard.scan_timeout", "No screen detected. Press the button on the back of the remote and try again.");
@@ -533,18 +544,17 @@
                 }, SCAN_TIMEOUT_MS);
 
                 scanInterval = setInterval(function () {
-                    if (wizardCancelled) { stopScan(); clearInterval(dotTimer); return; }
+                    if (wizardCancelled) { stopScan(); return; }
 
                     window.MiOpenApi.requestJson("/api/scan").then(function (data) {
                         if (data.detected && data.address) {
-                            clearInterval(dotTimer);
                             stopScan();
                             showStep2(data.address);
                         }
                     }).catch(function () {});
                 }, 1500);
             }).catch(function (err) {
-                clearInterval(dotTimer);
+                stopScan();
                 statusLine.textContent = app.i18nText("wizard.scan_error", "Could not start scan: ") + err.message;
                 statusLine.style.color = "red";
             });

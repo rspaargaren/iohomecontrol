@@ -36,6 +36,11 @@ AsyncWebSocket ws("/ws");
 static std::string s_scanBaseline;
 static std::atomic<bool> s_scanActive{false};
 
+// FIX: mux to guard lastFromAddress reads on dual-core ESP32.
+// The radio task (Core 1) writes lastFromAddress; HTTP handler (Core 0) reads
+// it. Without synchronisation this is a data race on a multi-byte array.
+static portMUX_TYPE s_addrMux = portMUX_INITIALIZER_UNLOCKED;
+
 static void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
                       AwsEventType type, void *arg, uint8_t *data,
                       size_t len) {
@@ -224,8 +229,14 @@ void handleApiRemotes(AsyncWebServerRequest *request, JsonArray &root) {
 // GET /api/scan
 // ---------------------------------------------------------------------------
 void handleApiScan(AsyncWebServerRequest *request, JsonObject &root) {
-  const std::string current =
-      bytesToHexString(IOHC::lastFromAddress, sizeof(IOHC::lastFromAddress));
+  // FIX: copy lastFromAddress under a spinlock to avoid a data race with the
+  // radio task on Core 1 which writes this array asynchronously.
+  uint8_t addrCopy[sizeof(IOHC::lastFromAddress)];
+  portENTER_CRITICAL(&s_addrMux);
+  memcpy(addrCopy, IOHC::lastFromAddress, sizeof(IOHC::lastFromAddress));
+  portEXIT_CRITICAL(&s_addrMux);
+
+  const std::string current = bytesToHexString(addrCopy, sizeof(addrCopy));
 
   const bool reset = request->hasParam("reset") &&
                      request->getParam("reset")->value() == "1";
