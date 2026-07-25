@@ -7,14 +7,32 @@
         app.logStatus(result.message || ("Action " + action + " sent."));
     }
 
+    async function setPosition(app, deviceId, percent) {
+        const result = await window.MiOpenApi.postJson("/api/action", {
+            deviceId: deviceId,
+            action: "position",
+            position: percent
+        });
+        app.logStatus(result.message || ("Position " + percent + "% sent."));
+    }
+
     function updateDeviceFill(deviceId, percent) {
         const deviceEl = document.querySelector('.device[data-id="' + deviceId + '"]');
         if (!deviceEl) {
             return;
         }
-
         deviceEl.style.background = "linear-gradient(to top, var(--color-input) " +
             percent + "%, var(--color-accent3) " + percent + "%)";
+
+        // Update slider + label if present
+        const slider = deviceEl.querySelector('.position-slider');
+        if (slider && Math.abs(parseInt(slider.value) - percent) > 1) {
+            slider.value = percent;
+        }
+        const label = deviceEl.querySelector('.position-label');
+        if (label) {
+            label.textContent = Math.round(percent) + "%";
+        }
     }
 
     function createDeviceButton(label, className, onClick) {
@@ -23,6 +41,43 @@
         button.classList.add("btn", className);
         button.addEventListener("click", onClick);
         return button;
+    }
+
+    function createPositionSlider(app, device) {
+        const wrapper = document.createElement("div");
+        wrapper.style.cssText = "display:flex;align-items:center;gap:6px;margin-top:6px;width:100%";
+
+        const slider = document.createElement("input");
+        slider.type = "range";
+        slider.min = "0";
+        slider.max = "100";
+        slider.value = String(Math.round(device.position || 0));
+        slider.className = "position-slider";
+        slider.style.cssText = "flex:1;cursor:pointer";
+        slider.title = app.i18nText("slider.position_title", "Drag to set position");
+
+        const label = document.createElement("span");
+        label.className = "position-label";
+        label.style.cssText = "min-width:36px;text-align:right;font-size:0.85em";
+        label.textContent = Math.round(device.position || 0) + "%";
+
+        // Live label update while dragging (no command sent)
+        slider.addEventListener("input", function () {
+            label.textContent = slider.value + "%";
+        });
+
+        // Send command on release
+        slider.addEventListener("change", function () {
+            const val = parseInt(slider.value, 10);
+            label.textContent = val + "%";
+            setPosition(app, device.id, val).catch(function (err) {
+                app.logStatus(err.message, true);
+            });
+        });
+
+        wrapper.appendChild(slider);
+        wrapper.appendChild(label);
+        return wrapper;
     }
 
     async function fetchAndDisplayDevices(app) {
@@ -70,6 +125,9 @@
                         app.logStatus(error.message, true);
                     });
                 }));
+
+                // Position slider
+                listItem.appendChild(createPositionSlider(app, device));
 
                 listItem.appendChild(createDeviceButton(app.i18nText("button.edit", "edit"), "edit", async function () {
                     try {
@@ -241,18 +299,12 @@
     // -------------------------------------------------------------------------
     // Pair Wizard
     // -------------------------------------------------------------------------
-    // Step 1 – Scan: instruct user to put screen in pair mode; auto-detect
-    //          the incoming address by polling /api/scan every 1.5 s.
-    // Step 2 – Confirm: show detected address, ask for a friendly name,
-    //          then call new1W <name> + add to complete pairing.
-    // -------------------------------------------------------------------------
 
     function openPairWizard(app) {
         let scanInterval = null;
         let detectedAddress = null;
         let wizardCancelled = false;
 
-        // Overlay container (sits on top of everything, outside the normal popup)
         const overlay = document.createElement("div");
         overlay.id = "pair-wizard-overlay";
         overlay.style.cssText = [
@@ -295,9 +347,6 @@
             if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
         }
 
-        // ------------------------------------------------------------------
-        // Step 2 – Confirm detected address and choose a name
-        // ------------------------------------------------------------------
         function showStep2(address) {
             detectedAddress = address;
             card.innerHTML = "";
@@ -352,12 +401,10 @@
                 confirmBtn.textContent = app.i18nText("wizard.pairing", "Pairing...");
 
                 try {
-                    // 1. Create the virtual device with chosen name
                     await window.MiOpenApi.postJson("/api/command", {
                         command: "new1W " + name
                     });
 
-                    // 2. Fetch device list to find the newly created device by name
                     const devices = await window.MiOpenApi.requestJson("/api/devices");
                     const newDevice = devices.find(function (d) {
                         return d.name === name || d.description === name;
@@ -367,7 +414,6 @@
                         throw new Error(app.i18nText("wizard.error_not_found", "Device not found after creation."));
                     }
 
-                    // 3. Send pair command (add) so the ESP32 pairs with the physical screen
                     await window.MiOpenApi.postJson("/api/command", {
                         deviceId: newDevice.id,
                         command: "add"
@@ -395,9 +441,6 @@
             nameInput.focus();
         }
 
-        // ------------------------------------------------------------------
-        // Step 1 – Scanning
-        // ------------------------------------------------------------------
         function showStep1() {
             card.innerHTML = "";
 
@@ -415,7 +458,6 @@
             statusLine.style.cssText = "font-size:0.9em;color:var(--color-accent,#888);min-height:1.4em";
             statusLine.textContent = app.i18nText("wizard.scanning", "Scanning...");
 
-            // Animated dots
             let dotCount = 0;
             const dotTimer = setInterval(function () {
                 if (wizardCancelled) { clearInterval(dotTimer); return; }
@@ -442,7 +484,6 @@
             card.appendChild(statusLine);
             card.appendChild(btnRow);
 
-            // Start scanning: reset baseline first
             window.MiOpenApi.requestJson("/api/scan?reset=1").then(function () {
                 scanInterval = setInterval(function () {
                     if (wizardCancelled) { stopScan(); clearInterval(dotTimer); return; }

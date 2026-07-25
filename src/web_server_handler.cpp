@@ -223,16 +223,6 @@ void handleApiRemotes(AsyncWebServerRequest *request, JsonArray &root) {
 // ---------------------------------------------------------------------------
 // GET /api/scan
 // ---------------------------------------------------------------------------
-// Called by the pair wizard to detect a screen that is in pair mode.
-//
-// First call (or after ?reset=1): records the current lastFromAddress as
-// baseline and returns { "detected": false, "address": "" }.
-//
-// Subsequent calls: if lastFromAddress has changed compared to the baseline
-// a new device was seen broadcasting on the radio channel; returns
-// { "detected": true, "address": "<hex>" }.
-//
-// The wizard polls this endpoint every 1-2 seconds while step-1 is open.
 void handleApiScan(AsyncWebServerRequest *request, JsonObject &root) {
   const std::string current =
       bytesToHexString(IOHC::lastFromAddress, sizeof(IOHC::lastFromAddress));
@@ -253,7 +243,7 @@ void handleApiScan(AsyncWebServerRequest *request, JsonObject &root) {
   root["address"]  = detected ? current.c_str() : "";
 }
 
-// POST /api/scan/stop  – called when wizard is closed without pairing
+// POST /api/scan/stop
 void handleApiScanStop(AsyncWebServerRequest *request, JsonObject &doc, JsonObject &root) {
   s_scanActive.store(false);
   s_scanBaseline.clear();
@@ -397,6 +387,34 @@ void handleApiAction(AsyncWebServerRequest *request, JsonObject &doc, JsonObject
   if (it == remotes.end()) {
     request->send(400, "application/json",
                   "{\"success\":false, \"message\":\"Unknown device\"}");
+    return;
+  }
+
+  // Handle set_position action: { action: "position", position: 0-100 }
+  if (action == "position") {
+    int pos = -1;
+    if (doc["position"].is<int>()) {
+      pos = doc["position"].as<int>();
+    } else if (doc["position"].is<float>()) {
+      pos = static_cast<int>(doc["position"].as<float>());
+    } else if (doc["position"].is<const char *>()) {
+      pos = atoi(doc["position"].as<const char *>());
+    }
+    if (pos < 0 || pos > 100) {
+      request->send(400, "application/json",
+                    "{\"success\":false, \"message\":\"position must be 0-100\"}");
+      return;
+    }
+    Tokens t;
+    t.push_back("pos1W");
+    t.push_back(it->description);
+    t.push_back(std::to_string(pos));
+    IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Position, &t);
+    broadcastDevicePosition(deviceId, static_cast<int>(it->positionTracker.getPosition()));
+    String msg = "Position " + String(pos) + "% sent to " + String(it->name.c_str());
+    addLogMessage(msg);
+    root["success"] = true;
+    root["message"] = msg;
     return;
   }
 
