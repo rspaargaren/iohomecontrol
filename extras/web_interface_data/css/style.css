@@ -124,7 +124,7 @@ ul#device-list {
   padding: 2px;
 }
 ul#device-list li {
-  background: var(--color-input); /* #fefefe5e */
+  background: var(--color-input);
   margin: 0;
   padding: 5px;
   border-radius: var(--radius);
@@ -185,14 +185,13 @@ th {
   background-color: var(--color-accent2);
   margin: 9px;
 }
+/* edit-knop: NIET meer absoluut gepositioneerd — zit in .device-card-footer */
 .btn.edit {
   background: url("../img/settings.svg") center no-repeat;
-    background-color: rgba(0, 0, 0, 0);
-  position: absolute;
-  bottom: 6px;
-  right: 6px;
+  background-color: transparent;
   height: 25px;
   width: 25px;
+  flex-shrink: 0;
 }
 .btn.add {
   background: url("../img/add.svg") no-repeat;
@@ -216,6 +215,24 @@ th {
   border: 0;
   background-color: var(--color-accent2);
   padding: 14px;
+}
+/* Footer-rij in device-kaart: travel-time links, tandwiel rechts */
+.device-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  margin-top: 4px;
+  width: 100%;
+  min-width: 0;
+}
+.device-card-footer .travel-time-label {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  margin-top: 0;
 }
 button {
   background-color: var(--color-accent3);
@@ -272,7 +289,7 @@ input, select {
     padding: 10px;
     background-color: var(--color-input);
     border-radius: var(--radius);
-    white-space: pre-wrap; /* So that newlines in messages are respected */
+    white-space: pre-wrap;
 }
 .device-selection {
   display: grid;

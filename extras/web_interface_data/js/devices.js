@@ -80,14 +80,16 @@
     function createTravelTimeLabel(app, device) {
         const wrapper = document.createElement("div");
         wrapper.className = "travel-time-label";
-        wrapper.style.cssText = "display:flex;align-items:center;gap:4px;margin-top:4px;font-size:0.78em;color:var(--color-accent,#888);width:100%";
+        wrapper.style.cssText = "display:flex;align-items:center;gap:4px;font-size:0.78em;color:var(--color-accent,#888);min-width:0;overflow:hidden";
 
         const icon = document.createElement("span");
         icon.textContent = "\u23F1";
         icon.setAttribute("aria-hidden", "true");
+        icon.style.flexShrink = "0";
 
         const text = document.createElement("span");
         text.dataset.travelTimeId = device.id;
+        text.style.cssText = "overflow:hidden;text-overflow:ellipsis;white-space:nowrap";
         text.textContent = app.i18nText("label.travel_time", "Travel time:") + " " +
             (device.travel_time || 10) + " " + app.i18nText("label.seconds", "s");
         text.title = app.i18nText("label.travel_time_hint", "Time for the screen to travel from fully open to fully closed. Edit to change.");
@@ -144,9 +146,15 @@
                 }));
 
                 listItem.appendChild(createPositionSlider(app, device));
-                listItem.appendChild(createTravelTimeLabel(app, device));
 
-                listItem.appendChild(createDeviceButton(app.i18nText("button.edit", "edit"), "edit", async function () {
+                // Footer-rij: travel-time label LINKS, tandwiel-knop RECHTS
+                // Nooit overlappend, ongeacht breedte van de kaart.
+                const footer = document.createElement("div");
+                footer.className = "device-card-footer";
+
+                footer.appendChild(createTravelTimeLabel(app, device));
+
+                const editBtn = createDeviceButton(app.i18nText("button.edit", "edit"), "edit", async function () {
                     try {
                         const freshDevices = await window.MiOpenApi.requestJson("/api/devices");
                         app.state.devicesCache = freshDevices;
@@ -269,7 +277,10 @@
                             }
                         }
                     );
-                }));
+                });
+
+                footer.appendChild(editBtn);
+                listItem.appendChild(footer);
 
                 deviceList.appendChild(listItem);
                 updateDeviceFill(device.id, device.position || 0);
@@ -480,7 +491,7 @@
             if (useMotorButton) {
                 instruction.innerHTML = app.i18nText(
                     "wizard.step1_instruction_motor",
-                    "Press and hold the <strong>Up ▲ and Down ▼ buttons simultaneously</strong> on the motor until the screen moves briefly up/down.<br><br>The address will be detected automatically."
+                    "Press and hold the <strong>Up \u25b2 and Down \u25bc buttons simultaneously</strong> on the motor until the screen moves briefly up/down.<br><br>The address will be detected automatically."
                 );
             } else {
                 instruction.innerHTML = app.i18nText(
@@ -543,7 +554,6 @@
             });
         }
 
-        // Step 0: choose pairing method
         function showStep0() {
             card.innerHTML = "";
 
