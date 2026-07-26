@@ -135,6 +135,7 @@ ul#device-list li {
   justify-content: center;
   border: 1px solid var(--color7);
   position: relative;
+  overflow: hidden; /* voorkomt dat children buiten de kaart uitlopen */
   transition: background 0.5s ease;
 }
 ul#device-list li .btn {
@@ -145,6 +146,13 @@ ul#device-list span {
   text-align: center;
   margin: auto;
   color: #fff;
+}
+/* Slider blijft altijd binnen de device-kaart */
+.position-slider {
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
 }
 table {
   border-collapse: collapse;
