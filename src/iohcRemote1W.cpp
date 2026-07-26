@@ -34,13 +34,13 @@
 
 namespace IOHC {
     iohcRemote1W* iohcRemote1W::_iohcRemote1W = nullptr;
-    static TimersUS::TickerUsESP32 positionTicker;
     static constexpr uint32_t DEFAULT_TRAVEL_TIME_SEC = 10;
 
-    static void positionTickerCallback() {
-        iohcRemote1W *inst = iohcRemote1W::getInstance();
-        if (inst) {
+    static void positionTaskLoop(void *arg) {
+        auto *inst = static_cast<iohcRemote1W *>(arg);
+        while (true) {
             inst->updatePositions();
+            vTaskDelay(pdMS_TO_TICKS(1000));
         }
     }
 
@@ -70,7 +70,8 @@ namespace IOHC {
         if (!_iohcRemote1W) {
             _iohcRemote1W = new iohcRemote1W();
             _iohcRemote1W->load();
-            positionTicker.attach_ms(1000, positionTickerCallback);
+            xTaskCreatePinnedToCore(positionTaskLoop, "positionTracker", 4096,
+                                    _iohcRemote1W, 1, nullptr, 1);
         }
         return _iohcRemote1W;
     }
@@ -152,11 +153,12 @@ namespace IOHC {
         switch (cmd) {
             case RemoteButton::Pair: {
                 // 0x2e: 0x1120 + target broadcast + source + 0x2e00 + sequence + hmac
-                packets2send.clear();
 
+                std::vector<iohcPacket *> packets2send;
 //                for (auto&r: remotes) {
 
                     auto* packet = new iohcPacket;
+                    packets2send.push_back(packet);
                     IOHC::iohcRemote1W::forgePacket(packet, r.type[0]);
                     // Packet length
                     packet->payload.packet.header.CtrlByte1.asStruct.MsgLen += sizeof(_p0x2e);
@@ -184,7 +186,6 @@ namespace IOHC {
 
                     packet->buffer_length = packet->payload.packet.header.CtrlByte1.asStruct.MsgLen + 1;
 
-                    packets2send.push_back(packet);
                     // if (typn) packet->payload.packet.header.CtrlByte2.asStruct.LPM = 0; //TODO only first is LPM
                     digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
 //                }
@@ -200,12 +201,13 @@ namespace IOHC {
 
             case RemoteButton::Remove: {
                 // 0x39: 0x1c00 + target broadcast + source + 0x3900 + sequence + hmac
-                packets2send.clear();
 
+                std::vector<iohcPacket *> packets2send;
 //                for (auto&r: remotes) {
 
 
                     auto* packet = new iohcPacket;
+                    packets2send.push_back(packet);
                     IOHC::iohcRemote1W::forgePacket(packet, r.type[0]);
                     // Packet length
                     //                    packet->payload.packet.header.CtrlByte1.asStruct.MsgLen = sizeof(_header) - 1;
@@ -233,7 +235,6 @@ namespace IOHC {
 
                     packet->buffer_length = packet->payload.packet.header.CtrlByte1.asStruct.MsgLen + 1;
 
-                    packets2send.push_back(packet);
                     digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
 //                }
                 _radioInstance->send(packets2send);
@@ -249,11 +250,12 @@ namespace IOHC {
 
             case RemoteButton::Add: {
                 // 0x30: 0x1100 + target broadcast + source + 0x3000 + ???
-                packets2send.clear();
 
+                std::vector<iohcPacket *> packets2send;
 //                for (auto&r: remotes) {
 
                     auto* packet = new iohcPacket;
+                    packets2send.push_back(packet);
                     IOHC::iohcRemote1W::forgePacket(packet, r.type[0]);
                     // Packet length
                     packet->payload.packet.header.CtrlByte1.asStruct.MsgLen += sizeof(_p0x30);
@@ -282,7 +284,7 @@ namespace IOHC {
 
                     packet->buffer_length = packet->payload.packet.header.CtrlByte1.asStruct.MsgLen + 1;
 
-                    packets2send.push_back(packet);
+
                     digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
 //                }
                 _radioInstance->send(packets2send);
@@ -293,12 +295,14 @@ namespace IOHC {
                 break;
             }
            default: {
-                packets2send.clear();
-
                 // 0x00: 0x1600 + target broadcast + source + 0x00 + Originator + ACEI + Main Param + FP1 + FP2 + sequence + hmac
+
+                std::vector<iohcPacket *> packets2send;
 //                for (auto&r: remotes) {
 
                     auto* packet = new iohcPacket;
+                    packets2send.push_back(packet);
+
                     IOHC::iohcRemote1W::forgePacket(packet, r.type[0]);
                     // Packet length
                     // packet->payload.packet.header.CtrlByte1.asStruct.MsgLen += sizeof(_p0x00);
@@ -628,15 +632,15 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
                     // }
                     packet->buffer_length = packet->payload.packet.header.CtrlByte1.asStruct.MsgLen + 1;
 
-                    packets2send.push_back(packet);
                     digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
+
+                    _radioInstance->send(packets2send);
+
+                    display1WAction(r.node, remoteButtonToString(cmd), "TX", r.name.c_str());
+                    Serial.printf("%s position: %.0f%%\n", r.name.c_str(), r.positionTracker.getPosition());
+                    display1WPosition(r.node, r.positionTracker.getPosition(), r.name.c_str());
+                    break;
                 }
-                _radioInstance->send(packets2send);
-                display1WAction(r.node, remoteButtonToString(cmd), "TX", r.name.c_str());
-                Serial.printf("%s position: %.0f%%\n", r.name.c_str(), r.positionTracker.getPosition());
-                display1WPosition(r.node, r.positionTracker.getPosition(), r.name.c_str());
-                break;
-//            }
         }
         this->save(); // Save sequence number
     }
@@ -737,6 +741,15 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
                 r.repeatOnNoResponse = false;
             }
             r.positionTracker.setTravelTime(r.travelTime);
+            if (jobj["position"].is<float>() || jobj["position"].is<int>()) {
+                r.positionTracker.setPosition(
+                    std::clamp(jobj["position"].as<float>(), 0.0f, 100.0f));
+            } else {
+                r.positionTracker.setPosition(0.0f);
+                updateFile = true;
+            }
+            r.lastPublishedPosition = r.positionTracker.getPosition();
+            r.lastSavedPosition = r.positionTracker.getPosition();
 
             loadedRemotes.push_back(r);
         }
@@ -756,7 +769,14 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
             return false;
         }
 
-        fs::File f = LittleFS.open(IOHC_1W_REMOTE, "w+");
+        constexpr const char *tempFile = "/1W.json.tmp";
+        constexpr const char *backupFile = "/1W.json.bak";
+        LittleFS.remove(tempFile);
+        fs::File f = LittleFS.open(tempFile, "w");
+        if (!f) {
+            Serial.printf("Failed to open temporary 1W settings file %s\n", tempFile);
+            return false;
+        }
         JsonDocument doc;
         for (const auto&r: remotes) {
             // jobj["key"] = bytesToHexString(_key, sizeof(_key));
@@ -786,12 +806,37 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
             jobj["name"] = r.name;
 
             jobj["travel_time"] = r.travelTime;
+            jobj["position"] =
+                static_cast<int>(std::round(r.positionTracker.getPosition()));
 
             jobj["paired"] = r.paired;
             jobj["repeatOnNoResponse"] = r.repeatOnNoResponse;
         }
-        serializeJson(doc, f);
+        const size_t written = serializeJson(doc, f);
+        f.flush();
         f.close();
+        if (written == 0) {
+            LittleFS.remove(tempFile);
+            Serial.println("Failed to serialize 1W settings");
+            return false;
+        }
+
+        LittleFS.remove(backupFile);
+        if (LittleFS.exists(IOHC_1W_REMOTE) &&
+            !LittleFS.rename(IOHC_1W_REMOTE, backupFile)) {
+            LittleFS.remove(tempFile);
+            Serial.println("Failed to back up 1W settings file");
+            return false;
+        }
+        if (!LittleFS.rename(tempFile, IOHC_1W_REMOTE)) {
+            Serial.println("Failed to replace 1W settings file");
+            LittleFS.remove(tempFile);
+            if (LittleFS.exists(backupFile)) {
+                LittleFS.rename(backupFile, IOHC_1W_REMOTE);
+            }
+            return false;
+        }
+        LittleFS.remove(backupFile);
 
         return true;
     }
@@ -1074,6 +1119,10 @@ const std::vector<iohcRemote1W::remote>& iohcRemote1W::getRemotes() const {
                     r.lastPublishedPosition = pos;
                 }
                 r.movement = remote::Movement::Idle;
+                if (fabs(pos - r.lastSavedPosition) >= 1.0f) {
+                    save();
+                    r.lastSavedPosition = pos;
+                }
             }
         }
     }

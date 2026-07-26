@@ -62,6 +62,7 @@ namespace IOHC {
             BlindPosition positionTracker{};
             enum class Movement { Idle, Opening, Closing } movement{Movement::Idle};
             float lastPublishedPosition{0.0f};
+            float lastSavedPosition{0.0f};
             std::string lastPublishedState{};
             float targetPosition{-1.0f};
         };
@@ -95,9 +96,6 @@ namespace IOHC {
 
 
         std::vector<remote> remotes;
-
-        std::vector<iohcPacket *> packets2send{};
-
     };
 }
 #endif

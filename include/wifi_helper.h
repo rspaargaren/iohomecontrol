@@ -20,16 +20,16 @@
 #include <interact.h>
 #include <WiFi.h>
 #include <WiFiManager.h>
+#include <atomic>
 
-extern TimerHandle_t wifiReconnectTimer;
 extern struct WiFiStatus {
-  ConnState connectionStatus;
-  int signalStrengthPercent;
+  std::atomic<ConnState> connectionStatus;
+  std::atomic<int> signalStrengthPercent;
+  std::atomic<int> rssi;
 } wifiStatus;
 
 
 void initWifi();
-void connectToWifi(TimerHandle_t timer = nullptr);
-void checkWifiConnection();
+void clearWifi();
 
 #endif // WIFI_HELPER_H

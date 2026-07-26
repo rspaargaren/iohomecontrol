@@ -84,9 +84,6 @@ namespace IOHC {
         //            std::vector<uint16_t> _type;
         //            uint8_t _manufacturer;
 
-        //            IOHC::iohcPacket *packets2send[2]; //[25];
-        // std::array<iohcPacket*, 25> packets2send{};
-        std::vector<iohcPacket *> packets2send{};
         //            IOHC::iohcRadio *_radioInstance;
     };
 }

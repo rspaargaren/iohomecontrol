@@ -104,6 +104,10 @@ void DisplayBuffer::purge() {
     lines = newLines;
 }
 
+void DisplayBuffer::clear() {
+    lines.clear();
+}
+
 std::vector<std::string> DisplayBuffer::getTextToDisplay(const int width, const int height) {
     purge();
 

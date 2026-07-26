@@ -394,6 +394,9 @@ void createCommands() {
             handleMqttConnect();
     });
 #endif
+    Cmd::addHandler((char *) "wifiClear", (char *) "Clear configured WiFi settings and restart device", [](Tokens *cmd)-> void {
+        clearWifi();
+    });
 /*
     Cmd::addHandler((char *) "list2W", (char *) "List received packets", [](Tokens *cmd)-> void {
         for (uint8_t i = 0; i < nextPacket; i++) msgRcvd(radioPackets[i]);

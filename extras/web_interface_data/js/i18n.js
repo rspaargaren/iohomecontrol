@@ -2,9 +2,15 @@ let I18N = {};
 let FALLBACK = {};
 let CURRENT_LANG = "en";
 
+// FIX: wrapped in try/catch so a network failure during ESP boot does not
+// crash the i18n init silently and leave all labels empty.
 async function loadJson(path) {
-  const response = await fetch(path);
-  return response.ok ? response.json() : {};
+  try {
+    const response = await fetch(path);
+    return response.ok ? response.json() : {};
+  } catch (_) {
+    return {};
+  }
 }
 
 function interpolate(text, params = {}) {

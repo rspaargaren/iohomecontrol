@@ -84,7 +84,6 @@ namespace IOHC {
         };
 
         std::vector<device> devices;
-        std::vector<iohcPacket *> packets2send{};
     };
 }
 #endif

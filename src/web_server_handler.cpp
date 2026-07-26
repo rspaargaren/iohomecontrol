@@ -5,12 +5,14 @@
 #include "ESPAsyncWebServer.h" // Or WebServer.h if that's preferred for memory
 #include <AsyncJson.h>
 #include <algorithm>
+#include <atomic>
 #include <functional>
 #include <memory>
 #include <LittleFS.h>
 #include <Update.h>
 #include <cstdlib>
 #include <interact.h>
+#include <firmware_version.h>
 #include <iohcCryptoHelpers.h>
 #include <iohcRemote1W.h>
 #include <iohcRemoteMap.h>
@@ -18,26 +20,33 @@
 #include <log_buffer.h>
 #include <mqtt_handler.h>
 #include <nvs_helpers.h>
+#include <oled_display.h>
+#include <version_info.h>
 #if defined(SYSLOG)
+#include <WiFi.h>
 #include <syslog_helper.h>
 #endif
 #include <tokens.h>
-// #include "main.h" // Or other relevant headers to access device data and
-// command functions
 
-// Assume ESPAsyncWebServer for now.
-// If you use WebServer.h, the setup and request handling will be different.
-AsyncWebServer server(80); // Create AsyncWebServer object on port 80
+AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
+
+// Tracks the last address seen *before* a scan was started, so we can detect
+// a new address arriving while the wizard is open.
+static std::string s_scanBaseline;
+static std::atomic<bool> s_scanActive{false};
+
+// FIX: mux to guard lastFromAddress reads on dual-core ESP32.
+// The radio task (Core 1) writes lastFromAddress; HTTP handler (Core 0) reads
+// it. Without synchronisation this is a data race on a multi-byte array.
+static portMUX_TYPE s_addrMux = portMUX_INITIALIZER_UNLOCKED;
 
 static void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
                       AwsEventType type, void *arg, uint8_t *data,
                       size_t len) {
   if (type == WS_EVT_CONNECT) {
-    // Ensure we broadcast the current position before sending init message
     IOHC::iohcRemote1W::getInstance()->updatePositions();
 
-    // Build a compact init message containing only device information
     JsonDocument doc;
     doc["type"] = "init";
 
@@ -54,7 +63,6 @@ static void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
     serializeJson(doc, payload);
     client->text(payload);
 
-    // Stream cached log messages individually to avoid a large JSON payload
     auto logMsgs = getLogMessages();
     for (const auto &m : logMsgs) {
       JsonDocument logDoc;
@@ -95,7 +103,6 @@ void broadcastLastAddress(const String &addr) {
   ws.textAll(payload);
 }
 
-// Structure describing a device entry returned to the web UI
 struct Device {
   String id;
   String name;
@@ -180,7 +187,6 @@ ArJsonRequestHandlerFunction jsonPost(const ArPostRequestHandlerFunction<JsonArr
 }
 
 void handleApiDevices(AsyncWebServerRequest *request, JsonArray &root) {
-  // Update device positions before returning them to the web client
   IOHC::iohcRemote1W::getInstance()->updatePositions();
 
   auto remotes = IOHC::iohcRemote1W::getInstance()->getRemotes();
@@ -199,13 +205,6 @@ void handleApiDevices(AsyncWebServerRequest *request, JsonArray &root) {
     deviceObj["paired"] = r.paired;
     deviceObj["repeatOnNoResponse"] = r.repeatOnNoResponse;
   }
-
-  // Provide a generic command interface as last entry
-  // JsonObject cmdObj = root.add<JsonObject>();
-  // cmdObj["id"] = "cmd_if";
-  // cmdObj["name"] = "Command Interface";
-
-  // log_i("Sent device list"); // Requires a logging library
 }
 
 void handleApiRemotes(AsyncWebServerRequest *request, JsonArray &root) {
@@ -224,6 +223,42 @@ void handleApiRemotes(AsyncWebServerRequest *request, JsonArray &root) {
       devs.add(d.c_str());
     }
   }
+}
+
+// ---------------------------------------------------------------------------
+// GET /api/scan
+// ---------------------------------------------------------------------------
+void handleApiScan(AsyncWebServerRequest *request, JsonObject &root) {
+  // FIX: copy lastFromAddress under a spinlock to avoid a data race with the
+  // radio task on Core 1 which writes this array asynchronously.
+  uint8_t addrCopy[sizeof(IOHC::lastFromAddress)];
+  portENTER_CRITICAL(&s_addrMux);
+  memcpy(addrCopy, IOHC::lastFromAddress, sizeof(IOHC::lastFromAddress));
+  portEXIT_CRITICAL(&s_addrMux);
+
+  const std::string current = bytesToHexString(addrCopy, sizeof(addrCopy));
+
+  const bool reset = request->hasParam("reset") &&
+                     request->getParam("reset")->value() == "1";
+
+  if (reset || !s_scanActive.load()) {
+    s_scanBaseline = current;
+    s_scanActive.store(true);
+    root["detected"] = false;
+    root["address"]  = "";
+    return;
+  }
+
+  const bool detected = (!current.empty() && current != s_scanBaseline);
+  root["detected"] = detected;
+  root["address"]  = detected ? current.c_str() : "";
+}
+
+// POST /api/scan/stop
+void handleApiScanStop(AsyncWebServerRequest *request, JsonObject &doc, JsonObject &root) {
+  s_scanActive.store(false);
+  s_scanBaseline.clear();
+  root["success"] = true;
 }
 
 void handleDownloadDevices(AsyncWebServerRequest *request) {
@@ -366,6 +401,34 @@ void handleApiAction(AsyncWebServerRequest *request, JsonObject &doc, JsonObject
     return;
   }
 
+  // Handle set_position action: { action: "position", position: 0-100 }
+  if (action == "position") {
+    int pos = -1;
+    if (doc["position"].is<int>()) {
+      pos = doc["position"].as<int>();
+    } else if (doc["position"].is<float>()) {
+      pos = static_cast<int>(doc["position"].as<float>());
+    } else if (doc["position"].is<const char *>()) {
+      pos = atoi(doc["position"].as<const char *>());
+    }
+    if (pos < 0 || pos > 100) {
+      request->send(400, "application/json",
+                    "{\"success\":false, \"message\":\"position must be 0-100\"}");
+      return;
+    }
+    Tokens t;
+    t.push_back("pos1W");
+    t.push_back(it->description);
+    t.push_back(std::to_string(pos));
+    IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::Position, &t);
+    broadcastDevicePosition(deviceId, static_cast<int>(it->positionTracker.getPosition()));
+    String msg = "Position " + String(pos) + "% sent to " + String(it->name.c_str());
+    addLogMessage(msg);
+    root["success"] = true;
+    root["message"] = msg;
+    return;
+  }
+
   IOHC::RemoteButton btn;
   if (action == "open")
     btn = IOHC::RemoteButton::Open;
@@ -393,6 +456,10 @@ void handleApiAction(AsyncWebServerRequest *request, JsonObject &doc, JsonObject
   root["message"] = msg;
 }
 
+void handleApiInfo(AsyncWebServerRequest *request, JsonObject &root) {
+  appendVersionInfo(root);
+}
+
 void handleApiLogs(AsyncWebServerRequest *request, JsonArray &root) {
   auto logs = getLogMessages();
   for (const auto &msg : logs) {
@@ -404,7 +471,6 @@ void handleApiLastAddr(AsyncWebServerRequest *request, JsonObject &root) {
   root["address"] = bytesToHexString(IOHC::lastFromAddress, sizeof(IOHC::lastFromAddress)).c_str();
 }
 
-#if defined(SYSLOG)
 static bool jsonToBool(JsonVariant variant, bool &value) {
   if (variant.is<bool>()) {
     value = variant.as<bool>();
@@ -436,12 +502,75 @@ static bool jsonToBool(JsonVariant variant, bool &value) {
   return false;
 }
 
+#if defined(SSD1306_DISPLAY)
+void handleApiDisplayGet(AsyncWebServerRequest *request, JsonObject &root) {
+  root["enabled"]   = isDisplayEnabled();
+  root["dim_after"] = getDisplayDimAfter();
+  root["off_after"] = getDisplayOffAfter();
+}
+
+void handleApiDisplaySet(AsyncWebServerRequest *request, JsonObject &doc, JsonObject &root) {
+  // --- enabled ---
+  if (doc["enabled"].is<JsonVariant>()) {
+    bool enabled = isDisplayEnabled();
+    if (!jsonToBool(doc["enabled"], enabled)) {
+      request->send(400, "application/json",
+                    "{\"success\":false,\"message\":\"Invalid enabled value\"}");
+      return;
+    }
+    setDisplayEnabled(enabled);
+  }
+
+  // --- dim_after ---
+  if (doc["dim_after"].is<JsonVariant>()) {
+    int v = -1;
+    JsonVariant jv = doc["dim_after"];
+    if (jv.is<int>() || jv.is<long>() || jv.is<unsigned long>()) {
+      v = jv.as<int>();
+    } else if (jv.is<const char *>()) {
+      v = atoi(jv.as<const char *>());
+    }
+    if (v < 0 || v > 3600) {
+      request->send(400, "application/json",
+                    "{\"success\":false,\"message\":\"dim_after must be 0-3600\"}");
+      return;
+    }
+    setDisplayDimAfter(v);
+  }
+
+  // --- off_after ---
+  if (doc["off_after"].is<JsonVariant>()) {
+    int v = -1;
+    JsonVariant jv = doc["off_after"];
+    if (jv.is<int>() || jv.is<long>() || jv.is<unsigned long>()) {
+      v = jv.as<int>();
+    } else if (jv.is<const char *>()) {
+      v = atoi(jv.as<const char *>());
+    }
+    if (v < 0 || v > 3600) {
+      request->send(400, "application/json",
+                    "{\"success\":false,\"message\":\"off_after must be 0-3600\"}");
+      return;
+    }
+    setDisplayOffAfter(v);
+  }
+
+  root["success"]   = true;
+  root["message"]   = "Display configuration updated";
+  root["enabled"]   = isDisplayEnabled();
+  root["dim_after"] = getDisplayDimAfter();
+  root["off_after"] = getDisplayOffAfter();
+}
+#endif
+
+#if defined(SYSLOG)
 void handleApiSyslogGet(AsyncWebServerRequest *request, JsonObject &root) {
   initSyslog();
 
   root["enabled"] = syslog_enabled;
   root["server"] = syslog_server.c_str();
   root["port"] = syslog_port;
+  root["tag"] = syslog_tag.c_str();
 }
 
 void handleApiSyslogSet(AsyncWebServerRequest *request, JsonObject &doc, JsonObject &root) {
@@ -497,6 +626,19 @@ void handleApiSyslogSet(AsyncWebServerRequest *request, JsonObject &doc, JsonObj
     }
   }
 
+  if (doc["tag"].is<JsonVariant>()) {
+    String newTag = doc["tag"] | "";
+    String sanitised;
+    for (char c : newTag) {
+      if (isalnum(c) || c == '-') sanitised += c;
+      if (sanitised.length() >= 20) break;
+    }
+    if (sanitised != syslog_tag.c_str()) {
+      syslog_tag = sanitised.c_str();
+      nvs_write_string(NVS_KEY_SYSLOG_TAG, syslog_tag);
+    }
+  }
+
   if (enabledChanged || serverChanged || portChanged) {
     resetSyslog();
     if (syslog_enabled) {
@@ -509,6 +651,23 @@ void handleApiSyslogSet(AsyncWebServerRequest *request, JsonObject &doc, JsonObj
   root["enabled"] = syslog_enabled;
   root["server"] = syslog_server.c_str();
   root["port"] = syslog_port;
+  root["tag"] = syslog_tag.c_str();
+}
+
+void handleApiSyslogTest(AsyncWebServerRequest *request, JsonObject &doc, JsonObject &root) {
+  if (!syslog_enabled) {
+    root["success"] = false;
+    root["message"] = "Syslog is disabled";
+    return;
+  }
+  if (WiFi.status() != WL_CONNECTED) {
+    root["success"] = false;
+    root["message"] = "WiFi not connected";
+    return;
+  }
+  sendSyslog("Test message from web UI", 6);
+  root["success"] = true;
+  root["message"] = "Test message sent";
 }
 #endif
 
@@ -596,8 +755,20 @@ void handleFirmwareUpdate(AsyncWebServerRequest *request) {
   } else {
     request->send(200, "application/json",
                   "{\"message\":\"Firmware update successful, rebooting\"}");
-    delay(100);
-    ESP.restart();
+    static std::atomic<bool> rebootScheduled{false};
+    if (!rebootScheduled.exchange(true)) {
+      xTaskCreate(
+        [](void *) {
+          vTaskDelay(pdMS_TO_TICKS(1000));
+          ESP.restart();
+        },
+        "reboot",
+        2048,
+        nullptr,
+        5,
+        nullptr
+      );
+    }
   }
 }
 
@@ -626,11 +797,24 @@ void handleFilesystemUpdate(AsyncWebServerRequest *request) {
   if (Update.hasError()) {
     request->send(500, "application/json",
                   "{\"message\":\"Filesystem update failed\"}");
+    LittleFS.begin();
   } else {
     request->send(200, "application/json",
                   "{\"message\":\"Filesystem update successful, rebooting\"}");
-    delay(100);
-    ESP.restart();
+    static std::atomic<bool> rebootScheduled{false};
+    if (!rebootScheduled.exchange(true)) {
+      xTaskCreate(
+        [](void *) {
+          vTaskDelay(pdMS_TO_TICKS(1000));
+          ESP.restart();
+        },
+        "reboot",
+        2048,
+        nullptr,
+        5,
+        nullptr
+      );
+    }
   }
 }
 
@@ -639,18 +823,22 @@ void handleFilesystemUpload(AsyncWebServerRequest *request, String filename,
                             bool final) {
   if (!index) {
     Serial.printf("Filesystem upload start: %s\n", filename.c_str());
+    LittleFS.end();
     if (!Update.begin(UPDATE_SIZE_UNKNOWN, U_SPIFFS)) {
       Update.printError(Serial);
+      return;
     }
   }
   if (!Update.hasError()) {
-    if (Update.write(data, len) != len) {
+    if (len && Update.write(data, len) != len) {
       Update.printError(Serial);
     }
   }
   if (final) {
     if (!Update.end(true)) {
       Update.printError(Serial);
+    } else {
+      Serial.printf("Filesystem upload complete: %u bytes\n", index + len);
     }
   }
 }
@@ -658,43 +846,45 @@ void handleFilesystemUpload(AsyncWebServerRequest *request, String filename,
 void setupWebServer() {
   Serial.println("Initializing HTTP server ...");
 
-  // Serve static files from /web_interface_data
-  // Ensure this path matches where your platformio.ini places data files
-  // or how you upload them (e.g., SPIFFS, LittleFS).
-  // The path "/" serves index.html from the data directory.
   if (!LittleFS.exists("/web_interface_data/index.html")) {
     Serial.println("Warning: /web_interface_data/index.html not found");
   }
 
   // API Endpoints
-  server.on("/api/devices", HTTP_GET, jsonGet(handleApiDevices));
-  server.on("/api/remotes", HTTP_GET, jsonGet(handleApiRemotes));
-  server.on("/api/logs", HTTP_GET, jsonGet(handleApiLogs));
-  server.on("/api/lastaddr", HTTP_GET, jsonGet(handleApiLastAddr));
-#if defined(SYSLOG)
-  server.on("/api/syslog", HTTP_GET, jsonGet(handleApiSyslogGet));
-#endif
-#if defined(MQTT)
-  server.on("/api/mqtt", HTTP_GET, jsonGet(handleApiMqttGet));
-#endif
-  server.on("/api/command", HTTP_POST, jsonPost(handleApiCommand));
-  server.on("/api/action", HTTP_POST, jsonPost(handleApiAction));
-#if defined(MQTT)
-  server.on("/api/mqtt", HTTP_POST, jsonPost(handleApiMqttSet));
+  server.on("/api/info",      HTTP_GET,  jsonGet(handleApiInfo));
+  server.on("/api/devices",   HTTP_GET,  jsonGet(handleApiDevices));
+  server.on("/api/remotes",   HTTP_GET,  jsonGet(handleApiRemotes));
+  server.on("/api/logs",      HTTP_GET,  jsonGet(handleApiLogs));
+  server.on("/api/lastaddr",  HTTP_GET,  jsonGet(handleApiLastAddr));
+  server.on("/api/scan",      HTTP_GET,  jsonGet(handleApiScan));
+#if defined(SSD1306_DISPLAY)
+  server.on("/api/display",   HTTP_GET,  jsonGet(handleApiDisplayGet));
 #endif
 #if defined(SYSLOG)
-  server.on("/api/syslog", HTTP_POST, jsonPost(handleApiSyslogSet));
+  server.on("/api/syslog",    HTTP_GET,  jsonGet(handleApiSyslogGet));
 #endif
-  server.on("/api/firmware", HTTP_POST, handleFirmwareUpdate,
-            handleFirmwareUpload);
-  server.on("/api/filesystem", HTTP_POST, handleFilesystemUpdate,
-            handleFilesystemUpload);
+#if defined(MQTT)
+  server.on("/api/mqtt",      HTTP_GET,  jsonGet(handleApiMqttGet));
+#endif
+  server.on("/api/command",   HTTP_POST, jsonPost(handleApiCommand));
+  server.on("/api/action",    HTTP_POST, jsonPost(handleApiAction));
+  server.on("/api/scan/stop", HTTP_POST, jsonPost(handleApiScanStop));
+#if defined(SSD1306_DISPLAY)
+  server.on("/api/display",   HTTP_POST, jsonPost(handleApiDisplaySet));
+#endif
+#if defined(MQTT)
+  server.on("/api/mqtt",      HTTP_POST, jsonPost(handleApiMqttSet));
+#endif
+#if defined(SYSLOG)
+  server.on("/api/syslog/test", HTTP_POST, jsonPost(handleApiSyslogTest));
+  server.on("/api/syslog",    HTTP_POST, jsonPost(handleApiSyslogSet));
+#endif
+  server.on("/api/firmware",  HTTP_POST, handleFirmwareUpdate, handleFirmwareUpload);
+  server.on("/api/filesystem", HTTP_POST, handleFilesystemUpdate, handleFilesystemUpload);
   server.on("/api/download/devices", HTTP_GET, handleDownloadDevices);
   server.on("/api/download/remotes", HTTP_GET, handleDownloadRemotes);
-  server.on("/api/upload/devices", HTTP_POST, handleUploadDevicesDone,
-            handleUploadDevicesFile);
-  server.on("/api/upload/remotes", HTTP_POST, handleUploadRemotesDone,
-            handleUploadRemotesFile);
+  server.on("/api/upload/devices",   HTTP_POST, handleUploadDevicesDone, handleUploadDevicesFile);
+  server.on("/api/upload/remotes",   HTTP_POST, handleUploadRemotesDone, handleUploadRemotesFile);
 
   ws.onEvent(onWsEvent);
   server.addHandler(&ws);
@@ -705,18 +895,6 @@ void setupWebServer() {
   staticHandler.setFilter([](AsyncWebServerRequest *request) {
     return !request->url().startsWith("/api");
   });
-  // You might need to explicitly serve each file if serveStatic with directory
-  // isn't working as expected or if files are not in a subdirectory of the data
-  // dir. server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-  //     request->send(LittleFS, "/web_interface_data/index.html", "text/html");
-  // });
-  // server.on("/style.css", HTTP_GET, [](AsyncWebServerRequest *request){
-  //     request->send(LittleFS, "/web_interface_data/style.css", "text/css");
-  // });
-  // server.on("/script.js", HTTP_GET, [](AsyncWebServerRequest *request){
-  //     request->send(LittleFS, "/web_interface_data/script.js",
-  //     "application/javascript");
-  // });
 
   server.onNotFound([](AsyncWebServerRequest *request) {
     request->send(404, "text/plain", "Not found");
@@ -727,7 +905,6 @@ void setupWebServer() {
 }
 
 void loopWebServer() {
-  // For ESPAsyncWebServer, most work is done asynchronously.
   ws.cleanupClients();
 }
 

@@ -60,7 +60,8 @@
         const showBoolean = !!popupOptions.showBoolean;
         boolRow.style.display = showBoolean ? "flex" : "none";
         boolInput.checked = !!popupOptions.defaultBoolean;
-        boolLabel.textContent = popupOptions.booleanLabel || app.i18nText("popup.boolean_label_default", "solar energy");
+        // FIX: removed "solar energy" debug fallback; use i18n key instead
+        boolLabel.textContent = popupOptions.booleanLabel || app.i18nText("popup.boolean_label_default", "Active");
         boolInput.onchange = null;
 
         const showRepeat = !!popupOptions.showRepeatOnNoResponse;
@@ -175,7 +176,8 @@
                 deleteInfo.textContent = popupOptions.deleteInfo ||
                     app.i18nText("popup.unpair_before_delete", "Unpair devices first before deleting.");
                 confirmBtn.style.display = "inline-block";
-                confirmBtn.textContent = "Confirm";
+                // FIX: was hardcoded "Confirm" — now uses i18n
+                confirmBtn.textContent = app.i18nText("button.confirm", "Confirm");
                 confirmBtn.onclick = async function () {
                     if (destructiveActionsBlocked()) {
                         showProtectedMessage();

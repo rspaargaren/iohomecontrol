@@ -50,12 +50,13 @@ class DisplayBuffer {
         ScrollingWindow scroller;
 
         Line* find(const std::string key);
+        void purge();
     public:
         DisplayBuffer();
     
         void addLine(const std::string &leftText, const std::string &rightText = "");
 
-        void purge();
+        void clear();
 
         std::vector<std::string> getTextToDisplay(const int width, const int height);
 };
