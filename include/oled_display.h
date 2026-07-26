@@ -28,26 +28,31 @@ void clearDisplayMessages();
 void updateDisplayStatus();
 bool isDisplayEnabled();
 void setDisplayEnabled(bool enabled);
+int  getDisplayDimAfter();
+void setDisplayDimAfter(int seconds);
+int  getDisplayOffAfter();
+void setDisplayOffAfter(int seconds);
 #else
 inline bool initDisplay() { return true; }
 inline void display1WAction(const uint8_t *, const char *, const char *, const char * = nullptr) {}
 inline void display1WPosition(const uint8_t *, float, const char * = nullptr) {}
-
 inline void updateDisplayStatus() {}
 inline void displayCustomMessage(const char*, const char* = nullptr) {}
 inline void clearDisplayMessages() {}
 inline bool isDisplayEnabled() { return false; }
 inline void setDisplayEnabled(bool) {}
+inline int  getDisplayDimAfter() { return 30; }
+inline void setDisplayDimAfter(int) {}
+inline int  getDisplayOffAfter() { return 120; }
+inline void setDisplayOffAfter(int) {}
 #endif
 
-
 template<typename ... Args>
-std::string format(const std::string &format, Args ... args)
+std::string format(const std::string &fmt, Args ... args)
 {
     char buf[250];
-    snprintf(buf, 250, format.c_str(), args ...);
+    snprintf(buf, 250, fmt.c_str(), args ...);
     return std::string(buf);
 }
-
 
 #endif // OLED_DISPLAY_H
