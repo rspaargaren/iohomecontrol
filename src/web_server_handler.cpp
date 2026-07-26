@@ -504,23 +504,62 @@ static bool jsonToBool(JsonVariant variant, bool &value) {
 
 #if defined(SSD1306_DISPLAY)
 void handleApiDisplayGet(AsyncWebServerRequest *request, JsonObject &root) {
-  const bool enabled = isDisplayEnabled();
-  root["enabled"] = enabled;
+  root["enabled"]   = isDisplayEnabled();
+  root["dim_after"] = getDisplayDimAfter();
+  root["off_after"] = getDisplayOffAfter();
 }
 
 void handleApiDisplaySet(AsyncWebServerRequest *request, JsonObject &doc, JsonObject &root) {
-  bool enabled = isDisplayEnabled();
-  if (!doc["enabled"].is<JsonVariant>() || !jsonToBool(doc["enabled"], enabled)) {
-    request->send(400, "application/json",
-                  "{\"success\":false,\"message\":\"Invalid enabled value\"}");
-    return;
+  // --- enabled ---
+  if (doc["enabled"].is<JsonVariant>()) {
+    bool enabled = isDisplayEnabled();
+    if (!jsonToBool(doc["enabled"], enabled)) {
+      request->send(400, "application/json",
+                    "{\"success\":false,\"message\":\"Invalid enabled value\"}");
+      return;
+    }
+    setDisplayEnabled(enabled);
   }
 
-  setDisplayEnabled(enabled);
+  // --- dim_after ---
+  if (doc["dim_after"].is<JsonVariant>()) {
+    int v = -1;
+    JsonVariant jv = doc["dim_after"];
+    if (jv.is<int>() || jv.is<long>() || jv.is<unsigned long>()) {
+      v = jv.as<int>();
+    } else if (jv.is<const char *>()) {
+      v = atoi(jv.as<const char *>());
+    }
+    if (v < 0 || v > 3600) {
+      request->send(400, "application/json",
+                    "{\"success\":false,\"message\":\"dim_after must be 0-3600\"}");
+      return;
+    }
+    setDisplayDimAfter(v);
+  }
 
-  root["success"] = true;
-  root["message"] = "Display configuration updated";
-  root["enabled"] = isDisplayEnabled();
+  // --- off_after ---
+  if (doc["off_after"].is<JsonVariant>()) {
+    int v = -1;
+    JsonVariant jv = doc["off_after"];
+    if (jv.is<int>() || jv.is<long>() || jv.is<unsigned long>()) {
+      v = jv.as<int>();
+    } else if (jv.is<const char *>()) {
+      v = atoi(jv.as<const char *>());
+    }
+    if (v < 0 || v > 3600) {
+      request->send(400, "application/json",
+                    "{\"success\":false,\"message\":\"off_after must be 0-3600\"}");
+      return;
+    }
+    setDisplayOffAfter(v);
+  }
+
+  root["success"]   = true;
+  root["message"]   = "Display configuration updated";
+  root["enabled"]   = isDisplayEnabled();
+  root["dim_after"] = getDisplayDimAfter();
+  root["off_after"] = getDisplayOffAfter();
 }
 #endif
 
