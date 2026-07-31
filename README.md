@@ -1,5 +1,24 @@
 <img src="https://github.com/user-attachments/assets/f6b606a1-0eca-4fd6-a509-d5d1136b2d31" alt="smlogo" width="50"/>
 
+# ESP32C3 + SX127x Test
+
+### 🔌 Pin-Belegung: ESP32-C3 ➔ SX127x (ohne Display)
+
+| ESP32-C3 (GPIO) | SX127x / RFM95 | Kategorie | Beschreibung |
+| :--- | :--- | :--- | :--- |
+| **3V3** | **3.3V / VCC** | ⚡ Strom | Versorgungsspannung (Max. 3.6V, niemals an 5V anschließen!) |
+| **GND** | **GND** | ⚡ Strom | Masse |
+| **GPIO 4** | **SCK / SCLK** | 📡 SPI | Serial Clock |
+| **GPIO 5** | **MISO** | 📡 SPI | Master In Slave Out |
+| **GPIO 6** | **MOSI** | 📡 SPI | Master Out Slave In |
+| **GPIO 7** | **NSS / CS** | 📡 SPI | Chip Select |
+| **GPIO 8** | **RST** | ⚙️ Steuerung | Reset des Moduls |
+| **GPIO 9** | **DIO0** | ⚙️ Interrupt | Rx/Tx Status (Sehr wichtig für den Empfang von Paketen) |
+| **GPIO 10** | **DIO1** | ⚙️ Interrupt | Rx Timeout / Status |
+| **GPIO 20** | **DIO2** | ⚙️ Interrupt | FSK/OOK Steuerung / Status |
+
+> **⚠️ Wichtiger Hinweis:** Schraube unbedingt die Antenne an das LoRa-Modul, **bevor** du den ESP32-C3 an den Strom (bzw. USB) anschließt! Ein Sendeversuch ohne angeschlossene Antenne kann die Sende-Endstufe auf dem Chip zerstören.
+
 # IO-Homecontrol ESP32 Project
 
 Based on the wonderful work of:

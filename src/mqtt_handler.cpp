@@ -383,7 +383,7 @@ void connectToMqtt() {
         return;
     }
     if (mqtt_server.empty()) {
-        Serial.println("MQTT server not configured");
+        //Serial.println("MQTT server not configured");
         return;
     }
     s_lastMqttConnectAttemptMs = millis();

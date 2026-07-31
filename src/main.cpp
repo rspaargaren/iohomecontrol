@@ -97,6 +97,10 @@ int log_to_buffer_and_serial(const char *format, va_list args) {
 
 void setup() {
 
+    #ifdef ESP32C3
+    delay(2000); 
+    #endif
+
     Serial.begin(115200);       //Start serial connection for debug and manual input
     esp_log_set_vprintf(log_to_buffer_and_serial);
     esp_log_level_set("*", ESP_LOG_DEBUG);    // Or VERBOSE for ESP_LOGV

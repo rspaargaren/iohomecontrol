@@ -56,6 +56,20 @@
 #define RADIO_DIO1_PIN      35 //HELTEC
 #define RADIO_DIO2_PIN      34 //HELTEC
 #define RADIO_BUSY_PIN      32
+// ---> NEU: HIER DEN C3 BLOCK EINFÜGEN <---
+#elif defined(ESP32C3)
+// Achtung: C3 hat nur GPIO 0-21. Pins 12-17 sind absolut verboten (Flash)!
+// Passe diese Pins an deine tatsächliche Verkabelung an:
+#define RADIO_SCLK_PIN       4
+#define RADIO_MISO_PIN       5
+#define RADIO_MOSI_PIN       6
+#define RADIO_CS_PIN         7
+#define RADIO_DIO0_PIN       9
+#define RADIO_RST_PIN        8
+#define BOARD_LED_PIN        2  // Oft die interne LED bei C3 DevKits
+#define RADIO_DIO1_PIN       10
+#define RADIO_DIO2_PIN       20
+#define RADIO_BUSY_PIN       21 // (Falls benötigt, sonst weglassen)
 #else
 #define RADIO_SCLK_PIN       5
 #define RADIO_MISO_PIN      19
@@ -79,6 +93,11 @@
 #define I2C_SDA_PIN 4
 #define I2C_SCL_PIN 15
 #define DISPLAY_OLED_RST_PIN 16
+// ---> NEU: HIER DEN C3 BLOCK EINFÜGEN <---
+#elif defined(ESP32C3)
+#define I2C_SDA_PIN 1
+#define I2C_SCL_PIN 3
+#define DISPLAY_OLED_RST_PIN -1 // Die meisten C3 Setups haben keinen Hardware-Reset fürs OLED
 #else
 #define I2C_SDA_PIN 21
 #define I2C_SCL_PIN 22
@@ -114,7 +133,7 @@
 #define RADIO_PREAMBLE_DETECTED                 RADIO_DIO_4     // Preamble detected from Radio (used instead of FIFO empty)
 #endif
 
-#define SPI_CLK_FRQ                                 10000000
+#define SPI_CLK_FRQ                                 1000000
 
 /*
  * Defines the time required for the TCXO to wakeup [ms].

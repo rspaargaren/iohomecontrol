@@ -27,6 +27,9 @@
 #include <ESPmDNS.h>
 #include <TickerUsESP32.h>
 #include <tuple>
+#ifdef ESP32C3
+#include "esp_wifi.h"
+#endif
 
 const long PORTAL_TIMEOUT = 300000; // 5 minuten = 300.000 ms
 const uint32_t WIFI_NOTIFY_GOT_IP = BIT0;
@@ -88,6 +91,11 @@ static void handleWifiConnected() {
         wifiStatus.rssi = WiFi.RSSI();
         wifiStatus.signalStrengthPercent = rssiToQuality(wifiStatus.rssi);
 
+        if (WiFi.getMode() == WIFI_AP_STA) {
+            Serial.println("WiFi: Verbindung steht. Schalte AP-Modus aus.");
+            WiFi.mode(WIFI_STA);
+        }
+
         wifiReconnectTimer.detach();
         rssiTimer.attach(5, rssiTimerCb);
         updateDisplayStatus();
@@ -138,6 +146,16 @@ static void applyAdvancedWiFiSettings() {
         // Enable minimal WPA2_PSK level (also allows WPA3 or other more secure modes)
         config.sta.threshold.authmode = WIFI_AUTH_WPA_PSK; 
 #endif // REQUIRE_MINIMUM_WPA2_PSK
+
+// --- HIER FEHLTE NOCH DER FRITZBOX-SICHERHEITS-FIX ---
+#ifdef ESP32C3
+        // FritzBox Kompatibilitäts-Fix für den C3
+        config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
+        config.sta.pmf_cfg.capable = false;
+        config.sta.pmf_cfg.required = false;
+#endif
+        // -----------------------------------------------------
+
         esp_wifi_set_config(WIFI_IF_STA, &config);
     }
 }
@@ -149,6 +167,15 @@ static std::string getConfiguredSSID() {
     }
 
     return std::string(reinterpret_cast<const char*>(conf.sta.ssid));
+}
+
+// --- NEU: Diese Funktion holt das Passwort sauber aus dem Speicher ---
+static std::string getConfiguredPassword() {
+    wifi_config_t conf {};
+    if (esp_wifi_get_config(WIFI_IF_STA, &conf) != ESP_OK) {
+        return {};
+    }
+    return std::string(reinterpret_cast<const char*>(conf.sta.password));
 }
 
 static void triggerWiFiReconnect() {
@@ -172,6 +199,12 @@ static void runConfigPortal(const std::string& ssid, bool hasWifiConfiguration) 
         Serial.println("WiFi: No WiFi network configured, opening Config Portal...");
     }
 
+    #ifdef ESP32C3
+    // C3 AP-Wakeup Fix
+    WiFi.setSleep(false);
+    WiFi.mode(WIFI_AP_STA);
+    #endif
+
     WiFiManager wm;
 
     applyAdvancedWiFiSettings();
@@ -179,6 +212,16 @@ static void runConfigPortal(const std::string& ssid, bool hasWifiConfiguration) 
     wm.setDisableConfigPortal(true); // allow config portal shutdown when previous configured wifi comes available.
     wm.setConfigPortalTimeout(PORTAL_TIMEOUT / 1000);
     wm.autoConnect("iohc-setup");
+
+#ifdef ESP32C3
+    // 1. Verhindere RF-Absturz durch zu viel Strombedarf
+    WiFi.setTxPower(WIFI_POWER_8_5dBm);
+    
+    // 2. Zwinge nun auch explizit das Access-Point-Interface (WIFI_IF_AP) in den Legacy-Modus!
+    // (Der WiFiManager hat das beim Starten sonst wieder auf 802.11n überschrieben)
+    esp_wifi_set_protocol(WIFI_IF_AP, WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G);
+    esp_wifi_set_bandwidth(WIFI_IF_AP, WIFI_BW_HT20);
+#endif
 
     const unsigned long portalStartTime = millis();
     bool portalClosed = false;
@@ -225,11 +268,24 @@ static void wifiWorker(void * pvParameters) {
     wl_status_t status = WL_DISCONNECTED;
 
     WiFi.mode(WIFI_STA);
+    
+// 1. ZUERST den sauberen Zustand herstellen
+    #ifdef ESP32C3
+        WiFi.setSleep(false);
+        WiFi.setTxPower(WIFI_POWER_8_5dBm);
+        esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G);
+        esp_wifi_set_bandwidth(WIFI_IF_STA, WIFI_BW_HT20);
+        WiFi.disconnect(true, false);
+        delay(100);
+    #endif
 
     const std::string ssid = getConfiguredSSID();
     const bool hasWifiConfiguration = !ssid.empty();
+    
     if (hasWifiConfiguration) {
         applyAdvancedWiFiSettings();
+        
+        // Das Original: Verbindet sich mit den Tresor-Daten
         WiFi.begin();
 
         Serial.printf("WiFi: Attempt connection to '%s', try for max 30 seconds...\n", ssid.c_str());
@@ -287,7 +343,11 @@ void initWifi() {
     // including after auto-reconnects where the connect task never runs.
     WiFi.setHostname("MiOpenIO");
 
-    xTaskCreatePinnedToCore(wifiWorker, "WiFi_Worker", 8192, NULL, 3, &wifiWorkerTaskHandle, 1);
+    #ifdef ESP32C3
+        xTaskCreatePinnedToCore(wifiWorker, "WiFi_Worker", 8192, NULL, 3, &wifiWorkerTaskHandle, 0);
+    #else
+        xTaskCreatePinnedToCore(wifiWorker, "WiFi_Worker", 8192, NULL, 3, &wifiWorkerTaskHandle, 1);
+    #endif
 
     WiFi.onEvent(onWiFiEvent);
     WiFi.setAutoReconnect(true);
