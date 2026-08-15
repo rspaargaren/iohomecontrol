@@ -25,6 +25,8 @@
 #define LONG_PREAMBLE_MS 1920
 #define SHORT_PREAMBLE_MS 40
 
+#define LOG_TAG "iohc_radio"
+
 namespace IOHC {
     iohcRadio *iohcRadio::_iohcRadio = nullptr;
     volatile unsigned long iohcRadio::_g_payload_millis = 0L;
@@ -136,18 +138,18 @@ namespace IOHC {
         callbackQueue = xQueueCreate(20, sizeof(struct Callback *));
         auto callbackTaskCode = xTaskCreatePinnedToCore(callbackTaskLoop, "CallbackTask", 4096, NULL, 5, &callbackTask, 0);
         if (callbackTaskCode != pdPASS || callbackQueue == NULL) {
-            printf("ERROR: Can't create callback-task or corresponding queue %d\n", callbackTaskCode);
+            ESP_LOGE(LOG_TAG, "Can't create callback-task or corresponding queue %d", callbackTaskCode);
             // sx127x_destroy(device);
             return;
         }
 
         // start state machine
-        printf("Starting Interrupt Handler...\n");
+        ESP_LOGI(LOG_TAG, "Starting interrupt handler...");
         BaseType_t task_code = xTaskCreatePinnedToCore(handle_interrupt_task, "handle_interrupt_task", 8192,
                                                        this /*nullptr*//*device*/, /*tskIDLE_PRIORITY*/4,
                                                        &handle_interrupt, /*tskNO_AFFINITY*/xPortGetCoreID());
         if (task_code != pdPASS) {
-            printf("ERROR STATEMACHINE Can't create task %d\n", task_code);
+            ESP_LOGE(LOG_TAG, "STATEMACHINE Can't create task %d", task_code);
             // sx127x_destroy(device);
             return;
         }
@@ -312,7 +314,7 @@ void iohcRadio::queueSend(std::vector<iohcPacket *> &iohcTx) {
         return;
     }
     sendQueue.push(std::move(iohcTx));
-    ets_printf("TX: Queued send batch. Queue depth=%d\n", static_cast<int>(sendQueue.size()));
+    ESP_LOGV(LOG_TAG, "TX: Queued send batch. Queue depth=%d", static_cast<int>(sendQueue.size()));
 }
 
 void iohcRadio::startQueuedSend() {
@@ -324,14 +326,14 @@ void iohcRadio::startQueuedSend() {
     sendQueue.pop();
     txCounter = 0;
     txComplete = false;
-    ets_printf("TX: Preparing %d packet(s)\n", packets2send.size());
+    ESP_LOGV(LOG_TAG, "TX: Preparing %d packet(s)", packets2send.size());
     setRadioState(RadioState::TX);
 
     auto packet = packets2send[txCounter];
 
     // 🟢 Set long preamble for first packet
     Radio::setPreambleLength(LONG_PREAMBLE_MS);
-    ets_printf("TX: Using LONG preamble (%d ms)\n", LONG_PREAMBLE_MS);
+    ESP_LOGV(LOG_TAG, "TX: Using LONG preamble (%d ms)", LONG_PREAMBLE_MS);
 
     // Send first packet immediately
     Radio::setStandby();
@@ -342,7 +344,7 @@ void iohcRadio::startQueuedSend() {
     //packet->decode(true); //false);
     //IOHC::lastSendCmd = packet->payload.packet.header.cmd;
 
-    ets_printf("TX: Sent first packet (%d repeats) at %llu us\n", packet->repeat, esp_timer_get_time());
+    ESP_LOGV(LOG_TAG, "TX: Sent first packet (%d repeats) at %llu us", packet->repeat, esp_timer_get_time());
 
     // Start ticker for repeats (short preamble)
     Sender.attach_ms(packet->repeatTime, &iohcRadio::onTxTicker, (void*)this);
@@ -367,24 +369,24 @@ void iohcRadio::onTxTicker(void *arg) {
     // 🩵 Fallback: Check IRQFLAGS2 (0x3F) for PacketSent in FSK mode
     uint8_t irqFlags2 = Radio::readByte(0x3F); // REG_IRQFLAGS2
     if (irqFlags2 & 0x08) { // Bit 3 == PacketSent (TXDONE in FSK)
-        ets_printf("FSK: Detected PacketSent (TXDONE) via register (ISR missed?)\n");
+        ESP_LOGD(LOG_TAG, "FSK: Detected PacketSent (TXDONE) via register (ISR missed?)");
         Radio::writeByte(0x3F, 0x08); // Clear PacketSent bit
         iohcRadio::txComplete = true;
     }
 
     // ⏳ Wait for TXDONE
     if (!radio->txComplete) {
-        ets_printf("TX: Waiting for TXDONE... (state=%s)\n", radioStateToString(radio->radioState));
+        ESP_LOGD(LOG_TAG, "TX: Waiting for TXDONE... (state=%s)", radioStateToString(radio->radioState));
         return;
     }
 
     // ✅ TXDONE received
-    ESP_LOGD("RADIO", "TXDONE flag set, ready to send repeat or next packet.\n");
+    ESP_LOGD(LOG_TAG, "TXDONE flag set, ready to send repeat or next packet.");
 
     // 🔁 Repeat logic
     if (packet->repeat > 0) {
         packet->repeat--;
-        ets_printf("TX: Repeating current packet (%d repeats left)\n", packet->repeat);
+        ESP_LOGD(LOG_TAG, "TX: Repeating current packet (%d repeats left)", packet->repeat);
     } else {
         // inform callback we finished sending this packet, this transfers ownership of the packet to the callback queue
         radio->sent(packet);
@@ -394,7 +396,7 @@ void iohcRadio::onTxTicker(void *arg) {
 
         // 🛑 Check if all packets are sent
         if (radio->txCounter == radio->packets2send.size()) {
-            ets_printf("TX: All packets sent. Stopping Ticker.\n");
+            ESP_LOGD(LOG_TAG, "TX: All packets sent. Stopping Ticker.");
             radio->Sender.detach();
             radio->packets2send.clear();
             Radio::setRx();
@@ -404,7 +406,7 @@ void iohcRadio::onTxTicker(void *arg) {
         }
 
         packet = radio->packets2send[radio->txCounter];
-        ets_printf("TX: Moving to next packet %d/%d (repeat=%d)\n",
+        ESP_LOGD(LOG_TAG, "TX: Moving to next packet %d/%d (repeat=%d)",
                     radio->txCounter + 1,
                     radio->packets2send.size(),
                     packet->repeat);
@@ -425,7 +427,7 @@ void iohcRadio::onTxTicker(void *arg) {
     //packet->decode(true); //false);
     //IOHC::lastSendCmd = packet->payload.packet.header.cmd;
 
-    ets_printf("TX: Sent packet %d/%d at %llu us\n",
+    ESP_LOGV(LOG_TAG, "TX: Sent packet %d/%d at %llu us",
                radio->txCounter + 1,
                radio->packets2send.size(),
                esp_timer_get_time());
@@ -643,8 +645,5 @@ bool queueCallback(IohcPacketDelegate* callback, iohcPacket* packet) {
 
     void IRAM_ATTR iohcRadio::setRadioState(RadioState newState) {
         radioState = newState;
-        // Optional debug:
-        //printf("State changed to: %d\n", static_cast<int>(newState));
-        ets_printf("State: %s\n", radioStateToString(newState));
     }
 }

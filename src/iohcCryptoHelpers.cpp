@@ -16,6 +16,10 @@
 
 #include <iohcCryptoHelpers.h>
 #include <crypto2Wutils.h> 
+#include <esp_log.h>
+
+#define LOG_TAG "iohcCrypto"
+
 /*
     Helper function to convert a string containing hex numbers to a bytes sequence; one byte every two characters
 */
@@ -103,7 +107,7 @@ namespace iohcCrypto {
 
     std::vector<uint8_t> constructInitialValue(const std::vector<uint8_t>& frame_data, const uint8_t *challenge = nullptr, const uint8_t *sequence_number = nullptr) {
         if (!challenge && !sequence_number) {
-            printf("Cannot create initial value: no mode selected\n");
+            ESP_LOGE(LOG_TAG, "Cannot create initial value: no mode selected");
             return {};
         }
 

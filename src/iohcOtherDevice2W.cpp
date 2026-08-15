@@ -24,6 +24,8 @@
 #include <iohcDevice.h>
 #include <numeric>
 
+#define LOG_TAG "iohcOther2W"
+
 namespace IOHC {
     iohcOtherDevice2W *iohcOtherDevice2W::_iohcOtherDevice2W = nullptr;
 
@@ -72,7 +74,7 @@ namespace IOHC {
 
     void iohcOtherDevice2W::cmd(Other2WButton cmd, Tokens *data) {
         if (!_radioInstance) {
-            Serial.println("NO RADIO INSTANCE");
+            ESP_LOGD(LOG_TAG, "NO RADIO INSTANCE");
             _radioInstance = iohcRadio::getInstance();
         }
 
@@ -453,7 +455,7 @@ namespace IOHC {
                     }
                     toSend.clear();
                 }
-                Serial.printf("valid %u\n", counter);
+                ESP_LOGD(LOG_TAG, "valid %u", counter);
                 digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
 
                 _radioInstance->send(packets2send);
@@ -529,9 +531,9 @@ namespace IOHC {
     bool iohcOtherDevice2W::load() {
         _radioInstance = iohcRadio::getInstance();
         if (LittleFS.exists(OTHER_2W_FILE))
-            Serial.printf("Loading Other 2W devices settings from %s\n", OTHER_2W_FILE);
+            ESP_LOGI(LOG_TAG, "Loading Other 2W devices settings from %s", OTHER_2W_FILE);
         else {
-            Serial.printf("*2W Other devices not available\n");
+            ESP_LOGE(LOG_TAG, "*2W Other devices not available");
             return false;
         }
 
@@ -541,6 +543,7 @@ namespace IOHC {
         f.close();
 
         // Iterate through the JSON object
+        size_t deviceCount = 0;
         for (JsonPair kv: doc.as<JsonObject>()) {
             hexStringToBytes(kv.key().c_str(), _node);
             auto jobj = kv.value().as<JsonObject>();
@@ -559,8 +562,10 @@ namespace IOHC {
             //         _type.insert(_type.begin()+i, jarr[i].as<uint16_t>());
 
             //     _manufacturer = jobj["manufacturer_id"].as<uint8_t>();
+            deviceCount++;
         }
 
+        ESP_LOGI(LOG_TAG, "Loaded %d x other 2W devices", deviceCount);
         return true;
     }
 

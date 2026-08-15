@@ -32,6 +32,8 @@
 // #include <SPIeX.h>
 #endif
 
+#define LOG_TAG "sx1276"
+
 namespace Radio {
     SPISettings SpiSettings(4000000, MSBFIRST, SPI_MODE0);
 
@@ -67,7 +69,7 @@ namespace Radio {
  * the availability of the radio, configures SPI settings, and puts the radio chip in standby mode.
  */
     void initHardware() {
-        printf("\nSPI Init");
+        ESP_LOGI(LOG_TAG, "SPI Init");
 
         //gpio_pullup_en((gpio_num_t) RADIO_MISO);
 
@@ -109,14 +111,13 @@ namespace Radio {
 
         pinMode(SCAN_LED, OUTPUT);
         digitalWrite(SCAN_LED, 1);
-
-        printf("\nRadio Chip is ready\n");
+        ESP_LOGI(LOG_TAG, "Radio chip is ready");
     }
 
 void setPreambleLength(uint16_t preambleLen) {
     writeByte(REG_PREAMBLEMSB, (preambleLen >> 8) & 0xFF);
     writeByte(REG_PREAMBLELSB, preambleLen & 0xFF);
-    ets_printf("Radio: Preamble length set to %u symbols\n", preambleLen);
+    ESP_LOGD(LOG_TAG, "Preamble length set to %u symbols", preambleLen);
 }
 
 /**

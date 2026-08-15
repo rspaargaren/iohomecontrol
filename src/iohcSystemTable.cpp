@@ -20,6 +20,8 @@
 
 #include <utility>
 
+#define LOG_TAG "iohcSysTable"
+
 namespace IOHC {
     iohcSystemTable *iohcSystemTable::_iohcSystemTable = nullptr;
 
@@ -86,15 +88,22 @@ namespace IOHC {
     bool iohcSystemTable::load()  {
         this->empty();
         if (LittleFS.exists(IOHC_SYS_TABLE))
-            Serial.printf("Loading systable objects from %s\n", IOHC_SYS_TABLE);
+            ESP_LOGI(LOG_TAG, "Loading systable objects from %s", IOHC_SYS_TABLE);
         else  {
-            Serial.printf("*systable objects not available\n");
+            ESP_LOGE(LOG_TAG, "systable objects not available");
             return false;
         }
 
         fs::File f = LittleFS.open(IOHC_SYS_TABLE, "r", true);
-        /*Dynamic*/JsonDocument doc; //(2048);
-        deserializeJson(doc, f);
+        JsonDocument doc;
+        DeserializationError error = deserializeJson(doc, f); 
+
+        if (error) {
+            ESP_LOGE(LOG_TAG, "JSON error while parsing systable objects file: %s",
+                error.c_str());
+            f.close();
+            return false;
+        }
         f.close();
 
         // Iterate through the JSON object
@@ -104,6 +113,8 @@ namespace IOHC {
             for (JsonPair ov : obj)
                 addObject(key, ov.value().as<std::string>());
         }
+
+        ESP_LOGI(LOG_TAG, "Loaded %d systable objects", size());
         return true;
     }
 
@@ -127,15 +138,15 @@ namespace IOHC {
     }
 
     void iohcSystemTable::dump1W()  {
-        Serial.printf("********************** 1W sysTable objects ***********************\n");
+        printf("********************** 1W sysTable objects ***********************\n");
         for (auto entry : _objects)
             entry.second->dump1W();
-        Serial.printf("\n");
+        printf("\n");
     }
     void iohcSystemTable::dump2W()  {
-        Serial.printf("********************** 2W sysTable objects ***********************\n");
+        printf("********************** 2W sysTable objects ***********************\n");
         for (auto entry : _objects)
             entry.second->dump2W();
-        Serial.printf("\n");
+        printf("\n");
     }
 }

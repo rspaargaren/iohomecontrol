@@ -48,19 +48,20 @@
 #include "LittleFS.h"
 //#include <WiFi.h> // Assuming WiFi is used and initialized elsewhere or will be here.
 
-
 #include <user_config.h>
 #include <oled_display.h>
-
 
 extern "C" {
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 }
 
+#define LOG_TAG_SETUP                   "setup"
+#define LOG_TAG_MSG_RECV_CALLBACK       "msgRcvd"
+#define LOG_TAG_MSG_ARCHIVE_CALLBACK    "msgArchive"
+
+
 void txUserBuffer(Tokens *cmd);
-void testKey();
-void scanDump();
 bool publishMsg(IOHC::iohcPacket *iohc);
 bool msgRcvd(IOHC::iohcPacket *iohc);
 bool msgArchive(IOHC::iohcPacket *iohc);
@@ -68,7 +69,6 @@ bool msgArchive(IOHC::iohcPacket *iohc);
 
 
 uint8_t keyCap[16] = {};
-//uint8_t source_originator[3] = {0};
 
 IOHC::iohcRadio *radioInstance;
 IOHC::iohcPacket *radioPackets[IOHC_INBOUND_MAX_PACKETS];
@@ -96,12 +96,11 @@ int log_to_buffer_and_serial(const char *format, va_list args) {
 }
 
 void setup() {
-
     Serial.begin(115200);       //Start serial connection for debug and manual input
     esp_log_set_vprintf(log_to_buffer_and_serial);
     esp_log_level_set("*", ESP_LOG_DEBUG);    // Or VERBOSE for ESP_LOGV
 
-    Serial.printf("Firmware version: %s\n", firmwareVersion());
+    ESP_LOGI(LOG_TAG_SETUP, "Firmware version: %s", firmwareVersion());
 
 
     initDisplay(); // Init OLED display
@@ -113,11 +112,11 @@ void setup() {
 #if defined(ESP32)
     // LittleFS.begin(); // Original call, replaced by new init below
     if(!LittleFS.begin()){
-        Serial.println("An Error has occurred while mounting LittleFS");
+        ESP_LOGE(LOG_TAG_SETUP, "An Error has occurred while mounting LittleFS");
         // Handle error appropriately, maybe by halting or indicating failure
         return;
     }
-    Serial.println("LittleFS mounted successfully");
+    ESP_LOGI(LOG_TAG_SETUP, "LittleFS mounted successfully");
 #endif
     nvs_init();
 
@@ -216,11 +215,12 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
       if (entry)
         deviceName = entry->name.c_str();
     }
-    addLogMessage("Command received from " + deviceId +
-                  " (" + deviceName + ")");
+
+    ESP_LOGI(LOG_TAG_MSG_RECV_CALLBACK, "Command received from %s (%s)", deviceId.c_str(), deviceName.c_str());
+
     switch (iohc->payload.packet.header.cmd) {
         case iohcDevice::RECEIVED_DISCOVER_0x28: {
-            printf("2W Pairing Asked\n");
+            ESP_LOGI(LOG_TAG_MSG_RECV_CALLBACK, "2W Pairing Asked");
             if (!Cmd::pairMode) break;
 
             // 0x0b OverKiz 0x0c Atlantic
@@ -243,18 +243,16 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
             break;
         }
         case iohcDevice::RECEIVED_DISCOVER_ANSWER_0x29: {
-            printf("2W Device want to be paired\n");
-            if (!Cmd::pairMode) break;
+            ESP_LOGV(LOG_TAG_MSG_RECV_CALLBACK, "2W Device want to be paired");
+            ESP_LOG_BUFFER_HEX_LEVEL(LOG_TAG_MSG_RECV_CALLBACK, iohc->payload.buffer + 9, 10, ESP_LOG_VERBOSE);
 
-            std::vector<uint8_t> deviceAsked;
-            deviceAsked.assign(iohc->payload.buffer + 9, iohc->payload.buffer + 18);
-            for (unsigned char i: deviceAsked) {
-                printf("%02X ", i);
+            if (!Cmd::pairMode)
+            {
+                ESP_LOGW(LOG_TAG_MSG_RECV_CALLBACK, "2W pairing request refused: pair mode is disabled");
+                break;
             }
-            printf("\n");
 
-            // printf("Sending 0x38 \n");
-            printf("Sending SEND_DISCOVER_ACTUATOR_0x2C \n");
+            ESP_LOGV(LOG_TAG_MSG_RECV_CALLBACK, "Sending SEND_DISCOVER_ACTUATOR_0x2C");
 
             // std::vector<uint8_t> toSend = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06}; // 38
             std::vector<uint8_t> toSend = {}; // SEND_DISCOVER_ACTUATOR_0x2C
@@ -284,7 +282,7 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
             break;
         }
         case iohcDevice::RECEIVED_DISCOVER_ACTUATOR_0x2C: {
-            printf("2W Actuator Ack Asked\n");
+            ESP_LOGV(LOG_TAG_MSG_RECV_CALLBACK, "2W actuator ACK asked");
             if (!Cmd::pairMode) break;
 
             std::vector<uint8_t> toSend = {};
@@ -306,24 +304,24 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
             break;
         }
         case iohcDevice::RECEIVED_LAUNCH_KEY_TRANSFERT_0x38: {
-            printf("2W Key Transfert Asked after Command %2.2X\n", iohc->payload.packet.header.cmd);
-            if (!Cmd::pairMode) break;
+            ESP_LOGV(LOG_TAG_MSG_RECV_CALLBACK, "2W key transfer asked after command %02X", iohc->payload.packet.header.cmd);
+            ESP_LOG_BUFFER_HEX_LEVEL(LOG_TAG_MSG_RECV_CALLBACK, iohc->payload.buffer + 9, 7, ESP_LOG_VERBOSE);
+
+            if (!Cmd::pairMode) 
+            {
+                ESP_LOGW(LOG_TAG_MSG_RECV_CALLBACK, "2W key transfer refused: pair mode is disabled");
+                break;
+            }
 
             std::vector<uint8_t> key_transfert;
             key_transfert.assign(iohc->payload.buffer + 9, iohc->payload.buffer + 15);
-
-            for (unsigned char i: key_transfert) {
-                printf("%02X ", i);
-            }
-            printf("\n");
+            
             std::vector<uint8_t> data = {IOHC::iohcDevice::SEND_ASK_CHALLENGE_0x31}; //0x38
             unsigned char initial_value[16];
             constructInitialValue(data, initial_value, data.size(), key_transfert, nullptr);
-            Serial.printf("2) Initial value used for key encryption: ");
-            for (unsigned char i: initial_value) {
-                printf("%02X ", i);
-            }
-            printf("\n");
+
+            ESP_LOGV(LOG_TAG_MSG_RECV_CALLBACK, "2) Initial value used for key encryption: ");
+            ESP_LOG_BUFFER_HEX_LEVEL(LOG_TAG_MSG_RECV_CALLBACK, initial_value, sizeof(initial_value)/sizeof(initial_value[0]), ESP_LOG_VERBOSE);
 
             AES_init_ctx(&ctx, transfert_key);
             uint8_t encrypted_key[16];
@@ -332,11 +330,9 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
             for (int i = 0; i < 16; i++) {
                 encrypted_key[i] = initial_value[i] ^ transfert_key[i];
             }
-            printf("2) Encrypted 2-way key to be sent with SEND_KEY_TRANSFERT_0x32: ");
-            for (unsigned char i: encrypted_key) {
-                printf("%02X ", i);
-            }
-            printf("\n");
+            ESP_LOGV(LOG_TAG_MSG_RECV_CALLBACK, "2) Encrypted 2-way key to be sent with SEND_KEY_TRANSFERT_0x32: ");
+            ESP_LOG_BUFFER_HEX_LEVEL(LOG_TAG_MSG_RECV_CALLBACK, encrypted_key, sizeof(encrypted_key)/sizeof(encrypted_key[0]), ESP_LOG_VERBOSE);
+
             std::vector<uint8_t> toSend;
             toSend.assign(encrypted_key, encrypted_key + 16);
 
@@ -390,8 +386,8 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
                 //                    challengeAsked.assign(iohc->payload.packet.msg.variableData.data, iohc->payload.packet.msg.variableData.data + iohc->payload.packet.msg.variableData.size);
                 challengeAsked.assign(iohc->payload.buffer + 9, iohc->payload.buffer + 15);
                 const size_t lastSendCmd = IOHC::lastSendCmd.load();
-                printf("Challenge asked after LastSend Command %2.2X\n", lastSendCmd);
-                printf("Challenge asked after Memorized Command %2.2X\n", cozyDevice2W->memorizeSend.memorizedCmd);
+                ESP_LOGV(LOG_TAG_MSG_RECV_CALLBACK, "Challenge asked after last sent command %02X, memorized command %02X", 
+                    lastSendCmd, cozyDevice2W->memorizeSend.memorizedCmd);
 
                 if (Cmd::scanMode) {
                     otherDevice2W->mapValid[lastSendCmd] = iohcDevice::RECEIVED_CHALLENGE_REQUEST_0x3C;
@@ -439,10 +435,8 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
                 // for (int i = 0; i < 16; i++)
                 //     Serial.printf("%02X ", initial_value[i]);
                 // Serial.println();
-                printf("Challenge response %2.2X: ", packet->payload.packet.header.cmd);
-                for (int i = 0; i < dataLen; i++)
-                    printf("%02X ", initial_value[i]);
-                printf("\n");
+                ESP_LOGV(LOG_TAG_MSG_RECV_CALLBACK, "Challenge response %02X: ", packet->payload.packet.header.cmd);
+                ESP_LOG_BUFFER_HEX_LEVEL(LOG_TAG_MSG_RECV_CALLBACK, initial_value, dataLen, ESP_LOG_VERBOSE);
 
                 //                sysTable->addObject(iohc);
                 digitalWrite(RX_LED, digitalRead(RX_LED) ^ 1);
@@ -515,16 +509,7 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
             break;
         }
         case 0x51: {
-            std::vector<uint8_t> nameReceived;
-            nameReceived.assign(iohc->payload.buffer + 9, iohc->payload.buffer + 25);
-            //            std::string asciiName;
-
-            for (char byte: nameReceived) {
-                //    asciiName += std::toupper(byte);
-                printf("%c", std::toupper(byte));
-            }
-            //            printf("%s\n", asciiName.c_str());
-            printf("\n");
+            ESP_LOG_BUFFER_HEXDUMP(LOG_TAG_MSG_RECV_CALLBACK, iohc->payload.buffer + 9, 17, ESP_LOG_VERBOSE);
             break;
         }
         case 0x04:
@@ -539,8 +524,8 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
                 // printf(" Answer %X Cmd %X ", iohc->payload.packet.header.cmd, IOHC::lastSendCmd);
                 otherDevice2W->mapValid[IOHC::lastSendCmd] = iohc->payload.packet.header.cmd;
             }
-        break;
-    }
+            break;
+        }
         case iohcDevice::RECEIVED_STATUS_0xFE: {
             if (Cmd::scanMode) {
                 otherDevice2W->memorizeOther2W = {};
@@ -554,14 +539,12 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
                 keyCap[idx] = iohc->payload.packet.msg.p0x30.enc_key[idx];
 
             iohcCrypto::encrypt_1W_key((const uint8_t *) iohc->payload.packet.header.source, (uint8_t *) keyCap);
-            printf("CLEAR KEY: ");
-            for (unsigned char idx: keyCap)
-                printf("%2.2X", idx);
-            printf("\n");
+            ESP_LOGV(LOG_TAG_MSG_RECV_CALLBACK, "CLEAR KEY: ");
+            ESP_LOG_BUFFER_HEXDUMP(LOG_TAG_MSG_RECV_CALLBACK, keyCap, sizeof(keyCap)/sizeof(keyCap[0]), ESP_LOG_VERBOSE);
             break;
         }
         case 0X2E: {
-            printf("1W Learning mode\n");
+            ESP_LOGV(LOG_TAG_MSG_RECV_CALLBACK, "1W Learning mode");
             break;
         }
         case 0x39: {
@@ -570,10 +553,8 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
             std::vector<uint8_t> frame(&iohc->payload.packet.header.cmd, &iohc->payload.packet.header.cmd + 2);
             // frame = {0x39, 0x00}; //
             iohcCrypto::create_1W_hmac(hmac, iohc->payload.packet.msg.p0x39.sequence, keyCap, frame);
-            printf("MAC: ");
-            for (uint8_t idx = 0; idx < 6; idx++)
-                printf("%2.2X", hmac[idx]);
-            printf("\n");
+            ESP_LOGV(LOG_TAG_MSG_RECV_CALLBACK, "MAC: ");
+            ESP_LOG_BUFFER_HEXDUMP(LOG_TAG_MSG_RECV_CALLBACK, hmac, sizeof(hmac)/sizeof(hmac[0]), ESP_LOG_VERBOSE);
             break;
         }
         case iohcDevice::RECEIVED_CHALLENGE_ANSWER_0x3D:
@@ -582,7 +563,7 @@ bool msgRcvd(IOHC::iohcPacket *iohc) {
         case 0x4A:
         case 0X05: break;
         default:
-            printf("Received Unknown command %02X ", iohc->payload.packet.header.cmd);
+            ESP_LOGV(LOG_TAG_MSG_RECV_CALLBACK, "Received unknown command %02X", iohc->payload.packet.header.cmd);
             return false;
             break;
     }
@@ -661,7 +642,7 @@ bool msgArchive(IOHC::iohcPacket *iohc) {
     }
     radioPackets[nextPacket] = new IOHC::iohcPacket;
     if (!radioPackets[nextPacket]) {
-        Serial.printf("*** Malloc failed!\n");
+        ESP_LOGE(LOG_TAG_MSG_ARCHIVE_CALLBACK, "*** Malloc failed!");
         return false;
     }
 
@@ -674,10 +655,10 @@ bool msgArchive(IOHC::iohcPacket *iohc) {
         radioPackets[nextPacket]->payload.buffer[i] = iohc->payload.buffer[i];
 
     nextPacket += 1;
-    Serial.printf("-> %d\r", nextPacket);
+    ESP_LOGV(LOG_TAG_MSG_ARCHIVE_CALLBACK, "Packet count in packet buffer: %d\r", nextPacket);
     if (nextPacket >= IOHC_INBOUND_MAX_PACKETS) {
         nextPacket = IOHC_INBOUND_MAX_PACKETS - 1;
-        Serial.printf("*** Not enough buffers available. Please erase current ones\n");
+        ESP_LOGE(LOG_TAG_MSG_ARCHIVE_CALLBACK, "*** Not enough buffers available. Please erase current ones");
         return false;
     }
 

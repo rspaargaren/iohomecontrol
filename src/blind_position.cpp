@@ -3,6 +3,8 @@
 #include <Arduino.h>
 #include <algorithm>
 
+#define LOG_TAG "blind_position"
+
 namespace IOHC {
     BlindPosition::BlindPosition(uint32_t travelTimeSec)
             : state(State::Idle), travelTime(travelTimeSec), lastUpdateUs(0), position(0.0f) {}
@@ -13,21 +15,21 @@ namespace IOHC {
 
     void BlindPosition::startOpening() {
         update();
-        Serial.printf("[BlindPosition] start opening (pos=%.1f%%)\n", position);
+        ESP_LOGI(LOG_TAG, "start opening (pos=%.1f%%)", position);
         state = State::Opening;
         lastUpdateUs = esp_timer_get_time();
     }
 
     void BlindPosition::startClosing() {
         update();
-        Serial.printf("[BlindPosition] start closing (pos=%.1f%%)\n", position);
+        ESP_LOGI(LOG_TAG, "start closing (pos=%.1f%%)", position);
         state = State::Closing;
         lastUpdateUs = esp_timer_get_time();
     }
 
     void BlindPosition::stop() {
         update();
-        Serial.printf("[BlindPosition] stop (pos=%.1f%%)\n", position);
+        ESP_LOGI(LOG_TAG, "stop (pos=%.1f%%)", position);
         state = State::Idle;
     }
 
@@ -60,7 +62,7 @@ namespace IOHC {
     position = std::clamp(position, 0.0f, 100.0f);
 
     lastUpdateUs = now;
-    Serial.printf("[BlindPosition] update (state=%d pos=%.1f%%)\n", static_cast<int>(state), position);
+    ESP_LOGI(LOG_TAG, "update (state=%d pos=%.1f%%)", static_cast<int>(state), position);
 }
 
     float BlindPosition::getPosition() const { return position; }

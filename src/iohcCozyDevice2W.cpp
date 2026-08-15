@@ -20,6 +20,8 @@
 #include <ArduinoJson.h>
 #include <numeric>
 
+#define LOG_TAG "iohcCozy2W"
+
 namespace IOHC {
     iohcCozyDevice2W *iohcCozyDevice2W::_iohcCozyDevice2W = nullptr;
 
@@ -76,7 +78,7 @@ namespace IOHC {
     /// Emulates device button press
     void iohcCozyDevice2W::cmd(DeviceButton cmd, Tokens *data) {
         if (!_radioInstance) {
-            Serial.println("NO RADIO INSTANCE");
+            ESP_LOGD(LOG_TAG, "NO RADIO INSTANCE");
             _radioInstance = IOHC::iohcRadio::getInstance();
         }
 
@@ -280,9 +282,9 @@ namespace IOHC {
         _radioInstance = iohcRadio::getInstance();
         // Load Cozy 2W device settings from file
         if (LittleFS.exists(COZY_2W_FILE))
-            Serial.printf("Loading Cozy 2W devices settings from %s\n", COZY_2W_FILE);
+            ESP_LOGI(LOG_TAG, "Loading Cozy 2W devices settings from %s", COZY_2W_FILE);
         else {
-            Serial.printf("*2W Cozy devices not available\n");
+            ESP_LOGE(LOG_TAG, "2W Cozy devices not available");
             return false;
         }
 
@@ -311,8 +313,8 @@ namespace IOHC {
             //     _manufacturer = jobj["manufacturer_id"].as<uint8_t>();
             devices.push_back(d);
         }
-        Serial.printf("Loaded %d x 2W devices\n", devices.size()); // _type.size());
 
+        ESP_LOGI(LOG_TAG, "Loaded %d x Cozy 2W devices", devices.size());
         return true;
     }
 

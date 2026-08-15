@@ -36,15 +36,16 @@ namespace {
             return true;
         }
 
-        if (msg.startsWith("[D]") || msg.startsWith("[V]")) {
+#if CONFIG_LOG_COLORS
+        const size_t logLevelPosition = 7;
+#else
+        const size_t logLevelPosition = 0;
+#endif /* CONFIG_LOG_COLORS */
+
+        if (msg[logLevelPosition] == 'D' || msg[logLevelPosition] == 'V') {
             return false;
         }
-
-        if (msg.indexOf("TX: TX-RX DONE") >= 0 ||
-            msg.indexOf("State:") >= 0) {
-            return false;
-        }
-
+        
         static unsigned long lastBroadcastMs = 0;
         const unsigned long now = millis();
         if (now - lastBroadcastMs < 50) {

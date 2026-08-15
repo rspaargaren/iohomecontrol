@@ -29,6 +29,8 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
+#define LOG_TAG "display"
+
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RST);
 DisplayBuffer displayBuffer;
 SemaphoreHandle_t displayBufferMutex = xSemaphoreCreateMutex();
@@ -161,7 +163,7 @@ bool initDisplay() {
 
     if (xTaskCreatePinnedToCore(displayTask, "DisplayTask", 4096, nullptr, 1,
                                 &displayTaskHandle, tskNO_AFFINITY) != pdPASS) {
-        Serial.println("Failed to create display task");
+        ESP_LOGE(LOG_TAG, "Failed to create display task");
         return false;
     }
 

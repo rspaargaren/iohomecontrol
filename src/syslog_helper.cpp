@@ -20,6 +20,8 @@
 #define SYSLOG_APP "MIOPENIO"        // rsyslog will use this as %PROGRAMNAME%
 #endif
 
+#define LOG_TAG "SYSLOG"
+
 // Define SYSLOG_RFC5424 to send RFC5424 instead of RFC3164
 // #define SYSLOG_RFC5424
 
@@ -28,7 +30,6 @@ namespace {
     IPAddress    syslogIP;
     bool         syslogReady  = false;
     bool         configLoaded = false;
-    static const char *TAG    = "SYSLOG";
 
     inline int pri(int facility, int severity) {
         if (severity < 0) severity = 6;     // default info
@@ -103,30 +104,30 @@ namespace {
 void initSyslog() {
     ensureConfigLoaded();
 
-    ESP_LOGD(TAG, "Init syslog: enabled=%d server='%s' port=%u",
+    ESP_LOGD(LOG_TAG, "Init syslog: enabled=%d server='%s' port=%u",
              syslog_enabled ? 1 : 0, syslog_server.c_str(), syslog_port);
 
     if (!syslog_enabled) {
-        ESP_LOGD(TAG, "Syslog disabled - not initializing");
+        ESP_LOGW(LOG_TAG, "Syslog disabled - not initializing");
         resetSyslog();
         return;
     }
 
     if (syslog_server.empty()) {
-        ESP_LOGD(TAG, "Syslog server not set");
+        ESP_LOGE(LOG_TAG, "Syslog server not set");
         resetSyslog();
         return;
     }
 
     if (syslog_port == 0 || syslog_port > 65535) {
-        ESP_LOGD(TAG, "Invalid syslog port: %u", syslog_port);
+        ESP_LOGE(LOG_TAG, "Invalid syslog port: %u", syslog_port);
         resetSyslog();
         return;
     }
 
     if (!syslogIP.fromString(syslog_server.c_str())) {
         if (WiFi.hostByName(syslog_server.c_str(), syslogIP) != 1) {
-            ESP_LOGD(TAG, "Unable to resolve syslog server: %s", syslog_server.c_str());
+            ESP_LOGE(LOG_TAG, "Unable to resolve syslog server: %s", syslog_server.c_str());
             resetSyslog();
             return;
         }
@@ -137,7 +138,7 @@ void initSyslog() {
         syslogReady = true;
     }
 
-    ESP_LOGD(TAG, "Syslog initialized with IP: %s", syslogIP.toString().c_str());
+    ESP_LOGI(LOG_TAG, "Syslog initialized with IP: %s", syslogIP.toString().c_str());
 }
 
 // Real sender with RFC header
@@ -150,11 +151,11 @@ void sendSyslog(const String &msg, int severity) {
         return;
     }
     if (!syslogReady) {
-        ESP_LOGD(TAG, "Syslog not ready, initializing");
+        ESP_LOGI(LOG_TAG, "Syslog not ready, initializing");
         initSyslog();
     }
     if (!syslog_enabled || !syslogReady) {
-        ESP_LOGD(TAG, "Syslog initialization failed");
+        ESP_LOGE(LOG_TAG, "Syslog initialization failed");
         return;
     }
 
@@ -167,11 +168,11 @@ void sendSyslog(const String &msg, int severity) {
     const String header = "<" + String(p) + ">" + ho + " " + SYSLOG_APP + ": ";
     const String wire   = header + "[" SYSLOG_SECRET "] " + msg;
 
-    ESP_LOGD(TAG, "Sending syslog (len=%u): %s", wire.length(), wire.c_str());
+    ESP_LOGD(LOG_TAG, "Sending syslog (len=%u): %s", wire.length(), wire.c_str());
     syslogUdp.beginPacket(syslogIP, syslog_port);
     syslogUdp.write(reinterpret_cast<const uint8_t*>(wire.c_str()), wire.length());
     int result = syslogUdp.endPacket();
-    ESP_LOGD(TAG, "Message send result: %d", result);
+    ESP_LOGD(LOG_TAG, "Message send result: %d", result);
 }
 
 // Legacy overload without severity (defaults to info)

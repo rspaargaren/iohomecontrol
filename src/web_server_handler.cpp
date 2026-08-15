@@ -31,6 +31,8 @@
 // #include "main.h" // Or other relevant headers to access device data and
 // command functions
 
+#define LOG_TAG "http"
+
 // Assume ESPAsyncWebServer for now.
 // If you use WebServer.h, the setup and request handling will be different.
 AsyncWebServer server(80); // Create AsyncWebServer object on port 80
@@ -864,19 +866,21 @@ void handleFirmwareUpload(AsyncWebServerRequest *request, String filename,
                           size_t index, uint8_t *data, size_t len,
                           bool final) {
   if (!index) {
-    Serial.printf("Firmware upload start: %s\n", filename.c_str());
+    ESP_LOGI(LOG_TAG, "Firmware upload start: %s", filename.c_str());
     if (!Update.begin(UPDATE_SIZE_UNKNOWN)) {
-      Update.printError(Serial);
+      ESP_LOGE(LOG_TAG, "Update begin error: %s", Update.errorString());
     }
   }
   if (!Update.hasError()) {
     if (Update.write(data, len) != len) {
-      Update.printError(Serial);
+      ESP_LOGE(LOG_TAG, "Update error: %s", Update.errorString());
     }
   }
   if (final) {
     if (!Update.end(true)) {
-      Update.printError(Serial);
+      ESP_LOGE(LOG_TAG, "Update end error: %s", Update.errorString());
+    } else {
+      ESP_LOGI(LOG_TAG, "Firmware upload complete: %u bytes", index + len);
     }
   }
 }
@@ -910,36 +914,36 @@ void handleFilesystemUpload(AsyncWebServerRequest *request, String filename,
                             size_t index, uint8_t *data, size_t len,
                             bool final) {
   if (!index) {
-    Serial.printf("Filesystem upload start: %s\n", filename.c_str());
+    ESP_LOGI(LOG_TAG, "Filesystem upload start: %s", filename.c_str());
     LittleFS.end();
     if (!Update.begin(UPDATE_SIZE_UNKNOWN, U_SPIFFS)) {
-      Update.printError(Serial);
+      ESP_LOGE(LOG_TAG, "Filesystem update begin error: %s", Update.errorString());
       return;
     }
   }
   if (!Update.hasError()) {
     if (len && Update.write(data, len) != len) {
-      Update.printError(Serial);
+      ESP_LOGE(LOG_TAG, "Filesystem update write error: %s", Update.errorString());
     }
   }
   if (final) {
     if (!Update.end(true)) {
-      Update.printError(Serial);
+      ESP_LOGE(LOG_TAG, "Filesystem update end error: %s", Update.errorString());
     } else {
-      Serial.printf("Filesystem upload complete: %u bytes\n", index + len);
+      ESP_LOGI(LOG_TAG, "Filesystem upload complete: %u bytes", index + len);
     }
   }
 }
 
 void setupWebServer() {
-  Serial.println("Initializing HTTP server ...");
+  ESP_LOGI(LOG_TAG, "Initializing HTTP server ...");
 
   // Serve static files from /web_interface_data
   // Ensure this path matches where your platformio.ini places data files
   // or how you upload them (e.g., SPIFFS, LittleFS).
   // The path "/" serves index.html from the data directory.
   if (!LittleFS.exists("/web_interface_data/index.html")) {
-    Serial.println("Warning: /web_interface_data/index.html not found");
+    ESP_LOGW(LOG_TAG, "/web_interface_data/index.html not found");
   }
 
   // API Endpoints
@@ -1014,7 +1018,7 @@ void setupWebServer() {
   });
 
   server.begin();
-  Serial.println("HTTP server started");
+  ESP_LOGI(LOG_TAG, "HTTP server started");
 }
 
 void loopWebServer() {

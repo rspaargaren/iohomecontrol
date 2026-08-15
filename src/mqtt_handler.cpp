@@ -20,6 +20,8 @@
 #include <atomic>
 #include "wifi_helper.h"
 
+#define LOG_TAG "mqtt"
+
 AsyncMqttClient mqttClient;
 static const char AVAILABILITY_TOPIC[] = "iown/status";
 static const char FREE_MEM_TOPIC[] = "iown/info/free_mem";
@@ -70,7 +72,7 @@ static void stopHeartbeat() {
 static void storeHardcodedConfigValue(const char* desc, const char* key, std::string &value) {
     if (!nvs_read_string(key, value)) {
         if (value.empty()) {
-            Serial.printf("%s not set\n", desc);
+            ESP_LOGE(LOG_TAG, "storeHardcodedConfigValue: %s not set", desc);
         } else {
             nvs_write_string(key, value);
         }
@@ -98,7 +100,7 @@ void initMqtt() {
 
     if (xTaskCreatePinnedToCore(mqttSchedulerTask, "mqttScheduler", 4096, nullptr,
                                 1, &s_mqttSchedulerTask, tskNO_AFFINITY) != pdPASS) {
-        Serial.println("Failed to create MQTT scheduler task");
+        ESP_LOGE(LOG_TAG, "Failed to create MQTT scheduler task");
         s_mqttSchedulerTask = nullptr;
         return;
     }
@@ -379,24 +381,22 @@ void connectToMqtt() {
         return;  // Avoid parallel connection attempts
     }
     if (WiFi.status() != WL_CONNECTED) {
-        Serial.println("WiFi not connected, skipping MQTT connection");
+        ESP_LOGW(LOG_TAG, "WiFi not connected, skipping MQTT connection");
         return;
     }
     if (mqtt_server.empty()) {
-        Serial.println("MQTT server not configured");
+        ESP_LOGE(LOG_TAG, "MQTT server not configured");
         return;
     }
     s_lastMqttConnectAttemptMs = millis();
-    Serial.printf("Connecting to MQTT at %s:%u...\n", mqtt_server.c_str(), mqtt_port);
-    addLogMessage(String("Connecting to MQTT at ") + mqtt_server.c_str() + ":" + String(mqtt_port));
+    ESP_LOGI(LOG_TAG, "Connecting to MQTT at %s:%u...", mqtt_server.c_str(), mqtt_port);
     mqttStatus = ConnState::Connecting;
     updateDisplayStatus();
     mqttClient.connect();
 }
 
 void onMqttConnect(bool sessionPresent) {
-    Serial.println("Connected to MQTT.");
-    addLogMessage(String("Connected to MQTT at ") + mqtt_server.c_str() + ":" + String(mqtt_port));
+    ESP_LOGI(LOG_TAG, "Connected to MQTT.");
     mqttStatus = ConnState::Connected;
     updateDisplayStatus();
 
@@ -424,9 +424,7 @@ void onMqttConnect(bool sessionPresent) {
 }
 
 void onMqttDisconnect(AsyncMqttClientDisconnectReason reason) {
-    Serial.print("Disconnected from MQTT. Reason: ");
-    Serial.println(static_cast<uint8_t>(reason));
-    addLogMessage(String("Disconnected from MQTT (reason ") + String(static_cast<uint8_t>(reason)) + ")");
+    ESP_LOGW(LOG_TAG, "Disconnected from MQTT (reason: %d)", static_cast<uint8_t>(reason));
     mqttStatus = ConnState::Disconnected;
     updateDisplayStatus();
     stopHeartbeat();
@@ -523,18 +521,18 @@ void mqttFuncHandler(const char *cmd) {
     constexpr char delim = ' ';
     Tokens segments;
     tokenize(cmd + 5, delim, segments);
-    Serial.printf("Search for %s\t", segments[0].c_str());
+    ESP_LOGD(LOG_TAG, "Search for %s", segments[0].c_str());
     for (uint8_t idx = 0; idx <= lastEntry; ++idx) {
         if (_cmdHandler[idx] == nullptr) continue;
         if (segments[0].find(_cmdHandler[idx]->cmd) != std::string::npos) {
-            Serial.printf(" %s %s (%s)\n", _cmdHandler[idx]->cmd,
+            ESP_LOGD(LOG_TAG, "found %s %s (%s)", _cmdHandler[idx]->cmd,
                           segments.size() > 1 ? segments[1].c_str() : "No param",
                           _cmdHandler[idx]->description);
             _cmdHandler[idx]->handler(&segments);
             return;
         }
     }
-    Serial.printf("*> MQTT Unknown %s <*\n", segments[0].c_str());
+    ESP_LOGE(LOG_TAG, "Unknown %s", segments[0].c_str());
 }
 
 void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties properties,
@@ -546,7 +544,7 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
     memcpy(buf, payload, len);
     buf[len] = '\0';
 
-    Serial.printf("Received MQTT %s %s %d\n", topic, buf, len);
+    ESP_LOGD(LOG_TAG, "Received MQTT %s %s %d", topic, buf, len);
 
     std::string topicStr(topic);
     std::string payloadStr(buf);
@@ -632,12 +630,12 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
             } else if (payloadStr == "force") {
                 IOHC::iohcRemote1W::getInstance()->cmd(IOHC::RemoteButton::ForceOpen, &t);
             } else {
-                Serial.printf("*> MQTT Unknown %s <*\n", payloadStr.c_str());
+                ESP_LOGE(LOG_TAG, "Unknown %s", payloadStr.c_str());
             }
             // Clear retained set message
             mqttClient.publish(topicStr.c_str(), 0, true, "", 0);
         } else {
-            Serial.printf("*> MQTT Unknown device %s <*\n", id.c_str());
+            ESP_LOGE(LOG_TAG, "Unknown device %s", id.c_str());
         }
         return;
     }
@@ -695,7 +693,7 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
 
     JsonDocument doc;
     if (deserializeJson(doc, buf) != DeserializationError::Ok) {
-        Serial.println(F("Failed to parse JSON"));
+        ESP_LOGE(LOG_TAG, "Failed to parse JSON");
         return;
     }
 

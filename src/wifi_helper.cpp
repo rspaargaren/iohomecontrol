@@ -30,6 +30,8 @@
 #include <TickerUsESP32.h>
 #include <tuple>
 
+#define LOG_TAG "wifi"
+
 const long PORTAL_TIMEOUT = 300000; // 5 minuten = 300.000 ms, used only as a fallback if NVS has no configured timeout
 const uint32_t WIFI_NOTIFY_GOT_IP = BIT0;
 const uint32_t WIFI_NOTIFY_DISCONNECTED = BIT1;
@@ -99,7 +101,7 @@ static void handleWifiConnected() {
         s_wifiReconnectAttempts = 0;
 
         if (WiFi.getMode() == WIFI_AP_STA) {
-            Serial.println("WiFi: connected, disabling fallback AP mode");
+            ESP_LOGI(LOG_TAG, "Connected, disabling fallback AP mode");
             WiFi.mode(WIFI_STA);
         }
 
@@ -109,10 +111,10 @@ static void handleWifiConnected() {
 
         if (!mdnsStarted) {
             if (!MDNS.begin("miopenio")) {
-                Serial.println("WiFi: mDNS start failed");
+                ESP_LOGE(LOG_TAG, "mDNS start failed");
             } else {
                 mdnsStarted = true;
-                Serial.println("WiFi: mDNS started at http://miopenio.local");
+                ESP_LOGI(LOG_TAG, "mDNS started at http://miopenio.local");
             }
         }
 
@@ -126,7 +128,7 @@ static void handleWifiConnected() {
 }
 
 static void configureWifiDisconnected() {
-    Serial.println("WiFi: connection lost (event)");
+    ESP_LOGW(LOG_TAG, "Connection lost (event)");
     wifiStatus.connectionStatus = ConnState::Disconnected;
     wifiStatus.signalStrengthPercent = 0;
     wifiStatus.rssi = 0;
@@ -230,10 +232,10 @@ static void applySavedNetworkSettings() {
 
     if (hasIp && hasGateway && hasMask) {
         if (!WiFi.config(ip, gateway, mask, dns1, dns2)) {
-            Serial.println("WiFi: static network config failed, falling back to DHCP");
+            ESP_LOGE(LOG_TAG, "static network config failed, falling back to DHCP");
         }
     } else {
-        Serial.println("WiFi: static network config incomplete, falling back to DHCP");
+        ESP_LOGE(LOG_TAG, "static network config incomplete, falling back to DHCP");
     }
 }
 
@@ -255,8 +257,7 @@ static uint32_t readFallbackTimeoutMs() {
 }
 
 static void resetWiFiStack() {
-    Serial.println("WiFi: Resetting WiFi stack after prolonged disconnect...");
-    addLogMessage("WiFi: resetting WiFi stack");
+    ESP_LOGW(LOG_TAG, "resetting WiFi stack after prolonged disconnect...");
     WiFi.disconnect(false, false);
     vTaskDelay(pdMS_TO_TICKS(250));
     WiFi.mode(WIFI_OFF);
@@ -272,7 +273,7 @@ static void runConfigPortal(const std::string& ssid, bool hasWifiConfiguration);
 
 static void triggerWiFiReconnect() {
     if (WiFi.status() != WL_CONNECTED) {
-        Serial.println("WiFi: Trigger WiFi reconnect...");
+        ESP_LOGW(LOG_TAG, "Trigger WiFi reconnect...");
         applyAdvancedWiFiSettings();
         WiFi.mode(WIFI_STA);
         WiFi.begin();
@@ -285,8 +286,7 @@ static void triggerWiFiReconnect() {
         const uint16_t runtimeFallbackRetries = readFallbackU16(NVS_KEY_FB_RUN, 3);
         if (readFallbackEnabled() && runtimeFallbackRetries > 0 &&
             s_wifiReconnectAttempts >= runtimeFallbackRetries) {
-            Serial.println("WiFi: opening fallback AP after reconnect retries");
-            addLogMessage("WiFi: opening fallback AP after reconnect retries");
+            ESP_LOGW(LOG_TAG, "opening fallback AP after reconnect retries");
             s_wifiReconnectAttempts = 0;
             runConfigPortal(getConfiguredSSID(), true);
             return;
@@ -299,8 +299,7 @@ static void triggerWiFiReconnect() {
             }
 
             if (static_cast<int32_t>(now - s_wifiDisconnectedSinceMs) >= static_cast<int32_t>(WIFI_RESTART_AFTER_MS)) {
-                Serial.println("WiFi: disconnected too long, restarting device");
-                addLogMessage("WiFi: disconnected too long, restarting device");
+                ESP_LOGE(LOG_TAG, "disconnected too long, restarting device");
                 esp_restart();
             }
         }
@@ -314,9 +313,9 @@ static std::tuple<int, int> millisToMinutesAndSeconds(long millis) {
 
 static void runConfigPortal(const std::string& ssid, bool hasWifiConfiguration) {
     if (hasWifiConfiguration) {
-        Serial.println("WiFi: Configured network not found, opening Config Portal...");
+        ESP_LOGW(LOG_TAG, "Configured network not found, opening Config Portal...");
     } else {
-        Serial.println("WiFi: No WiFi network configured, opening Config Portal...");
+        ESP_LOGW(LOG_TAG, "No WiFi network configured, opening Config Portal...");
     }
 
     WiFiManager wm;
@@ -361,13 +360,13 @@ static void runConfigPortal(const std::string& ssid, bool hasWifiConfiguration) 
                 esp_restart();
             }
         } else if (portalTimeoutMs > 0 && millisRemaining < 0) {
-            Serial.println("WiFi: Config portal timeout, closing portal...");
+            ESP_LOGI(LOG_TAG, "Config portal timeout, closing portal...");
             portalClosed = true;
 
             if (hasWifiConfiguration) {
-                Serial.printf("WiFi: Device keeps waiting for connection on network: %s. Restart to re-open config portal.\n", ssid.c_str());
+                ESP_LOGW(LOG_TAG, "Device keeps waiting for connection on network: %s. Restart to re-open config portal.", ssid.c_str());
             } else {
-                Serial.println("WiFi: Restart the device manually to re-open the config portal!");
+                ESP_LOGE(LOG_TAG, "Restart the device manually to re-open the config portal!");
             }
         }
     }
@@ -387,7 +386,7 @@ static void wifiWorker(void * pvParameters) {
         for (uint16_t attempt = 0; attempt < bootRetries && status != WL_CONNECTED; ++attempt) {
             applyAdvancedWiFiSettings();
             WiFi.begin();
-            Serial.printf("WiFi: Attempt connection to '%s' (%u/%u)...\n", ssid.c_str(), attempt + 1, bootRetries);
+            ESP_LOGI(LOG_TAG, "Attempt connection to '%s' (%u/%u)...", ssid.c_str(), attempt + 1, bootRetries);
             status = (wl_status_t)WiFi.waitForConnectResult(10000);
         }
     }
@@ -454,7 +453,7 @@ void initWifi() {
     WiFi.onEvent(onWiFiEvent);
     WiFi.setAutoReconnect(true);
 
-    Serial.printf("WiFi MAC: %s\n", WiFi.macAddress().c_str());
+    ESP_LOGD(LOG_TAG, "MAC: %s", WiFi.macAddress().c_str());
 }
 
 void clearWifi() {

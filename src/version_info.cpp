@@ -21,6 +21,8 @@ extern "C" {
 #include "freertos/task.h"
 }
 
+#define LOG_TAG "version_check"
+
 namespace {
 
 constexpr uint32_t VERSION_CHECK_INTERVAL_MS = 24UL * 60UL * 60UL * 1000UL;
@@ -110,12 +112,11 @@ void publishVersionInfoUpdate() {
 #endif
 
   const auto versionInfo = getVersionInfo();
-  Serial.printf(
-      "Firmware update check results:\n"
-      " - latestVersion: %s\n"
-      " - hasUpdate: %s\n"
-      " - checkSucceeded: %s\n"
-      " - checkError: %s\n",
+  ESP_LOGI(LOG_TAG, "Firmware update check results: "
+      "latestVersion: %s, "
+      "hasUpdate: %s, "
+      "checkSucceeded: %s, "
+      "checkError: %s",
       versionInfo.latestVersion.c_str(),
       versionInfo.updateAvailable ? "true" : "false",
       versionInfo.checkOk ? "true" : "false",
@@ -128,7 +129,7 @@ const char *githubCaPem() {
   const auto *bundleEnd = _binary_extras_github_ca_pem_end;
   const auto bundleSize = static_cast<unsigned int>(bundleEnd - bundleStart);
   if (bundleSize == 0) {
-    Serial.println("Failed to locate embedded CA bundle");
+    ESP_LOGE(LOG_TAG, "Failed to locate embedded CA bundle");
     return nullptr;
   }
 
@@ -138,7 +139,7 @@ const char *githubCaPem() {
   }
 
   if (s_globalCaPem.empty()) {
-    Serial.println("Embedded CA bundle is empty");
+    ESP_LOGE(LOG_TAG, "Embedded CA bundle is empty");
     return nullptr;
   }
 
@@ -271,7 +272,7 @@ void checkLatestRelease() {
     state.lastCheckAtMs = now;
   });
 
-  Serial.printf("Version check: current=%s latest=%s update=%s\n",
+  ESP_LOGI(LOG_TAG, "Version check: current=%s latest=%s update=%s",
                 firmwareVersion(), latestVersion.c_str(),
                 updateAvailable ? "yes" : "no");
   publishVersionInfoUpdate();
@@ -314,17 +315,17 @@ void initVersionInfo() {
   }
 
   if (std::string(firmwareVersion()) == "DEV") {
-    Serial.println("Disabling automatic version check for DEV versions. Only officially released versions have automated version checking.");
+    ESP_LOGW(LOG_TAG, "Disabling automatic version check for DEV versions. Only officially released versions have automated version checking.");
   } else {
     s_versionInfoMutex = xSemaphoreCreateMutex();
     if (!s_versionInfoMutex) {
-      Serial.println("Failed to create version info mutex");
+      ESP_LOGE(LOG_TAG, "Failed to create version info mutex");
       return;
     }
 
     if (xTaskCreatePinnedToCore(versionInfoTask, "versionInfo", 8192, nullptr, 1,
                                 &s_versionInfoTask, tskNO_AFFINITY) != pdPASS) {
-      Serial.println("Failed to create version info task");
+      ESP_LOGE(LOG_TAG, "Failed to create version info task");
       vSemaphoreDelete(s_versionInfoMutex);
       s_versionInfoMutex = nullptr;
       s_versionInfoTask = nullptr;

@@ -6,6 +6,8 @@
 #include <cstring>
 #include <algorithm>
 
+#define LOG_TAG "iohcRemote"
+
 namespace IOHC {
     iohcRemoteMap* iohcRemoteMap::_instance = nullptr;
 
@@ -32,17 +34,20 @@ namespace IOHC {
 
     bool iohcRemoteMap::load() {
         _entries.clear();
-        if (!LittleFS.exists(REMOTE_MAP_FILE)) {
-            Serial.printf("*remote map not available\n");
+
+        if (LittleFS.exists(REMOTE_MAP_FILE))
+            ESP_LOGI(LOG_TAG, "Loading remote map settings from %s", REMOTE_MAP_FILE);
+        else {
+            ESP_LOGE(LOG_TAG, "Remote map settings not available");
             return false;
         }
+
         fs::File f = LittleFS.open(REMOTE_MAP_FILE, "r");
         JsonDocument doc;
         DeserializationError error = deserializeJson(doc, f);
         f.close();
         if (error) {
-            Serial.print("Failed to parse JSON: ");
-            Serial.println(error.c_str());
+            ESP_LOGE(LOG_TAG, "Failed to parse remote map settings JSON: %s", error.c_str());
             return false;
         }
         for (JsonPair kv : doc.as<JsonObject>()) {
@@ -56,7 +61,8 @@ namespace IOHC {
             }
             _entries.push_back(e);
         }
-        Serial.printf("Loaded %d remotes map\n", _entries.size());
+
+        ESP_LOGI(LOG_TAG, "Loaded %d remotes", _entries.size());
         return true;
     }
 
@@ -75,7 +81,7 @@ namespace IOHC {
     bool iohcRemoteMap::save() {
         fs::File f = LittleFS.open(REMOTE_MAP_FILE, "w");
         if (!f) {
-            Serial.println("Failed to open remote map for writing");
+            ESP_LOGE(LOG_TAG, "Failed to open remote map settings file %s for writing", REMOTE_MAP_FILE);
             return false;
         }
         JsonDocument doc;
@@ -94,7 +100,7 @@ namespace IOHC {
 
     bool iohcRemoteMap::add(const address node, const std::string &name) {
         if (find(node)) {
-            Serial.println("Remote already exists");
+            ESP_LOGE(LOG_TAG, "Remote %02X%02X%02X already exists", node[0], node[1], node[2]);
             return false;
         }
         entry e{};
@@ -112,11 +118,13 @@ namespace IOHC {
                     e.devices.push_back(desc);
                     return save();
                 }
-                Serial.println("Device already linked");
+                
+                ESP_LOGE(LOG_TAG, "Device '%s' already linked", device.c_str());
                 return false;
             }
         }
-        Serial.println("Remote not found");
+
+        ESP_LOGE(LOG_TAG, "Remote %02X%02X%02X not found", node[0], node[1], node[2]);
         return false;
     }
 
@@ -129,11 +137,13 @@ namespace IOHC {
                     e.devices.erase(it);
                     return save();
                 }
-                Serial.println("Device not found");
+
+                ESP_LOGE(LOG_TAG, "Device '%s' not found", device.c_str());
                 return false;
             }
         }
-        Serial.println("Remote not found");
+
+        ESP_LOGE(LOG_TAG, "Remote %02X%02X%02X not found", node[0], node[1], node[2]);
         return false;
     }
 
@@ -141,7 +151,7 @@ namespace IOHC {
         auto it = std::find_if(_entries.begin(), _entries.end(),
                                [&](const entry &e) { return memcmp(e.node, node, sizeof(address)) == 0; });
         if (it == _entries.end()) {
-            Serial.println("Remote not found");
+            ESP_LOGE(LOG_TAG, "Remote %02X%02X%02X not found", node[0], node[1], node[2]);
             return false;
         }
         it->name = name;
@@ -152,7 +162,7 @@ namespace IOHC {
         auto it = std::find_if(_entries.begin(), _entries.end(),
                                [&](const entry &e) { return memcmp(e.node, node, sizeof(address)) == 0; });
         if (it == _entries.end()) {
-            Serial.println("Remote not found");
+            ESP_LOGE(LOG_TAG, "Remote %02X%02X%02X not found", node[0], node[1], node[2]);
             return false;
         }
         _entries.erase(it);
