@@ -94,9 +94,11 @@
                 if (data.success) {
                     window.location.href = '/';
                 } else {
+                    document.getElementById('error').innerText = data.message || 'Invalid credentials';
                     document.getElementById('error').style.display = 'block';
                 }
             } catch (err) {
+                document.getElementById('error').innerText = 'Connection error';
                 document.getElementById('error').style.display = 'block';
             }
         });

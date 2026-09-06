@@ -33,13 +33,13 @@
 std::string current_session_token = "";
 
 // Global variables for brute-force protection
-static uint8_t failed_login_attempts = 0;
-static unsigned long last_login_attempt = 0;
-const unsigned long MIN_ATTEMPT_INTERVAL_MS = 1000; // 1 second between any attempts
-const uint8_t MAX_FAILED_ATTEMPTS = 5;
-const unsigned long LOCKOUT_DURATION_MS = 10000; // 10 seconds lockout after 5 fails
+static unsigned long last_failed_login_attempt = 0;
+const unsigned long MIN_FAILED_LOGIN_INTERVAL_MS = 2000; // 2 seconds delay after any failed attempt
 
 bool isAuthenticated(AsyncWebServerRequest *request) {
+#if defined(DISABLE_WEB_AUTH)
+  return true;
+#else
   if (current_session_token.empty()) return false;
   if (request->hasHeader("Cookie")) {
     String cookie = request->header("Cookie");
@@ -48,6 +48,7 @@ bool isAuthenticated(AsyncWebServerRequest *request) {
     }
   }
   return false;
+#endif
 }
 
 // Assume ESPAsyncWebServer for now.
@@ -622,30 +623,16 @@ void handleApiWifiSet(AsyncWebServerRequest *request, JsonObject &doc, JsonObjec
   scheduleRestart("wifi-reboot");
 }
 
+#if !defined(DISABLE_WEB_AUTH)
 void handleApiLogin(AsyncWebServerRequest *request, JsonVariant &json) {
   unsigned long now = millis();
 
-  // Check Tier 2: Hard Lockout (5 fails -> 10 sec)
-  if (failed_login_attempts >= MAX_FAILED_ATTEMPTS) {
-    if (now - last_login_attempt < LOCKOUT_DURATION_MS) {
-      request->send(429, "application/json", "{\"success\":false,\"message\":\"Account locked. Please wait 10 seconds.\"}");
-      return;
-    } else {
-      // Lockout expired, reset the counter
-      failed_login_attempts = 0;
-    }
-  }
-
-  // Check Tier 1: Pacing (1 second between any attempts)
+  // Check Pacing (2 seconds after any failed attempt)
   // We handle rollover of millis() gracefully by subtraction
-  if (last_login_attempt != 0 && (now - last_login_attempt < MIN_ATTEMPT_INTERVAL_MS)) {
-    request->send(429, "application/json", "{\"success\":false,\"message\":\"Too fast. Please wait 1 second.\"}");
+  if (last_failed_login_attempt != 0 && (now - last_failed_login_attempt < MIN_FAILED_LOGIN_INTERVAL_MS)) {
+    request->send(429, "application/json", "{\"success\":false,\"message\":\"Too fast. Please wait 2 seconds.\"}");
     return;
   }
-
-  // Update the timestamp for this attempt (whether it succeeds or fails)
-  last_login_attempt = now;
-
 
   JsonObject doc = json.as<JsonObject>();
   String username = doc["username"] | "";
@@ -653,8 +640,6 @@ void handleApiLogin(AsyncWebServerRequest *request, JsonVariant &json) {
 
   // Validate credentials
   if (username == http_username.c_str() && password == http_password.c_str()) {
-    failed_login_attempts = 0; // Reset counter on success
-    
     char token[17];
     snprintf(token, sizeof(token), "%08x%08x", esp_random(), esp_random());
     current_session_token = token;
@@ -666,7 +651,7 @@ void handleApiLogin(AsyncWebServerRequest *request, JsonVariant &json) {
   }
 
   // On invalid password
-  failed_login_attempts++;
+  last_failed_login_attempt = millis();
   request->send(401, "application/json", "{\"success\":false,\"message\":\"Invalid credentials\"}");
 }
 
@@ -690,6 +675,7 @@ void handleApiAuthSet(AsyncWebServerRequest *request, JsonObject &doc, JsonObjec
   root["success"] = true;
   root["message"] = "Authentication configuration updated";
 }
+#endif
 
 static bool jsonToBool(JsonVariant variant, bool &value) {
   if (variant.is<bool>()) {
@@ -1043,9 +1029,11 @@ void setupWebServer() {
   auto authFilter = [](AsyncWebServerRequest *request) {
     return isAuthenticated(request);
   };
+#if !defined(DISABLE_WEB_AUTH)
   server.on("/api/login", HTTP_POST, handleApiLogin);
   server.on("/api/auth", HTTP_GET, jsonGet(handleApiAuthGet)).setFilter(authFilter);
   server.on("/api/auth", HTTP_POST, jsonPost(handleApiAuthSet)).setFilter(authFilter);
+#endif
 
   // API Endpoints
   server.on("/api/info", HTTP_GET, jsonGet(handleApiInfo)).setFilter(authFilter);
