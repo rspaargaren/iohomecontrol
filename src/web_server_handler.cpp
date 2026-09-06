@@ -28,8 +28,28 @@
 #include <syslog_helper.h>
 #endif
 #include <tokens.h>
-// #include "main.h" // Or other relevant headers to access device data and
-// command functions
+#include <esp_random.h>
+
+std::string current_session_token = "";
+
+// Global variables for brute-force protection
+static unsigned long last_failed_login_attempt = 0;
+const unsigned long MIN_FAILED_LOGIN_INTERVAL_MS = 2000; // 2 seconds delay after any failed attempt
+
+bool isAuthenticated(AsyncWebServerRequest *request) {
+#if defined(DISABLE_WEB_AUTH)
+  return true;
+#else
+  if (current_session_token.empty()) return false;
+  if (request->hasHeader("Cookie")) {
+    String cookie = request->header("Cookie");
+    if (cookie.indexOf(String("session_id=") + current_session_token.c_str()) != -1) {
+      return true;
+    }
+  }
+  return false;
+#endif
+}
 
 // Assume ESPAsyncWebServer for now.
 // If you use WebServer.h, the setup and request handling will be different.
@@ -40,6 +60,12 @@ static void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
                       AwsEventType type, void *arg, uint8_t *data,
                       size_t len) {
   if (type == WS_EVT_CONNECT) {
+    AsyncWebServerRequest *request = (AsyncWebServerRequest*)arg;
+    if (!isAuthenticated(request)) {
+      client->close(4000, "Unauthorized");
+      return;
+    }
+
     // Ensure we broadcast the current position before sending init message
     IOHC::iohcRemote1W::getInstance()->updatePositions();
 
@@ -597,6 +623,60 @@ void handleApiWifiSet(AsyncWebServerRequest *request, JsonObject &doc, JsonObjec
   scheduleRestart("wifi-reboot");
 }
 
+#if !defined(DISABLE_WEB_AUTH)
+void handleApiLogin(AsyncWebServerRequest *request, JsonVariant &json) {
+  unsigned long now = millis();
+
+  // Check Pacing (2 seconds after any failed attempt)
+  // We handle rollover of millis() gracefully by subtraction
+  if (last_failed_login_attempt != 0 && (now - last_failed_login_attempt < MIN_FAILED_LOGIN_INTERVAL_MS)) {
+    request->send(429, "application/json", "{\"success\":false,\"message\":\"Too fast. Please wait 2 seconds.\"}");
+    return;
+  }
+
+  JsonObject doc = json.as<JsonObject>();
+  String username = doc["username"] | "";
+  String password = doc["password"] | "";
+
+  // Validate credentials
+  if (username == http_username.c_str() && password == http_password.c_str()) {
+    char token[17];
+    snprintf(token, sizeof(token), "%08x%08x", esp_random(), esp_random());
+    current_session_token = token;
+
+    AsyncWebServerResponse *response = request->beginResponse(200, "application/json", "{\"success\":true}");
+    response->addHeader("Set-Cookie", String("session_id=") + current_session_token.c_str() + "; HttpOnly; Path=/");
+    request->send(response);
+    return;
+  }
+
+  // On invalid password
+  last_failed_login_attempt = millis();
+  request->send(401, "application/json", "{\"success\":false,\"message\":\"Invalid credentials\"}");
+}
+
+void handleApiAuthGet(AsyncWebServerRequest *request, JsonObject &root) {
+  root["user"] = http_username.c_str();
+}
+
+void handleApiAuthSet(AsyncWebServerRequest *request, JsonObject &doc, JsonObject &root) {
+  String user = doc["user"] | "";
+  String password = doc["password"] | "";
+
+  if (!user.isEmpty()) {
+    http_username = user.c_str();
+    nvs_write_string(NVS_KEY_HTTP_USERNAME, http_username);
+  }
+  if (!password.isEmpty()) {
+    http_password = password.c_str();
+    nvs_write_string(NVS_KEY_HTTP_PASSWORD, http_password);
+  }
+
+  root["success"] = true;
+  root["message"] = "Authentication configuration updated";
+}
+#endif
+
 static bool jsonToBool(JsonVariant variant, bool &value) {
   if (variant.is<bool>()) {
     value = variant.as<bool>();
@@ -934,6 +1014,9 @@ void handleFilesystemUpload(AsyncWebServerRequest *request, String filename,
 void setupWebServer() {
   Serial.println("Initializing HTTP server ...");
 
+  nvs_read_string(NVS_KEY_HTTP_USERNAME, http_username);
+  nvs_read_string(NVS_KEY_HTTP_PASSWORD, http_password);
+
   // Serve static files from /web_interface_data
   // Ensure this path matches where your platformio.ini places data files
   // or how you upload them (e.g., SPIFFS, LittleFS).
@@ -941,51 +1024,65 @@ void setupWebServer() {
   if (!LittleFS.exists("/web_interface_data/index.html")) {
     Serial.println("Warning: /web_interface_data/index.html not found");
   }
+  
+  // API Authentication
+  auto authFilter = [](AsyncWebServerRequest *request) {
+    return isAuthenticated(request);
+  };
+#if !defined(DISABLE_WEB_AUTH)
+  server.on("/api/login", HTTP_POST, handleApiLogin);
+  server.on("/api/auth", HTTP_GET, jsonGet(handleApiAuthGet)).setFilter(authFilter);
+  server.on("/api/auth", HTTP_POST, jsonPost(handleApiAuthSet)).setFilter(authFilter);
+#endif
 
   // API Endpoints
-  server.on("/api/info", HTTP_GET, jsonGet(handleApiInfo));
-  server.on("/api/devices", HTTP_GET, jsonGet(handleApiDevices));
-  server.on("/api/remotes", HTTP_GET, jsonGet(handleApiRemotes));
-  server.on("/api/logs", HTTP_GET, jsonGet(handleApiLogs));
-  server.on("/api/lastaddr", HTTP_GET, jsonGet(handleApiLastAddr));
-  server.on("/api/wifi-scan", HTTP_GET, jsonGet(handleApiWifiScan));
-  server.on("/api/wifi", HTTP_GET, jsonGet(handleApiWifiGet));
-  server.on("/api/network", HTTP_GET, jsonGet(handleApiNetworkGet));
-  server.on("/api/fallback", HTTP_GET, jsonGet(handleApiFallbackGet));
+  server.on("/api/info", HTTP_GET, jsonGet(handleApiInfo)).setFilter(authFilter);
+  server.on("/api/devices", HTTP_GET, jsonGet(handleApiDevices)).setFilter(authFilter);
+  server.on("/api/remotes", HTTP_GET, jsonGet(handleApiRemotes)).setFilter(authFilter);
+  server.on("/api/logs", HTTP_GET, jsonGet(handleApiLogs)).setFilter(authFilter);
+  server.on("/api/lastaddr", HTTP_GET, jsonGet(handleApiLastAddr)).setFilter(authFilter);
+  server.on("/api/wifi-scan", HTTP_GET, jsonGet(handleApiWifiScan)).setFilter(authFilter);
+  server.on("/api/wifi", HTTP_GET, jsonGet(handleApiWifiGet)).setFilter(authFilter);
+  server.on("/api/network", HTTP_GET, jsonGet(handleApiNetworkGet)).setFilter(authFilter);
+  server.on("/api/fallback", HTTP_GET, jsonGet(handleApiFallbackGet)).setFilter(authFilter);
+
 #if defined(SSD1306_DISPLAY)
-  server.on("/api/display", HTTP_GET, jsonGet(handleApiDisplayGet));
+  server.on("/api/display", HTTP_GET, jsonGet(handleApiDisplayGet)).setFilter(authFilter);
 #endif
 #if defined(SYSLOG)
-  server.on("/api/syslog", HTTP_GET, jsonGet(handleApiSyslogGet));
+  server.on("/api/syslog", HTTP_GET, jsonGet(handleApiSyslogGet)).setFilter(authFilter);
+  server.on("/api/syslog/test", HTTP_POST, jsonPost(handleApiSyslogTest)).setFilter(authFilter);
 #endif
 #if defined(MQTT)
-  server.on("/api/mqtt", HTTP_GET, jsonGet(handleApiMqttGet));
+  server.on("/api/mqtt", HTTP_GET, jsonGet(handleApiMqttGet)).setFilter(authFilter);
 #endif
-  server.on("/api/command", HTTP_POST, jsonPost(handleApiCommand));
-  server.on("/api/action", HTTP_POST, jsonPost(handleApiAction));
-  server.on("/api/wifi", HTTP_POST, jsonPost(handleApiWifiSet));
-  server.on("/api/network", HTTP_POST, jsonPost(handleApiNetworkSet));
-  server.on("/api/fallback", HTTP_POST, jsonPost(handleApiFallbackSet));
+  server.on("/api/command", HTTP_POST, jsonPost(handleApiCommand).setFilter(authFilter));
+  server.on("/api/action", HTTP_POST, jsonPost(handleApiAction)).setFilter(authFilter);
+  server.on("/api/wifi", HTTP_POST, jsonPost(handleApiWifiSet)).setFilter(authFilter);
+  server.on("/api/network", HTTP_POST, jsonPost(handleApiNetworkSet)).setFilter(authFilter);
+  server.on("/api/fallback", HTTP_POST, jsonPost(handleApiFallbackSet)).setFilter(authFilter);
+  server.on("/api/command", HTTP_POST, jsonPost(handleApiCommand)).setFilter(authFilter);
+  server.on("/api/action", HTTP_POST, jsonPost(handleApiAction)).setFilter(authFilter);
 #if defined(SSD1306_DISPLAY)
-  server.on("/api/display", HTTP_POST, jsonPost(handleApiDisplaySet));
+  server.on("/api/display", HTTP_POST, jsonPost(handleApiDisplaySet)).setFilter(authFilter);
 #endif
 #if defined(MQTT)
-  server.on("/api/mqtt", HTTP_POST, jsonPost(handleApiMqttSet));
+  server.on("/api/mqtt", HTTP_POST, jsonPost(handleApiMqttSet)).setFilter(authFilter);
 #endif
 #if defined(SYSLOG)
-  server.on("/api/syslog/test", HTTP_POST, jsonPost(handleApiSyslogTest));
-  server.on("/api/syslog", HTTP_POST, jsonPost(handleApiSyslogSet));
+  server.on("/api/syslog/test", HTTP_POST, jsonPost(handleApiSyslogTest)).setFilter(authFilter);
+  server.on("/api/syslog", HTTP_POST, jsonPost(handleApiSyslogSet)).setFilter(authFilter);
 #endif
   server.on("/api/firmware", HTTP_POST, handleFirmwareUpdate,
-            handleFirmwareUpload);
+            handleFirmwareUpload).setFilter(authFilter);
   server.on("/api/filesystem", HTTP_POST, handleFilesystemUpdate,
-            handleFilesystemUpload);
-  server.on("/api/download/devices", HTTP_GET, handleDownloadDevices);
-  server.on("/api/download/remotes", HTTP_GET, handleDownloadRemotes);
+            handleFilesystemUpload).setFilter(authFilter);
+  server.on("/api/download/devices", HTTP_GET, handleDownloadDevices).setFilter(authFilter);
+  server.on("/api/download/remotes", HTTP_GET, handleDownloadRemotes).setFilter(authFilter);
   server.on("/api/upload/devices", HTTP_POST, handleUploadDevicesDone,
-            handleUploadDevicesFile);
+            handleUploadDevicesFile).setFilter(authFilter);
   server.on("/api/upload/remotes", HTTP_POST, handleUploadRemotesDone,
-            handleUploadRemotesFile);
+            handleUploadRemotesFile).setFilter(authFilter);
 
   ws.onEvent(onWsEvent);
   server.addHandler(&ws);
@@ -994,22 +1091,24 @@ void setupWebServer() {
       server.serveStatic("/", LittleFS, "/web_interface_data/");
   staticHandler.setDefaultFile("index.html");
   staticHandler.setFilter([](AsyncWebServerRequest *request) {
-    return !request->url().startsWith("/api");
+    if (request->url().startsWith("/api")) {
+      return false;
+    }
+    if (request->url() == "/login.html" || request->url().endsWith(".css") || request->url().endsWith(".js") || request->url().endsWith(".png")) {
+      return true;
+    }
+    return isAuthenticated(request);
   });
-  // You might need to explicitly serve each file if serveStatic with directory
-  // isn't working as expected or if files are not in a subdirectory of the data
-  // dir. server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-  //     request->send(LittleFS, "/web_interface_data/index.html", "text/html");
-  // });
-  // server.on("/style.css", HTTP_GET, [](AsyncWebServerRequest *request){
-  //     request->send(LittleFS, "/web_interface_data/style.css", "text/css");
-  // });
-  // server.on("/script.js", HTTP_GET, [](AsyncWebServerRequest *request){
-  //     request->send(LittleFS, "/web_interface_data/script.js",
-  //     "application/javascript");
-  // });
 
   server.onNotFound([](AsyncWebServerRequest *request) {
+    if (!isAuthenticated(request) && !request->url().startsWith("/api") && request->url() != "/login.html") {
+      request->redirect("/login.html");
+      return;
+    }
+    if (!isAuthenticated(request) && request->url().startsWith("/api")) {
+      request->send(401, "application/json", "{\"success\":false,\"message\":\"Unauthorized\"}");
+      return;
+    }
     request->send(404, "text/plain", "Not found");
   });
 

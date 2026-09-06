@@ -141,6 +141,18 @@
             </div>
             <div class="settings-grid">
             <section id="integration-settings-section" class="settings-panel active grid" data-settings-panel="integration">
+                <section id="auth-settings-section">
+                    <div class="title">
+                        <h2 data-i18n="section.auth_settings">Authentication</h2>
+                    </div>
+                    <div class="card">
+                        <label for="auth-user" data-i18n="label.auth_user">Username:</label>
+                        <input type="text" id="auth-user" placeholder="Username">
+                        <label for="auth-password" data-i18n="label.auth_password">Password:</label>
+                        <input type="password" id="auth-password" placeholder="New Password">
+                        <button id="auth-update" data-i18n="button.update">Update</button>
+                    </div>
+                </section>
                 <section id="mqtt-settings-section">
                     <div class="title">
                         <h2 data-i18n="section.mqtt_settings">MQTT settings</h2>

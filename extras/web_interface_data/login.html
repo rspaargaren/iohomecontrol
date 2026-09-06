@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="page.login">Login - MiOpen.IO</title>
+    <link rel="icon" href="img/logo.png">
+    <link rel="stylesheet" href="css/style.css?v=20260526b">
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        .login-container {
+            width: 100%;
+            max-width: 400px;
+            margin: 10px;
+        }
+        .login-container .title {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 15px;
+        }
+        .login-container .title img {
+            max-width: 40px;
+            height: auto;
+        }
+        .login-container .card {
+            gap: 15px;
+        }
+        .login-container button {
+            background-color: var(--color-accent3);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: var(--radius);
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .login-container button:hover {
+            opacity: 0.9;
+        }
+        .error {
+            color: #ff4444;
+            font-weight: bold;
+            text-align: center;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="title">
+            <img src="img/logo.png" alt="MiOpen.IO Logo" class="logo">
+            <h2>Login</h2>
+        </div>
+        <div class="card">
+            <div id="error" class="error">Invalid credentials</div>
+            <form id="loginForm">
+                <label for="username">Username:</label>
+                <input type="text" id="username" placeholder="Username" required>
+                
+                <label for="password">Password:</label>
+                <input type="password" id="password" placeholder="Password" required>
+                
+                <button type="submit">Login</button>
+            </form>
+        </div>
+    </div>
+    <script>
+        // Check theme
+        if (localStorage.getItem("theme") === "dark") {
+            document.body.classList.add("dark-mode");
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: u, password: p })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    window.location.href = '/';
+                } else {
+                    document.getElementById('error').innerText = data.message || 'Invalid credentials';
+                    document.getElementById('error').style.display = 'block';
+                }
+            } catch (err) {
+                document.getElementById('error').innerText = 'Connection error';
+                document.getElementById('error').style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

@@ -23,6 +23,10 @@
 
             const response = await fetch(requestUrl, requestOptions);
             const data = await ensureJson(response);
+            if (response.status === 401) {
+                window.location.href = '/login.html';
+                throw new Error("Unauthorized");
+            }
             if (!response.ok) {
                 throw new Error(data.message || ("HTTP error " + response.status));
             }
@@ -32,6 +36,10 @@
         window.MiOpenApi = {
             downloadFile: async function (url, filename) {
                 const response = await fetch(url);
+                if (response.status === 401) {
+                    window.location.href = '/login.html';
+                    throw new Error("Unauthorized");
+                }
                 if (!response.ok) {
                     throw new Error("Network response was not ok");
                 }
@@ -116,6 +124,9 @@
             syslogTagInput: document.getElementById("syslog-tag"),
             syslogUpdateButton: document.getElementById("syslog-update"),
             syslogTestButton: document.getElementById("syslog-test"),
+            authUserInput: document.getElementById("auth-user"),
+            authPasswordInput: document.getElementById("auth-password"),
+            authUpdateButton: document.getElementById("auth-update"),
             remotePopupButton: document.getElementById("remote-popup"),
             remotesFileInput: document.getElementById("remotes-file"),
             remotesUploadButton: document.getElementById("upload-remotes"),
@@ -292,6 +303,9 @@
         if (app.elements.syslogTestButton) {
             app.elements.syslogTestButton.addEventListener("click", app.sendSyslogTest);
         }
+        if (app.elements.authUpdateButton) {
+            app.elements.authUpdateButton.addEventListener("click", app.updateAuthConfig);
+        }
         if (app.elements.firmwareUploadButton) {
             app.elements.firmwareUploadButton.addEventListener("click", app.uploadFirmware);
         }
@@ -369,6 +383,7 @@
 
         app.logStatus("System started");
         app.logStatus("Loading devices...");
+        app.loadAuthConfig();
         app.loadMqttConfig();
         app.loadWifiConfig();
         app.loadNetworkConfig();
