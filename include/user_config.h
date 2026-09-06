@@ -56,8 +56,10 @@ inline std::string syslog_tag = "";    // Optional tag prepended to hostname for
 #define WEBSERVER
 
 #define HTTP_LISTEN_PORT    80
-#define HTTP_USERNAME       "admin"
-#define HTTP_PASSWORD       "admin"
+#define HTTP_USERNAME_DEFAULT "admin"
+#define HTTP_PASSWORD_DEFAULT "admin"
+inline std::string http_username = HTTP_USERNAME_DEFAULT;
+inline std::string http_password = HTTP_PASSWORD_DEFAULT;
 #if defined(ESP8266)
         #define SERIALSPEED         460800
 #elif defined(ESP32)

@@ -17,6 +17,30 @@
         }
     }
 
+    async function loadAuthConfig(app) {
+        try {
+            const config = await window.MiOpenApi.requestJson("/api/auth");
+            app.elements.authUserInput.value = config.user || "";
+            app.elements.authPasswordInput.value = "";
+        } catch (error) {
+            console.error("Error fetching auth config", error);
+        }
+    }
+
+    async function updateAuthConfig(app) {
+        try {
+            const result = await window.MiOpenApi.postJson("/api/auth", {
+                user: app.elements.authUserInput.value,
+                password: app.elements.authPasswordInput.value
+            });
+            app.logStatus(result.message || "Auth settings updated.");
+            app.elements.authPasswordInput.value = "";
+        } catch (error) {
+            console.error("Error updating auth config", error);
+            app.logStatus("Error updating auth config", true);
+        }
+    }
+
     async function loadMqttConfig(app) {
         try {
             const config = await window.MiOpenApi.requestJson("/api/mqtt");
@@ -498,6 +522,12 @@
 
         app.loadLastAddress = function () {
             return loadLastAddress(app);
+        };
+        app.loadAuthConfig = function () {
+            return loadAuthConfig(app);
+        };
+        app.updateAuthConfig = function () {
+            return updateAuthConfig(app);
         };
         app.loadMqttConfig = function () {
             return loadMqttConfig(app);
