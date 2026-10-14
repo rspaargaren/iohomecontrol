@@ -666,9 +666,30 @@ Every 9 -> 0x20 12:41:28.171 > (23) 1W S 1 E 1  FROM B60D1A TO 00003F CMD 20 <  
         this->save(); // Save sequence number
     }
 
+    // save() renames 1W.json to .bak before moving .tmp into place. A power
+    // loss between those two renames leaves no 1W.json, so recover it from
+    // .tmp (newest, fully written before the renames) or else from .bak.
+    static void recoverInterruptedSave() {
+        if (LittleFS.exists(IOHC_1W_REMOTE))
+            return;
+        for (const char *candidate : {"/1W.json.tmp", "/1W.json.bak"}) {
+            if (!LittleFS.exists(candidate))
+                continue;
+            fs::File f = LittleFS.open(candidate, "r");
+            JsonDocument doc;
+            const bool valid = f && !deserializeJson(doc, f) && doc.is<JsonObject>() && doc.size() > 0;
+            f.close();
+            if (valid && LittleFS.rename(candidate, IOHC_1W_REMOTE)) {
+                Serial.printf("Recovered 1W remote settings from %s\n", candidate);
+                return;
+            }
+        }
+    }
+
    bool iohcRemote1W::load() {
         _radioInstance = iohcRadio::getInstance();
 
+        recoverInterruptedSave();
         if (LittleFS.exists(IOHC_1W_REMOTE))
             Serial.printf("Loading 1W remote settings from %s\n", IOHC_1W_REMOTE);
         else {
